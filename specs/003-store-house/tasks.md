@@ -180,7 +180,7 @@ description: "Task list for 003-store-house"
 - [X] T056 [P] Performance: extend `tests/bench/tick.bench.ts` to place every building at its limit and run the boost; confirm the tick stays inside the 6 ms budget and the terrain bake with the fertile overlay stays under about 1 s on the largest map; record results in Implementation notes
 - [X] T057 [P] Update `README.md` (Store House, fertile ground, farm dial, new keys `T`, `[`, `]`) and the 002 docs where they describe the farm (`specs/002-buildings/spec.md` note that 003 changes farm placement and income)
 - [X] T058 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what they show
-- [ ] T059 Fresh-clone validation: clone, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts` all pass
+- [X] T059 Fresh-clone validation: clone, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts` all pass
 
 ---
 
@@ -230,4 +230,7 @@ description: "Task list for 003-store-house"
 - T053 deviation: the plan said turn farms down while net income is negative, but a lower level always earns less than it saves, so the AI turns a linked farm down to level 2 while its piece is full (it pays nothing then but still costs upkeep) and back to the default once the stock is under half the cap.
 - T054: no change needed. `rivalBuildReserve` already shrinks each round (`buildReserveBase` minus `buildReserveStep` per round, floored at `buildReserveMin`), so harder rounds build the new buildings earlier through the same gate, with no change to costs or limits.
 
-(more notes as tasks complete)
+- T055: see research S12b (stand-in 76/82/88/80% for rounds 1-4 with start 50 and store house/farm cost 25; it was 83/78/88% before 003).
+- T056: tick means 0.6-1.7 ms with every building placed (budget 6 ms); p99/max spikes of 7-12 ms at round 10 also appear in the growth-only scenario (path repaths), so they predate 003. Terrain bake with the fertile overlay: about 0.7-0.8 s on the round-10 map, 0.2-0.3 s on round 1 (headless Chrome, software GL).
+- T059: fresh clone of `003-store-house` at 6fcda31: install, typecheck, build, 276 tests and the bench all pass.
+- The manual playtest checklist (`checklists/playtest.md`) is left for a human.
