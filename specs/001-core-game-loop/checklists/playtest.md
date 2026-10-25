@@ -94,3 +94,31 @@ Build: Phase 6 (T075–T080), seed 777.
 - Drops land in places the player cannot see, so landed food is marked as remembered for every mold; otherwise it would be invisible in the fog after everyone had watched it land.
 - Drops are an important part of the economy: the average drop (about 250 nutrients every 35 s) is roughly 7 nutrients per second across the whole map, much more than the core's 0.5. How that income is shared will matter a lot for the balance pass.
 - With the toast and the build bar both near the bottom, they overlap in a narrow window; the toast moves up under 900 px of width.
+
+## US4 — Generated Maps and Escalating Rounds, balance, polish (2026-10-25)
+
+| # | Scenario | Result |
+|---|---|---|
+| 9 | Victory and next round (US4) | **Pass.** A victory showed the round-end screen; "Next round" loaded round 2 on a bigger map (173×130) and the best round was saved to browser storage. |
+| 10 | Defeat (FR-023) | **Pass.** A forced defeat showed "You were eaten!" with New run and Quit to title; New run started round 1 with a new seed. |
+| 12 | Smoothness (SC-003) | **Not verified.** Round 10 (275×206, 6 molds) costs about 0.8 ms per sim tick (bench) and under 1 ms of JS per frame, but the browser pane was throttled, so no real frames-per-second number exists. Needs a look in a visible window. |
+
+### Balance pass (T093), by AI-played rounds
+
+The player is an AI stand-in (same AI as the rivals, a fixed 1.2 s decision pace, and a human-like habit of building up to 4 farms). Win rates come from 8 to 20 games per round, so they are rough.
+
+- **Round length:** median 4.6 min (round 1) rising to about 12 min (round 8), so most rounds fall in 5–15 min. Rounds 1 and 2 are slightly short.
+- **Round 1:** 92% wins with the new curve (rival thinks every 3 s). Without the farms and the slower rival it was a coin flip, because two equal AIs are decided by who starts near better food.
+- **Escalation:** the player model still wins about 90% of rounds 5–10, so roughly 40% of runs would reach round 10 (target: under 20%). More rivals mostly fight each other, and a farming player that stays out of trouble is rarely pressed. A steeper ramp (rival start nutrients ×(1+0.5(n−1)), food down to 35%) is adopted but only moved this slightly. **This target is not met, and it cannot be checked without human playtesting.**
+- Changes made: spend cap grows with size (+0.01/s per cell), rival thinking 3.0 s to 0.8 s, steeper rival start and food curves, early drops after 21 s.
+- The AI does not build farms, and the AI's aggression setting made no measurable difference to results.
+
+### Accessibility (T097)
+
+- Six molds get six distinct ink patterns (plain, hatching, halftone, rings, cross-hatch, waves), shown in the HUD list and on veins and bodies; a test checks no two molds share a color or pattern. In grayscale at 3x zoom a rival's veins still read by pattern and heavy outline.
+- Gap found and fixed: with five patterns the sixth mold repeated "plain". The pattern is now also drawn on veins, where most of a mold is.
+- The slider is a native range input (keyboard operable); Q/E nudge it. HUD contrast is dark ink on cream. Not checked with a screen reader.
+
+### Fresh clone (T100)
+
+`npm install`, `npm run typecheck`, `npm run build` and `npm test` (192 tests) all pass in a fresh clone. The production bundle contains no debug hooks, URL parameters or overlay.

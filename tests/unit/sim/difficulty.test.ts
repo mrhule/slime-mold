@@ -13,18 +13,18 @@ describe('difficultyFor (R14)', () => {
     expect(r5.rivalCount).toBe(3);
     expect(r5.mapWidth).toBe(211);
     expect(r5.mapHeight).toBe(158);
-    expect(r5.foodDensity).toBeCloseTo(0.8);
+    expect(r5.foodDensity).toBeCloseTo(0.72);
     expect(r5.rivalAggression).toBeCloseTo(0.52);
-    expect(r5.rivalStartNutrients).toBeCloseTo(1.4);
+    expect(r5.rivalStartNutrients).toBeCloseTo(3);
     expect(r5.aiThinkInterval).toBeCloseTo(2);
 
     const r10 = difficultyFor(10);
     expect(r10.rivalCount).toBe(5);
     expect(r10.mapWidth).toBe(275);
     expect(r10.mapHeight).toBe(206);
-    expect(r10.foodDensity).toBeCloseTo(0.55);
+    expect(r10.foodDensity).toBeCloseTo(0.37);
     expect(r10.rivalAggression).toBeCloseTo(0.9);
-    expect(r10.rivalStartNutrients).toBeCloseTo(1.9);
+    expect(r10.rivalStartNutrients).toBeCloseTo(5.5);
     expect(r10.aiThinkInterval).toBeCloseTo(0.8);
   });
 
@@ -33,7 +33,7 @@ describe('difficultyFor (R14)', () => {
     expect(late.rivalCount).toBe(5);
     expect(late.mapWidth).toBe(320);
     expect(late.mapHeight).toBe(240);
-    expect(late.foodDensity).toBe(0.5);
+    expect(late.foodDensity).toBe(0.35);
     expect(late.rivalAggression).toBe(0.9);
     expect(late.aiThinkInterval).toBe(0.8);
   });
