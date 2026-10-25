@@ -191,3 +191,9 @@ every access is in try/catch like the best-round key. A shared safe-store helper
 avoids duplicating the try/catch.
 
 **Rationale**: FR-002 and the Constitution's graceful-degradation rule for storage.
+
+**Spike result (T050)**: `Filter.from({ gl: { vertex, fragment }, resources: { printUniforms: { uPitch: { value, type: 'f32' } } } })`
+works in PixiJS 8.22. The filter needs its own vertex shader (the default one is not exported) that
+reads `uInputSize`, `uOutputFrame` and `uOutputTexture`. The fragment samples `uTexture` at
+`vTextureCoord`, and pixel position is `vTextureCoord * uInputSize.xy`. Both shaders must declare
+`precision highp float;`, or the program fails to link ("Precisions of uniform 'uInputSize' differ").

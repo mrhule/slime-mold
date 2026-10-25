@@ -16,6 +16,8 @@ export interface ScreenActions {
 export interface SettingsApi {
   get(): Settings;
   set(change: Partial<Settings>): void;
+  /** false when the print filter could not be built, which hides its toggle */
+  printAvailable?: boolean;
 }
 
 const fmtTime = (seconds: number): string => {
@@ -105,6 +107,7 @@ export class Screens {
       <label class="setting"><span>Music</span>${slider('musicVolume', s.musicVolume)}</label>
       <label class="setting"><span>Mute all</span><input type="checkbox" data-setting="muted" ${s.muted ? 'checked' : ''} /></label>
       <label class="setting" title="Turns off screen shake and flashing or bouncing effects"><span>Reduce motion</span><input type="checkbox" data-setting="reduceMotion" ${s.reduceMotion ? 'checked' : ''} /></label>
+      ${this.settings.printAvailable === false ? '' : `<label class="setting" title="A comic print look: halftone dots, grain and slightly off-register colour. High quality only."><span>Print texture</span><input type="checkbox" data-setting="printTexture" ${s.printTexture ? 'checked' : ''} /></label>`}
     </div>`;
   }
 

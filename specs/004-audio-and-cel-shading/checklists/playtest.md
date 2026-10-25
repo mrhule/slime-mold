@@ -44,3 +44,12 @@ Run with `npm run dev` (add `?seed=7&nopause` for a fixed map). Tick each item w
 - [ ] Outlines look hand-inked (lighter toward the light, heavier on the shadow side), not doubled.
 - [ ] Fog memory shows no live shadow detail: remembered buildings and food keep their dimmed look.
 - [ ] On Low quality (once the setting exists) the vein shadow pass is gone and nothing else breaks.
+
+## US6 Print texture
+
+Turn on Settings → Print texture, then compare on and off in a busy late-round scene.
+
+- [ ] Every mold, food item and front is still readable at a glance with it on
+- [ ] Dots and grain look like print, not noise; the red/blue fringe is subtle
+- [ ] Off looks exactly as before; it is unavailable on Low and Medium quality
+- [ ] Decision: keep (default off) or remove `src/render/print-filter.ts` and the toggle

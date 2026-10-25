@@ -5,6 +5,7 @@ import { Camera } from './camera';
 import { FilmLayer } from './film-layer';
 import { FogLayer } from './fog-layer';
 import { FoodLayer } from './food-layer';
+import { PrintFilter } from './print-filter';
 import { FxLayer } from './fx-layer';
 import type { PlacementGhost } from './fx-layer';
 import { bakeTerrain } from './terrain-layer';
@@ -29,6 +30,9 @@ export class GameRenderer {
   private timeSeconds = 0;
   /** the quality level layers read to decide which passes to draw (A14) */
   quality: QualityLevel = 'high';
+  /** the optional print texture (A9); null when the filter could not be built */
+  readonly print = PrintFilter.create();
+  private printOn = false;
 
   constructor(readonly app: Application, sim: Readonly<World>) {
     this.camera = new Camera(sim.width * CELL, sim.height * CELL);
@@ -58,6 +62,18 @@ export class GameRenderer {
   setQuality(level: QualityLevel): void {
     this.quality = level;
     this.fx?.setSplatScale(style.quality[level].splatScale);
+    this.syncPrint();
+  }
+
+  /** the print texture setting; it also needs High quality, and off leaves the plain look untouched */
+  setPrintTexture(on: boolean): void {
+    this.printOn = on;
+    this.syncPrint();
+  }
+
+  private syncPrint(): void {
+    const active = this.print !== null && this.printOn && this.quality === 'high';
+    this.world.filters = active && this.print ? [this.print.filter] : null;
   }
 
   resize(): void {
@@ -73,6 +89,7 @@ export class GameRenderer {
   update(sim: Readonly<World>, dtSeconds: number, ghost: PlacementGhost | null = null): void {
     this.timeSeconds += dtSeconds;
     this.camera.apply(this.world);
+    this.print?.setZoom(this.camera.zoom);
     this.film.update(sim, this.timeSeconds);
     this.food.update(sim);
     this.veins.update(sim, this.timeSeconds, this.quality);

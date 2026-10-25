@@ -106,9 +106,10 @@ async function main(): Promise<void> {
     quitToTitle: () => run.quitToTitle(),
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
-  }, { get: () => settings, set: (change) => applySettings(change) });
+  }, { get: () => settings, set: (change) => applySettings(change), printAvailable: renderer.print !== null });
   const reduceMotion = (): void => {
     renderer.camera.reduceMotion = settings.reduceMotion;
+    renderer.setPrintTexture(settings.printTexture);
     document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);
   };
   applySettings = (change) => {

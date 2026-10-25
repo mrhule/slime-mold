@@ -176,11 +176,11 @@ Nothing in `src/sim/` changes in this feature.
 
 **Independent Test**: Toggle it in a busy fight; molds, food and fronts stay readable, and off returns the exact previous look (quickstart scenario 9)
 
-- [ ] T050 [US6] Spike: in a scratch file (not committed) confirm the PixiJS 8 filter API (`Filter.from` with a GLSL fragment, the default filter vertex, `uTexture` sampling, resolution handling) by applying a trivial tint filter to the world container; record the working shape in `specs/004-audio-and-cel-shading/research.md` under A9
-- [ ] T051 [US6] Create `src/render/print-filter.ts`: a filter that samples the scene, darkens with a halftone dot pattern whose size is a fixed screen size divided by the camera zoom and whose coverage rises in darker areas, adds a subtle grain, and samples red and blue with a small opposite offset for the fringe; exposes `setZoom` and `setEnabled`
-- [ ] T052 [US6] Apply it in `src/render/renderer.ts`: attach the filter to `world` only when `printTexture` is on and the quality level is High; detach it otherwise so off returns the previous look exactly (SC-007)
-- [ ] T053 [US6] Add a Print texture toggle to the Settings section in `src/ui/screens.ts`, saved; hide it if the filter could not be created
-- [ ] T054 [US6] Playtest checklist (US6 section) and decision: compare on and off in a busy late-round scene; every mold, food item and front stays readable at a glance; keep the filter only if it improves the look, and otherwise remove it (record the decision in Implementation notes)
+- [X] T050 [US6] Spike: in a scratch file (not committed) confirm the PixiJS 8 filter API (`Filter.from` with a GLSL fragment, the default filter vertex, `uTexture` sampling, resolution handling) by applying a trivial tint filter to the world container; record the working shape in `specs/004-audio-and-cel-shading/research.md` under A9
+- [X] T051 [US6] Create `src/render/print-filter.ts`: a filter that samples the scene, darkens with a halftone dot pattern whose size is a fixed screen size divided by the camera zoom and whose coverage rises in darker areas, adds a subtle grain, and samples red and blue with a small opposite offset for the fringe; exposes `setZoom` and `setEnabled`
+- [X] T052 [US6] Apply it in `src/render/renderer.ts`: attach the filter to `world` only when `printTexture` is on and the quality level is High; detach it otherwise so off returns the previous look exactly (SC-007)
+- [X] T053 [US6] Add a Print texture toggle to the Settings section in `src/ui/screens.ts`, saved; hide it if the filter could not be created
+- [X] T054 [US6] Playtest checklist (US6 section) and decision: compare on and off in a busy late-round scene; every mold, food item and front stays readable at a glance; keep the filter only if it improves the look, and otherwise remove it (record the decision in Implementation notes)
 
 **Checkpoint**: US6 is decided: kept behind its toggle, or removed
 
@@ -246,3 +246,5 @@ Nothing in `src/sim/` changes in this feature.
 - US5 (T045-T049): the vein shadow is a second geometry of the core silhouette moved by `shadow.veinOffset`, drawn opaque into a shared container with one `AlphaFilter` at `veinAlpha` so overlapping edges and joints do not darken twice (`vein-shadow.frag`); it sits under all veins and is skipped on Low quality. The vein outline pad is `padLit` on the lit side and `padShade` on the shadow side (joints interpolate). Buildings and food draw an ink-tinted copy (Graphics `tint`) shifted by `outline.strokeShift` behind the real shape for the heavier shadow-side line, and use `shadow.groundOffset`/`groundAlpha` for their ground shadows; the obstacle outline width follows the same range. Suite: 54 files / 359 tests.
 
 (more notes as tasks complete)
+
+**US6 decision (T054)**: kept behind its toggle, default off, until a human has compared it in a busy scene (see playtest.md US6). Looked fine in a quick check; nothing else depends on it, so removal is `print-filter.ts`, `print.frag`, the renderer hooks and the toggle.
