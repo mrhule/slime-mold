@@ -13,7 +13,9 @@ the grid sits a vein graph whose nutrient flow and thickness follow a simplified
 model (tree-routed demand, conductivity reinforcement, retraction). Combat is resolved by
 nutrients delivered to contact cells. Rivals are utility AIs that see the world only through
 a fog-filtered `MoldView` and act only through the player's `Command` set. PixiJS renders
-the grid as a shader-smoothed "goo" film with mesh veins and a fog overlay. A DOM HUD and the
+the grid as a comic / cel-shaded "ink film" (heavy outlines, flat color bands, hatching) with
+outlined mesh veins and an ink-scribble fog overlay, in a Borderlands-inspired, hand-drawn,
+gritty style (FR-032). A DOM HUD and the
 fixed-timestep loop provide pause and 1x/2x/3x speed. See [research.md](research.md) for every
 decision and its rationale.
 
@@ -123,13 +125,13 @@ src/
 │   ├── renderer.ts            # layer setup, per-frame update
 │   ├── camera.ts              # pan/zoom/clamp
 │   ├── terrain-layer.ts       # baked terrain texture
-│   ├── film-layer.ts          # owner/biomass texture + goo filter
+│   ├── film-layer.ts          # owner/biomass texture + ink-film (toon) filter
 │   ├── vein-layer.ts          # per-mold dynamic mesh + pulse shader
 │   ├── food-layer.ts          # food sprites, drop warnings
 │   ├── fog-layer.ts           # vision texture + fog filter
 │   ├── fx-layer.ts            # target markers, front sparks, pings
 │   ├── palette.ts             # colors + patterns (R18)
-│   └── shaders/               # goo.frag, vein.vert/frag, fog.frag
+│   └── shaders/               # toon.frag, vein.vert/frag, fog.frag
 └── ui/
     ├── hud.ts                 # DOM HUD bound to HudModel
     ├── screens.ts             # title, pause, round-end
@@ -178,7 +180,8 @@ playtest and debug.
 |---|---|
 | Sim tick too slow at 6 molds, 275×206 cells | Bench gate from Foundation onward. Incremental fog. Flow at 4 Hz. Worker fallback (R13) |
 | Vein mesh rebuilds cause frame spikes | Rebuild only on flow ticks and topology changes. Reuse buffers. Profile in US1 |
-| Grid look feels blocky | Goo filter + jittered vein nodes + string-pulled paths. Judged in the US1 playtest |
+| Grid look feels blocky | Ink-film outline with seeded wobble + jittered vein nodes + string-pulled paths. Judged in the US1 playtest |
+| Comic style hurts readability or fps | One near-black outline for all molds with a pattern as the second cue (R18). Outline pass cost measured in T096. Half-resolution baked outline as the fallback (R9) |
 | Combat feels opaque | Front sparks scaled by pressure. Slider tooltip. Debug overlay shows pressures |
 | Balance off (rounds too long/short) | All constants in `balance.ts`. Batch sim gives round-length and win-rate data |
 

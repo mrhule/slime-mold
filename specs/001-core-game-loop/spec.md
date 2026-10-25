@@ -245,6 +245,17 @@ confirm the orders take effect. Check that each HUD value matches the game state
   what their own veins can see, plus anything visible to every mold.
 - **FR-031**: Food-drop warnings MUST be visible to every mold across the whole map, so that a
   drop starts a race.
+
+**Visual style**
+
+- **FR-032**: The whole game MUST follow one comic / cel-shaded art direction, in the spirit of
+  Borderlands: heavy dark ink outlines on every mold, vein, food item, obstacle, and HUD
+  panel; flat color bands (2–3 tones) instead of smooth gradients; hand-drawn line wobble;
+  gritty hatching, halftone, and grunge texture in shadows and surfaces; and no soft glow or
+  bloom. Comic-style effects (such as angular bursts) MUST be used for combat and drop alerts.
+- **FR-033**: Each mold MUST be distinguishable by a hatching or ink pattern as well as by color,
+  and outlines MUST keep every mold, vein, and food item readable against the map at all
+  zoom levels.
 - **FR-029**: The game MUST provide a start screen, a round-end screen (victory or defeat with
   summary stats), and a way to start the next round or retry.
 
@@ -286,10 +297,11 @@ confirm the orders take effect. Check that each HUD value matches the game state
 - Desktop browser with mouse and keyboard. Touch and mobile layouts are out of scope for v1.
 - Single player only. No accounts, online play, leaderboards, or server.
 - Audio is limited to simple feedback sounds and is not needed to meet any requirement.
-- The look aims for an organic, glowing slime-on-a-petri-dish style. Exact art direction is
-  decided in planning.
-- Rival molds are told apart by color. Supporting color-blind players with distinct patterns
-  or outlines is desired and will be checked during planning.
+- Art direction (FR-032): "Borderlands-inspired" comic / cel-shaded, heavily outlined,
+  hand-drawn, and gritty. It sets the look of the map, molds, food, fog, effects, and HUD.
+  It replaces the earlier glowing, bioluminescent petri-dish idea.
+- Rival molds are told apart by color and by a distinct hatching or ink pattern, so color
+  alone is never the only cue (FR-033).
 - Balance numbers (growth cost, upkeep, absorption rates, difficulty curve) are set in planning
   and tuned through playtesting. Those values do not change any requirement in this spec.
 - "Take over the full map" is the fantasy. FR-022's 75% threshold keeps rounds from dragging

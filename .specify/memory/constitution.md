@@ -61,6 +61,10 @@
 - Local persistence, when needed, MUST use browser storage only and MUST degrade gracefully
   when storage is unavailable.
 - Third-party runtime dependencies beyond PixiJS MUST be justified in the plan.
+- Art direction: "Borderlands-inspired" comic / cel-shaded, heavily outlined, hand-drawn, and
+  gritty. All visuals (map, molds, food, fog, effects, HUD) MUST follow it. Stylization lives
+  in render code and shaders only and MUST NOT affect simulation state. Mold identity MUST NOT
+  rely on color alone.
 
 ## Development Workflow
 
@@ -81,4 +85,4 @@
   expanded; PATCH: clarifications), and updating the Last Amended date.
 - Compliance is reviewed at plan time and again before a feature branch is merged.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-25
+**Version**: 1.1.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-25

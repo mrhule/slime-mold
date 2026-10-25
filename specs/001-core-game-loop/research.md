@@ -193,24 +193,54 @@ expensive in real time); scripted waypoints (spec rejected "simple scripted").
 
 ## R9. Rendering approach (PixiJS v8)
 
-**Decision**: Layers, bottom to top:
+**Art direction** (FR-032): "Borderlands-inspired" comic / cel-shaded, heavily outlined,
+hand-drawn, gritty. Concretely:
 
-1. **Terrain**: baked once per map into a texture (agar/table surface, rough patches,
-   obstacles such as glass shards and pebbles) at 2× cell resolution.
-2. **Slime film**: one RGBA texture at grid resolution. RGB is the owner color × biomass, and
-   alpha marks occupancy. It is re-uploaded only when cells change (dirty flag, at most once
-   per frame). It is drawn upscaled with linear filtering through a custom "goo" fragment
-   filter (smooth threshold, rim light, subtle animated noise), so the edges look like
-   metaballs rather than squares.
+- Thick dark ink outlines (about 3 px at 1x zoom, easing with zoom so they stay readable from
+  0.5x to 3x) on every mold, vein, food item, obstacle, and HUD panel.
+- Flat 2–3 band cel shading (base, shadow, highlight) with hard edges, never smooth gradients.
+- Hand-drawn feel: seeded line wobble, uneven outline weight, and a "boiling line" effect that
+  re-seeds the wobble at about 8 fps (visual only).
+- Grit: hatching and halftone dots in shadow bands, a paper/grunge overlay, ink splatters,
+  scratches, and stains on the surface. A desaturated, dirty base palette, with the molds
+  as the saturated accents.
+- No glow, bloom, or blur. Highlights are flat white or pale shapes.
+- Comic FX: angular starburst "POW" shapes for combat, and a jagged burst plus "!" for drop
+  warnings. HUD panels look like chunky comic panels with a bold hand-lettered font.
+
+**Decision**: Layers, bottom to top. All stylization lives in render code and shaders; the sim
+is unaffected (Constitution I).
+
+1. **Terrain**: baked once per map into a texture at 2× cell resolution. A grimy, scratched
+   dish or counter surface with a grunge overlay, hatched shadows, and inked rough patches.
+   Obstacles (glass shards, pebbles) are drawn as outlined cel-shaded shapes with a
+   hatched drop shadow.
+2. **Slime film**: one RGBA texture at grid resolution. RGB is the owner color, A is occupancy,
+   and biomass is stored in a second channel. It is re-uploaded only when cells change
+   (dirty flag, at most once per frame). It is drawn upscaled through a custom **ink-film**
+   fragment filter (`toon.frag`):
+   - posterizes biomass into 3 flat color bands (thin edge = shadow band, thick middle =
+     highlight band);
+   - draws a heavy outline wherever occupancy changes between neighboring samples (edge
+     detection on the occupancy texture), with a seeded wobble and varied thickness;
+   - adds hatching or halftone in the shadow band, using the owner's pattern (R18);
+   - uses nearest-then-smoothed thresholding so edges read as hand-inked blobs, not squares.
 3. **Veins**: one `Mesh` per mold with dynamic geometry (a quad strip per edge, width ∝ √D,
-   jittered node positions from a seeded per-cell offset, joints smoothed with round caps).
-   Geometry is rebuilt only on flow ticks (4×/s) and topology changes. A shader animates a
-   pulse traveling along the flow direction (a per-vertex flow attribute).
-4. **Food and drops**: sprites, drawn procedurally into a small runtime atlas (no art
-   pipeline yet). Drop warnings use a pulsing ring with a countdown.
-5. **Fog**: vision grid → R8 texture → filter (black for unseen, desaturated dim for
-   remembered, clear for visible), with a blurred edge.
-6. **Targets/FX**: target markers, front sparks.
+   jittered node positions from a seeded per-cell offset). Each vein draws as two passes in
+   the same mesh draw: a wider near-black ink outline, then the flat colored core, with a
+   thin offset highlight stripe. Geometry is rebuilt only on flow ticks (4×/s) and topology
+   changes. Flow direction is shown by chunky dashes or arrows that march along the vein
+   (a per-vertex flow attribute), instead of a soft glow.
+4. **Food and drops**: outlined, cel-shaded sprites drawn procedurally into a small runtime
+   atlas (no art pipeline yet). Drop warnings use a jagged comic burst with a "!" and a
+   hand-lettered countdown.
+5. **Fog**: vision grid → R8 texture → filter. Unseen areas are filled with dense ink
+   scribble/cross-hatching (not blurred black). Remembered areas are covered in halftone
+   dots with the content dimmed to flat gray tones. Visible areas are clear. The boundary is
+   a hand-drawn wavy ink line.
+6. **Targets/FX**: inked target markers, angular starburst "POW" shapes for front contact
+   (scaled by pressure), comic dust and speed lines, and a rough red "X" ping for rejected
+   commands.
 
 The camera supports pan (WASD, arrow keys, middle-drag, screen-edge) and wheel zoom
 (0.5×–3×), clamped to map bounds.
@@ -219,12 +249,19 @@ Rendering interpolates nothing positional (cells are discrete). Vein width and f
 are eased between flow ticks for smooth thickening.
 
 **Rationale**: Few draw calls (one per layer per mold). The texture-based film scales with
-cell count, not with on-screen object count. All the "organic" look sits in shaders, and the
-sim stays a simple grid (Constitution I).
+cell count, not with on-screen object count. The whole comic look (outline, cel bands,
+hatching, grunge) sits in shaders and baked textures, so it costs a few texture samples per
+pixel rather than extra geometry, and the sim stays a simple grid (Constitution I).
 
 **Alternatives considered**: `Graphics` redrawn per frame (simple, but rebuilding thousands of
 stroked segments costs too much CPU — kept as a fallback for debugging); a sprite per cell
-(76k sprites; wasteful).
+(76k sprites; wasteful); a full-screen post-process outline (Sobel on the rendered scene).
+It outlines everything uniformly, but also outlines pattern and grunge noise, and it cannot
+give each element its own outline weight. A per-layer outline was chosen instead.
+
+**Performance note**: the outline pass samples the occupancy texture 4–8 times per pixel. If
+that misses the frame budget at the largest map, bake the outline into a half-resolution
+texture that is rebuilt only when the film is dirty.
 
 ## R10. Simulation loop and time control
 
@@ -375,6 +412,25 @@ mid-run save (out of scope; a run is one sitting).
 
 **Decision**: Player is always a warm yellow (classic Physarum). Rivals come from a
 color-blind-safe palette (Okabe–Ito–derived: orange, sky blue, bluish green, vermillion,
-reddish purple). Each rival also gets a distinct **film pattern** (stripes, dots, rings,
-cross-hatch, plain) in the goo filter, so it can be told apart without color. The HUD rival
-list shows the same color and pattern swatch.
+reddish purple), pushed toward punchy comic saturation against a muted, dirty map palette.
+Each mold also gets a distinct **ink pattern** in the shadow band of the ink-film filter
+(`toon.frag`): plain, diagonal hatching, halftone dots, concentric rings, cross-hatch. This
+suits the comic style and lets molds be told apart without color (FR-033). All molds use the
+same near-black outline, so outline color never carries mold identity. The HUD rival list
+shows the same color and pattern swatch.
+
+## R19. UI and HUD styling
+
+**Decision**: The DOM HUD (R16) is styled as comic panels: thick black borders, a hard offset
+drop shadow, slight rotation (±1°) on panels, flat fills with a halftone overlay (CSS
+gradients), and a bold hand-lettered display font with a plain readable fallback. The font is
+loaded from Google Fonts at runtime (Bangers or Permanent Marker for titles, a plain
+sans-serif for numbers) or bundled as a static file, and the HUD stays legible if it fails to
+load. The allocation slider is drawn as a chunky inked bar with a thick handle. Toasts and
+the round-end screen use speech-bubble and burst shapes.
+
+**Rationale**: One consistent look across canvas and UI at no cost to accessibility, as long
+as contrast and text size are kept (checked in T097).
+
+**Alternatives considered**: Pixi-drawn UI for a perfect style match (more work for text and
+inputs, see R16).

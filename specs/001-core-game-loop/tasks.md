@@ -96,13 +96,13 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 - [ ] T031 [US1] Implement the flow solve in `src/sim/flow.ts`: per component, a multi-source BFS tree from sources (food cells with `food > 0` and the owned `core`); growth-sink demand split by distance to target; subtree accumulation; bottleneck-capped delivery; conductivity update; low-flow timers and retraction with refund (R2, R4)
 - [ ] T032 [US1] Wire the economy into `src/sim/step.ts`: `coreIncome` (0.5/s), upkeep `upkeepPerCell × cellCount` per component, growth delivery each tick, flow every `flowEvery` ticks; set up `createRound` for single-mold rounds with `playerStartNutrients` (30) and `defaultAllocation` (0.3); make `setTarget`, `cancelTarget`, and `clearTargets` real in `src/sim/commands.ts`
 - [ ] T033 [US1] Implement `readHud` (stored nutrients, 2 s smoothed net income, allocation, `growthStarved`, targets) in `src/sim/hud.ts`, exported from `src/sim/index.ts`
-- [ ] T034 [P] [US1] Terrain layer: bake terrain (agar surface, rough patches, obstacle shards and pebbles, dish wall) once per map into a 2× cell-resolution texture in `src/render/terrain-layer.ts`
-- [ ] T035 [P] [US1] Film layer: an RGBA grid texture (RGB = owner color × biomass, A = occupancy) uploaded only when dirty, drawn upscaled with linear filtering through a goo filter (smooth threshold, rim light, animated noise) in `src/render/film-layer.ts` and `src/render/shaders/goo.frag`
-- [ ] T036 [P] [US1] Vein layer: a per-mold dynamic `Mesh` (quad strip per edge, width ∝ √D, seeded per-cell node jitter, round joints, reused buffers) rebuilt only on flow ticks or topology change, with a flow-direction pulse shader, in `src/render/vein-layer.ts` and `src/render/shaders/vein.vert`/`vein.frag`. Ease width between flow ticks
-- [ ] T037 [P] [US1] Food layer: procedurally drawn runtime atlas for the 4 food types, with sprites scaled by remaining amount, in `src/render/food-layer.ts`
-- [ ] T038 [P] [US1] FX layer: target markers with the tip state shown (growing, starved, blocked) and the red rejection ping in `src/render/fx-layer.ts`
+- [ ] T034 [P] [US1] Terrain layer: bake terrain (grimy scratched surface with grunge overlay, inked rough patches, outlined cel-shaded obstacle shards and pebbles with hatched shadows, dish wall) once per map into a 2× cell-resolution texture in `src/render/terrain-layer.ts`
+- [ ] T035 [P] [US1] Film layer: an RGBA grid texture (RGB = owner color × biomass, A = occupancy) uploaded only when dirty, drawn upscaled through the ink-film filter (3 flat cel bands, heavy wobbly outline from occupancy edge detection, hatching in the shadow band, no glow; see R9 and FR-032) in `src/render/film-layer.ts` and `src/render/shaders/toon.frag`
+- [ ] T036 [P] [US1] Vein layer: a per-mold dynamic `Mesh` (quad strip per edge, width ∝ √D, seeded per-cell node jitter, reused buffers) rebuilt only on flow ticks or topology change, drawn as a near-black outline pass plus a flat colored core with an offset highlight stripe, with chunky marching dashes showing flow direction, in `src/render/vein-layer.ts` and `src/render/shaders/vein.vert`/`vein.frag`. Ease width between flow ticks
+- [ ] T037 [P] [US1] Food layer: procedurally drawn outlined, cel-shaded runtime atlas for the 4 food types, with sprites scaled by remaining amount, in `src/render/food-layer.ts`
+- [ ] T038 [P] [US1] FX layer: inked target markers with the tip state shown (growing, starved, blocked) and a rough red "X" rejection ping in `src/render/fx-layer.ts`
 - [ ] T039 [US1] Input in `src/ui/input.ts` per contracts/controls.md: left-click → `setTarget`, right-click on a marker → `cancelTarget`, Shift + right-click → `clearTargets`, camera bindings; stamp the player mold id
-- [ ] T040 [US1] Minimal HUD (stored nutrients, net income, "growth starved" indicator) bound to `HudModel` in `src/ui/hud.ts`, plus rejection toasts
+- [ ] T040 [US1] Minimal HUD (stored nutrients, net income, "growth starved" indicator) bound to `HudModel` in `src/ui/hud.ts`, plus rejection toasts, styled as comic panels per R19 (thick black border, hard offset shadow, halftone overlay, bold hand-lettered display font with a readable fallback) in `src/ui/styles.css`
 - [ ] T041 [US1] Wire everything in `src/main.ts`: create a single-mold round, connect loop → sim → renderer → HUD, route input commands into `enqueue`
 - [ ] T042 [US1] Playtest quickstart scenarios 1–4 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US1 section). Profile vein mesh rebuild cost in the Chrome Performance panel and note it there
 
@@ -126,7 +126,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 - [ ] T046 [US5] Pause and speed controls plus auto-pause on `visibilitychange` (hidden) and window `blur` in `src/game/loop.ts` and `src/main.ts` (FR-025, FR-027), with a "Paused — click to resume" overlay
 - [ ] T047 [US5] Compute `reachableCells` at round creation and `mapControl` every 10 ticks in `src/sim/round.ts`, exposed via `readHud`
-- [ ] T048 [US5] Full HUD in `src/ui/hud.ts` per FR-026: allocation slider (`<input type=range>` 0..1 step 0.05 → `setAllocation`, `Q`/`E` ±0.1), map control % with "win at 75%", round number, speed indicator, elapsed time, rival list placeholder, tooltips per contracts/controls.md
+- [ ] T048 [US5] Full HUD in `src/ui/hud.ts` per FR-026: allocation slider (`<input type=range>` 0..1 step 0.05 → `setAllocation`, `Q`/`E` ±0.1), map control % with "win at 75%", round number, speed indicator, elapsed time, rival list placeholder, tooltips per contracts/controls.md; the slider is a chunky inked bar with a thick handle (R19)
 - [ ] T049 [US5] Run state machine (`title → playing ⇄ paused → roundEnd → …`, per data-model.md Run) in `src/game/run.ts`
 - [ ] T050 [US5] Screens in `src/ui/screens.ts`: title (Start), pause menu on `Esc` (resume, restart run, quit to title), round-end with elapsed time, peak size, nutrients gathered, rivals eliminated, and seed (FR-029)
 - [ ] T051 [P] [US5] Debug overlay (FPS, mean tick ms, ticks per frame, seed) toggled by backtick or `?debug`, dev builds only, in `src/ui/debug.ts`
@@ -163,8 +163,8 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 - [ ] T066 [US2] Implement the utility AI `think(view, state, rng)` in `src/sim/ai/rival-ai.ts`: scores for forage, attack weak visible enemy cells × aggression, defend/reinforce, and explore; picks up to 3 targets with a diversity penalty; sets allocation from the front pressure ratio and aggression (R8)
 - [ ] T067 [US2] Call the AI in `src/sim/step.ts`: think cadence `aiThinkInterval` ± seeded jitter per rival from stream `ai:<id>`, commands go through the same `enqueue`, at most `aiCommandsPerThink` per think, and rival start nutrients come from difficulty
 - [ ] T068 [US2] Implement `roundOutcome` (checked every 10 ticks, defeat-first tie rule) in `src/sim/round.ts`, and route victory and defeat to roundEnd in `src/game/run.ts`
-- [ ] T069 [P] [US2] Fog layer: vision → R8 texture → fog filter (black unseen, desaturated dim remembered, clear visible, blurred edge), with remembered rival cells drawn from memory marked as stale, in `src/render/fog-layer.ts` and `src/render/shaders/fog.frag`
-- [ ] T070 [P] [US2] Front sparks scaled by pressure in `src/render/fx-layer.ts`, and per-rival film patterns in `src/render/shaders/goo.frag`
+- [ ] T069 [P] [US2] Fog layer: vision → R8 texture → fog filter (dense ink scribble/cross-hatching for unseen, halftone dots with flat gray tones for remembered, clear for visible, hand-drawn wavy boundary line), with remembered rival cells drawn from memory marked as stale, in `src/render/fog-layer.ts` and `src/render/shaders/fog.frag`
+- [ ] T070 [P] [US2] Angular comic starburst FX scaled by pressure in `src/render/fx-layer.ts`, and per-rival ink patterns (plain, hatching, halftone dots, rings, cross-hatch) in `src/render/shaders/toon.frag`
 - [ ] T071 [US2] HUD rival list (color and pattern swatch, alive/eliminated, `visibleCells` or "?") and elimination toasts in `src/ui/hud.ts`
 - [ ] T072 [US2] Add AI target scores and front pressures to the debug overlay in `src/ui/debug.ts`
 - [ ] T073 [US2] Fill in `tests/bench/tick.bench.ts` with combat, fog, and AI at 160×120 with 2 molds and at 275×206 with 6 molds; record the mean tick ms in `specs/001-core-game-loop/checklists/playtest.md`
@@ -232,7 +232,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 - [ ] T095 Perf gate (Constitution V): `npm run bench` mean tick ≤ 6 ms at 275×206 with 6 molds. If it misses, move the sim into a Web Worker per R13 (`src/game/sim-worker.ts`, snapshot transfer) and record the decision in plan.md Complexity Tracking
 - [ ] T096 Render perf: with `?round=10&debug`, hold about 60 fps during a 5-rival battle (quickstart scenario 12, SC-003); fix hotspots in `src/render/vein-layer.ts` and `src/render/film-layer.ts`
-- [ ] T097 [P] Accessibility check: rivals can be told apart by pattern alone (grayscale screenshot), HUD contrast, slider keyboard operable; fix in `src/render/palette.ts`, `src/render/shaders/goo.frag`, `src/ui/styles.css`
+- [ ] T097 [P] Accessibility check: rivals can be told apart by pattern alone (grayscale screenshot), HUD contrast, slider keyboard operable; also check outline readability at 0.5x and 3x zoom (FR-033); fix in `src/render/palette.ts`, `src/render/shaders/toon.frag`, `src/ui/styles.css`
 - [ ] T098 [P] Make sure the debug overlay and URL parameters are stripped from production builds (`import.meta.env.DEV` guards) in `src/ui/debug.ts` and `src/main.ts`
 - [ ] T099 [P] Update `README.md` with gameplay overview, controls (from contracts/controls.md), and dev commands
 - [ ] T100 Run the full quickstart.md validation (all automated checks and all 12 playtest scenarios) from a fresh clone, and record the results in `specs/001-core-game-loop/checklists/playtest.md`
@@ -289,7 +289,7 @@ Task: "Food tests in tests/unit/sim/food.test.ts"
 
 # Render layers together (after T032):
 Task: "Terrain layer in src/render/terrain-layer.ts"
-Task: "Film layer in src/render/film-layer.ts + shaders/goo.frag"
+Task: "Film layer in src/render/film-layer.ts + shaders/toon.frag"
 Task: "Vein layer in src/render/vein-layer.ts + shaders/vein.*"
 Task: "Food layer in src/render/food-layer.ts"
 Task: "FX layer in src/render/fx-layer.ts"
@@ -313,7 +313,7 @@ Task: "AI tests in tests/unit/sim/ai.test.ts"
 
 1. Phase 1 Setup → Phase 2 Foundational
 2. Phase 3 US1: the foraging sandbox
-3. **Stop and validate**: run quickstart scenarios 1–4 and judge whether the goo/vein look and growth feel are good. Settle that before building combat on top
+3. **Stop and validate**: run quickstart scenarios 1–4 and judge whether the comic ink look and growth feel are good. Settle that before building combat on top
 
 ### Incremental Delivery
 
