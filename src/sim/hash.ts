@@ -39,6 +39,7 @@ export function stateHash(world: World): number {
   h.array(world.conductivity);
   h.array(world.component);
   h.array(world.food);
+  h.array(world.buildingAt);
   for (const m of world.molds) {
     h.num(m.id);
     h.num(m.allocation);
@@ -59,6 +60,12 @@ export function stateHash(world: World): number {
     h.num(c.pool);
     h.num(c.cells.length);
     h.num(c.starveCell);
+  }
+  for (const b of world.buildings) {
+    h.num(b.id);
+    h.num(b.moldId);
+    h.num(b.cell);
+    h.num(b.destroyed ? 1 : 0);
   }
   for (const f of world.foodSources) {
     h.num(f.remaining);

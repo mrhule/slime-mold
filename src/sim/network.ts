@@ -1,6 +1,7 @@
+import { isFarmCell } from './buildings';
 import { DX, DY, dirBetween, edgeSlot, neighbor, popcount8 } from './grid';
 import { moldOf } from './world';
-import type { CellIndex, Component, MoldId, World } from './types';
+import type { Building, CellIndex, Component, MoldId, World } from './types';
 import { TICK_DT } from './types';
 
 export function newComponent(world: World, moldId: MoldId): Component {
@@ -94,6 +95,13 @@ export function removeCell(world: World, cell: CellIndex): void {
     }
     if (comp.cells.length === 0) world.components.delete(compId);
   }
+  const buildingId = world.buildingAt[cell] as number;
+  if (buildingId >= 0) {
+    const building = world.buildings[buildingId] as Building;
+    building.destroyed = true;
+    world.buildingAt[cell] = -1;
+    world.events.push({ type: 'buildingDestroyed', id: building.id, building: building.type, mold: moldId, cell });
+  }
   world.owner[cell] = 0;
   world.biomass[cell] = 0;
   world.component[cell] = -1;
@@ -165,7 +173,7 @@ export function refreshSources(world: World, comp: Component): void {
   const was = comp.orphaned;
   comp.sources.length = 0;
   for (const cell of comp.cells) {
-    if (cell === mold.core || (world.food[cell] as number) > 0) comp.sources.push(cell);
+    if (cell === mold.core || (world.food[cell] as number) > 0 || isFarmCell(world, cell)) comp.sources.push(cell);
   }
   comp.orphaned = comp.sources.length === 0 && comp.cells.length > 0;
   if (comp.orphaned && !was) {

@@ -46,6 +46,8 @@ export function createWorld(
   component.fill(-1);
   const foodSourceId = new Int16Array(cells);
   foodSourceId.fill(-1);
+  const buildingAt = new Int16Array(cells);
+  buildingAt.fill(-1);
   return {
     width,
     height,
@@ -67,6 +69,8 @@ export function createWorld(
     components: new Map(),
     nextComponentId: 0,
     foodSources: [],
+    buildings: [],
+    buildingAt,
     drops: [],
     nextTargetId: 1,
     reachableCells: 0,
@@ -118,6 +122,21 @@ export function assertInvariants(world: World): void {
       if (dirBetween(w, i, n) !== k) fail('direction mismatch');
       if (!((world.conductivity[edgeSlot(w, i, k)] as number) > 0)) fail(`edge ${i}-${n} has no conductivity`);
     }
+  }
+  const seenCells = new Set<number>();
+  for (const b of world.buildings) {
+    if (b.destroyed) {
+      if (world.buildingAt[b.cell] === b.id) fail(`destroyed building ${b.id} still on cell ${b.cell}`);
+      continue;
+    }
+    if (world.owner[b.cell] !== b.moldId) fail(`building ${b.id} stands on a cell its owner does not hold`);
+    if (world.buildingAt[b.cell] !== b.id) fail(`building ${b.id} is not indexed on its cell`);
+    if (seenCells.has(b.cell)) fail(`two buildings share cell ${b.cell}`);
+    seenCells.add(b.cell);
+  }
+  for (let i = 0; i < world.buildingAt.length; i++) {
+    const id = world.buildingAt[i] as number;
+    if (id >= 0 && (world.buildings[id]?.destroyed ?? true)) fail(`cell ${i} points at a missing building`);
   }
   for (const m of world.molds) {
     if ((counts.get(m.id) ?? 0) !== m.cellCount) {

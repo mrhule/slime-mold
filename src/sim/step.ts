@@ -1,3 +1,4 @@
+import { tickBuildings } from './buildings';
 import { applyQueuedCommands } from './commands';
 import { solveFlow } from './flow';
 import { tickFood } from './food';
@@ -20,6 +21,7 @@ function tickIncome(world: World): void {
     mold.incomeTick += gain;
   }
   tickFood(world);
+  tickBuildings(world);
 }
 
 function settleNetIncome(world: World): void {

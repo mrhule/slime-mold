@@ -1,3 +1,4 @@
+import { placeBuilding } from './buildings';
 import { addTarget } from './growth';
 import type { Command, MoldId, World } from './types';
 
@@ -32,6 +33,11 @@ export function applyCommand(world: World, cmd: Command): void {
     case 'clearTargets':
       mold.targets.length = 0;
       return;
+    case 'placeBuilding': {
+      const res = placeBuilding(world, cmd.mold, cmd.building, cmd.cell);
+      if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
     case 'setAllocation': {
       const v = Math.min(1, Math.max(0, cmd.value));
       mold.allocation = Math.round(v * 20) / 20;

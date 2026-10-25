@@ -2,10 +2,12 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { FixedStepLoop } from './game/loop';
 import { GameRenderer } from './render/renderer';
-import { createRound, enqueue, readHud, step } from './sim';
+import { canPlace, createRound, enqueue, readHud, step } from './sim';
 import type { Command, SimEvent, World } from './sim';
+import { BuildBar } from './ui/buildbar';
 import { Hud } from './ui/hud';
 import { InputController } from './ui/input';
+import { reasonText } from './ui/messages';
 
 const PLAYER = 1;
 
@@ -29,6 +31,7 @@ async function main(): Promise<void> {
   });
   const send = (cmd: Command): void => enqueue(world, cmd);
   const input = new InputController(app.canvas, renderer, () => world, send);
+  const buildBar = new BuildBar(document.getElementById('ui') as HTMLElement, (type) => input.togglePlacing(type));
 
   if (import.meta.env.DEV) {
     (window as unknown as { __slime: unknown }).__slime = { get world() { return world; }, loop, renderer, runSeed };
@@ -39,8 +42,20 @@ async function main(): Promise<void> {
     loop.advance(dt);
     input.update(dt);
     renderer.resize();
-    renderer.update(world, dt);
-    hud.update(readHud(world, PLAYER));
+    // placement preview: ask the sim whether it would allow the building under the cursor
+    let ghost: { cell: number; ok: boolean } | null = null;
+    const pointer = input.pointerPosition;
+    if (input.placing && input.hoverCell !== null && pointer) {
+      const result = canPlace(world, PLAYER, input.placing, input.hoverCell);
+      ghost = { cell: input.hoverCell, ok: result.ok };
+      buildBar.showHint(result.ok ? 'Click to build' : reasonText(result.reason), pointer.x, pointer.y, result.ok);
+    } else {
+      buildBar.showHint(null, 0, 0, true);
+    }
+    renderer.update(world, dt, ghost);
+    const model = readHud(world, PLAYER);
+    hud.update(model);
+    buildBar.update(model.build, input.placing);
     for (const e of frameEvents) {
       if (e.type === 'commandRejected' && e.mold === PLAYER) {
         hud.reject(e.reason);

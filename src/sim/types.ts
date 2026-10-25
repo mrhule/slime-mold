@@ -13,6 +13,8 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice';
 
+export type BuildingType = 'farm';
+
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
 export interface GrowthTarget {
@@ -85,6 +87,17 @@ export interface FoodSource {
   depleted: boolean;
 }
 
+export interface Building {
+  /** index in World.buildings */
+  id: number;
+  type: BuildingType;
+  moldId: MoldId;
+  cell: CellIndex;
+  placedTick: number;
+  /** true once its cell is gone; the entry stays so ids do not shift */
+  destroyed: boolean;
+}
+
 export interface DropEvent {
   id: number;
   type: FoodType;
@@ -98,7 +111,20 @@ export type Command =
   | { type: 'setTarget'; mold: MoldId; cell: CellIndex }
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
-  | { type: 'setAllocation'; mold: MoldId; value: number };
+  | { type: 'setAllocation'; mold: MoldId; value: number }
+  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex };
+
+export type PlaceReason =
+  | 'unknown-building'
+  | 'mold-eliminated'
+  | 'out-of-bounds'
+  | 'not-your-cell'
+  | 'occupied'
+  | 'on-food'
+  | 'limit-reached'
+  | 'cant-afford';
+
+export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
 export type SimEvent =
   | { type: 'cellDied'; cell: CellIndex; mold: MoldId; by: MoldId | 0 }
@@ -107,6 +133,8 @@ export type SimEvent =
   | { type: 'foodDepleted'; foodSourceId: number }
   | { type: 'moldEliminated'; mold: MoldId }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
+  | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
+  | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'commandRejected'; mold: MoldId; reason: string; cell?: CellIndex };
 
 export interface DifficultyProfile {
@@ -135,6 +163,19 @@ export interface HudTarget {
   state: TipState;
 }
 
+export interface BuildOption {
+  type: BuildingType;
+  cost: number;
+  /** per second */
+  upkeep: number;
+  /** per second, farm only */
+  income?: number;
+  count: number;
+  limit: number;
+  /** some piece of the mold holds at least `cost` */
+  affordable: boolean;
+}
+
 export interface HudModel {
   round: number;
   storedNutrients: number;
@@ -143,6 +184,9 @@ export interface HudModel {
   mapControl: number;
   growthStarved: boolean;
   targets: HudTarget[];
+  build: BuildOption[];
+  /** nutrients per second from working farms, before upkeep */
+  buildingIncome: number;
   rivals: {
     id: MoldId;
     color: number;
@@ -222,6 +266,9 @@ export interface World {
   components: Map<number, Component>;
   nextComponentId: number;
   foodSources: FoodSource[];
+  buildings: Building[];
+  /** building id on each cell, or -1 */
+  buildingAt: Int16Array;
   drops: DropEvent[];
   nextTargetId: number;
   reachableCells: number;

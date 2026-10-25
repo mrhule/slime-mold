@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { cellCenter, drawFarm } from './building-layer';
 import type { Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { CELL } from './units';
@@ -8,6 +9,15 @@ interface Ping {
   y: number;
   age: number;
 }
+
+/** where the player is about to place a building, and whether the sim would allow it */
+export interface PlacementGhost {
+  cell: number;
+  ok: boolean;
+}
+
+const GHOST_OK = 0x2ea84a;
+const GHOST_BAD = 0xe0432a;
 
 const STATE_COLOR = { growing: -1, starved: 0xe8872b, blocked: 0xe0432a, arrived: 0xffffff } as const;
 const PING_SECONDS = 0.9;
@@ -31,7 +41,7 @@ export class FxLayer {
     return [(cell % width) * CELL + CELL / 2, Math.floor(cell / width) * CELL + CELL / 2];
   }
 
-  update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number): void {
+  update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null): void {
     const g = this.g;
     g.clear();
     if (player) {
@@ -56,6 +66,12 @@ export class FxLayer {
         g.poly(pts, true).fill(tint).stroke({ width: 3, color: INK, join: 'round' });
         g.circle(x, y, 2).fill(INK);
       }
+    }
+    if (ghost && player) {
+      const [gx, gy] = cellCenter(ghost.cell, world.width);
+      const color = ghost.ok ? GHOST_OK : GHOST_BAD;
+      g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
+      drawFarm(g, gx, gy, moldColor(player.color), color);
     }
     this.pings = this.pings.filter((p) => (p.age += dt) < PING_SECONDS);
     for (const p of this.pings) {

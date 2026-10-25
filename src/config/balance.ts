@@ -9,6 +9,20 @@ export interface FoodTypeSpec {
   absorbRate: number;
 }
 
+export interface BuildingSpec {
+  /** nutrients, paid up front from the pool of the piece it is placed in */
+  cost: number;
+  /** nutrients per second, on top of per-cell upkeep */
+  upkeep: number;
+  /** most a single mold may have */
+  limit: number;
+}
+
+export interface FarmSpec extends BuildingSpec {
+  /** nutrients per second into its piece */
+  income: number;
+}
+
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
 export interface BalanceConfig {
   // economy
@@ -75,6 +89,9 @@ export interface BalanceConfig {
   aiCommandsPerThink: number;
 
   foodTypes: Record<FoodType, FoodTypeSpec>;
+
+  /** one entry per building type (002) */
+  buildings: { farm: FarmSpec };
 
   /** coefficients for difficultyFor(round), R14 */
   difficulty: {
@@ -153,6 +170,10 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     breadCrumb: { w: 3, h: 3, nutrients: 120, absorbRate: 1.5 },
     sugarCube: { w: 4, h: 4, nutrients: 300, absorbRate: 3.0 },
     fruitSlice: { w: 6, h: 4, nutrients: 500, absorbRate: 1.0 },
+  },
+
+  buildings: {
+    farm: { cost: 30, upkeep: 0.1, limit: 6, income: 0.5 },
   },
 
   difficulty: {

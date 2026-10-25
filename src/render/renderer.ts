@@ -1,9 +1,11 @@
 import { Application, Container } from 'pixi.js';
 import type { World } from '../sim/types';
+import { BuildingLayer } from './building-layer';
 import { Camera } from './camera';
 import { FilmLayer } from './film-layer';
 import { FoodLayer } from './food-layer';
 import { FxLayer } from './fx-layer';
+import type { PlacementGhost } from './fx-layer';
 import { bakeTerrain } from './terrain-layer';
 import { VeinLayer } from './vein-layer';
 import { CELL } from './units';
@@ -18,6 +20,7 @@ export class GameRenderer {
   film!: FilmLayer;
   veins!: VeinLayer;
   food!: FoodLayer;
+  buildings!: BuildingLayer;
   fx!: FxLayer;
   private timeSeconds = 0;
 
@@ -35,8 +38,9 @@ export class GameRenderer {
     this.film = new FilmLayer(sim);
     this.veins = new VeinLayer(sim);
     this.food = new FoodLayer();
+    this.buildings = new BuildingLayer();
     this.fx = new FxLayer();
-    this.world.addChild(bakeTerrain(sim), this.film.container, this.food.container, this.veins.container, this.fx.container);
+    this.world.addChild(bakeTerrain(sim), this.film.container, this.food.container, this.veins.container, this.buildings.container, this.fx.container);
     const core = sim.molds[0]?.core ?? 0;
     this.camera.zoom = 1.2;
     this.camera.centerOn((core % sim.width) * CELL, Math.floor(core / sim.width) * CELL);
@@ -52,12 +56,13 @@ export class GameRenderer {
     return [(core % sim.width) * CELL + CELL / 2, Math.floor(core / sim.width) * CELL + CELL / 2];
   }
 
-  update(sim: Readonly<World>, dtSeconds: number): void {
+  update(sim: Readonly<World>, dtSeconds: number, ghost: PlacementGhost | null = null): void {
     this.timeSeconds += dtSeconds;
     this.camera.apply(this.world);
     this.film.update(sim, this.timeSeconds);
     this.food.update(sim);
     this.veins.update(sim, this.timeSeconds);
-    this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds);
+    this.buildings.update(sim);
+    this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost);
   }
 }

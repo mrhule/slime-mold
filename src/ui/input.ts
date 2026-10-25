@@ -1,7 +1,9 @@
 import type { GameRenderer } from '../render/renderer';
 import { FxLayer } from '../render/fx-layer';
+import { canPlace } from '../sim';
 import { CELL } from '../render/units';
-import type { Command, World } from '../sim/types';
+import type { BuildingType, Command, World } from '../sim/types';
+import { BUILD_HOTKEYS } from './buildbar';
 
 const PLAYER = 1;
 const KEY_PAN_SPEED = 700; // screen px per second
@@ -16,6 +18,10 @@ const MARKER_HIT_PX = 16;
 export class InputController {
   private readonly keys = new Set<string>();
   private pointer: { x: number; y: number } | null = null;
+  /** the building the player is about to place, or null outside placement mode */
+  placing: BuildingType | null = null;
+  /** cell under the cursor (placement preview), or null */
+  hoverCell: number | null = null;
   private dragging = false;
   private lastDrag = { x: 0, y: 0 };
 
@@ -30,6 +36,7 @@ export class InputController {
     canvas.addEventListener('pointerup', this.onPointerUp);
     canvas.addEventListener('pointerleave', () => {
       this.pointer = null;
+      this.hoverCell = null;
       this.dragging = false;
     });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -63,10 +70,22 @@ export class InputController {
     }
     if (e.button === 0) {
       const cell = this.cellAt(sx, sy);
-      if (cell !== null) this.send({ type: 'setTarget', mold: PLAYER, cell });
+      if (cell === null) return;
+      if (this.placing) {
+        // always send, so a refusal comes back from the sim as a toast; stay in the mode if it will be refused
+        const allowed = canPlace(this.getWorld(), PLAYER, this.placing, cell).ok;
+        this.send({ type: 'placeBuilding', mold: PLAYER, building: this.placing, cell });
+        if (allowed && !e.shiftKey) this.placing = null;
+      } else {
+        this.send({ type: 'setTarget', mold: PLAYER, cell });
+      }
       return;
     }
     if (e.button === 2) {
+      if (this.placing) {
+        this.placing = null;
+        return;
+      }
       if (e.shiftKey) {
         this.send({ type: 'clearTargets', mold: PLAYER });
         return;
@@ -88,6 +107,7 @@ export class InputController {
   private readonly onPointerMove = (e: PointerEvent): void => {
     const [sx, sy] = this.screenPos(e);
     this.pointer = { x: sx, y: sy };
+    this.hoverCell = this.placing ? this.cellAt(sx, sy) : null;
     if (this.dragging) {
       this.renderer.camera.pan(-(e.clientX - this.lastDrag.x), -(e.clientY - this.lastDrag.y));
       this.lastDrag = { x: e.clientX, y: e.clientY };
@@ -107,6 +127,15 @@ export class InputController {
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
+    const building = BUILD_HOTKEYS[k];
+    if (building) {
+      this.togglePlacing(building);
+      return;
+    }
+    if (k === 'escape') {
+      this.placing = null;
+      return;
+    }
     this.keys.add(k);
     if (k === 'h') {
       const [x, y] = this.renderer.coreWorldPosition(this.getWorld());
@@ -114,6 +143,18 @@ export class InputController {
     }
     if (k.startsWith('arrow')) e.preventDefault();
   };
+
+  /** enter placement mode for a building, or leave it if it is already selected */
+  togglePlacing(type: BuildingType): void {
+    this.placing = this.placing === type ? null : type;
+    if (!this.placing) this.hoverCell = null;
+    else if (this.pointer) this.hoverCell = this.cellAt(this.pointer.x, this.pointer.y);
+  }
+
+  /** cursor position in screen pixels, or null when it is off the canvas */
+  get pointerPosition(): { x: number; y: number } | null {
+    return this.pointer;
+  }
 
   /** keyboard and screen-edge panning; call once per frame */
   update(dtSeconds: number): void {

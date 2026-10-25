@@ -1,3 +1,4 @@
+import { buildingUpkeep } from './buildings';
 import { degree, removeCell } from './network';
 import { edgeSlot, octile } from './grid';
 import { moldOf } from './world';
@@ -12,7 +13,7 @@ import type { CellIndex, Component, World } from './types';
 export function tickUpkeep(world: World): void {
   const rate = world.balance.upkeepPerCell * TICK_DT;
   for (const comp of [...world.components.values()]) {
-    const due = rate * comp.cells.length;
+    const due = rate * comp.cells.length + buildingUpkeep(world, comp.id) * TICK_DT;
     const paid = Math.min(due, comp.pool);
     comp.pool -= paid;
     moldOf(world, comp.moldId).upkeepTick += paid;
@@ -25,12 +26,16 @@ function validVictim(world: World, comp: Component, cell: CellIndex): boolean {
   return cell >= 0 && world.component[cell] === comp.id && cell !== moldOf(world, comp.moldId).core && degree(world, cell) <= 1;
 }
 
-/** The leaf (or loose) cell on the thinnest vein, then the outermost, then the lowest index. */
+/**
+ * The leaf (or loose) cell to starve: building-free cells first, then the thinnest vein, then
+ * the outermost, then the lowest index. A building cell goes only when nothing else is left.
+ */
 function pickVictim(world: World, comp: Component): CellIndex {
   const core = moldOf(world, comp.moldId).core;
   let best = -1;
   let bestD = Infinity;
   let bestDist = -1;
+  let bestBuilt = 1;
   for (const cell of comp.cells) {
     if (cell === core || degree(world, cell) > 1) continue;
     let d = 0;
@@ -41,7 +46,13 @@ function pickVictim(world: World, comp: Component): CellIndex {
       d = world.conductivity[edgeSlot(world.width, cell, k)] as number;
     }
     const dist = octile(world.width, cell, core);
-    if (best < 0 || d < bestD || (d === bestD && (dist > bestDist || (dist === bestDist && cell < best)))) {
+    const built = (world.buildingAt[cell] as number) >= 0 ? 1 : 0;
+    if (
+      best < 0 ||
+      built < bestBuilt ||
+      (built === bestBuilt && (d < bestD || (d === bestD && (dist > bestDist || (dist === bestDist && cell < best)))))
+    ) {
+      bestBuilt = built;
       bestD = d;
       bestDist = dist;
       best = cell;

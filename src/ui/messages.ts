@@ -1,0 +1,16 @@
+/** Plain-words messages for sim rejection reasons (growth targets and building placement). */
+export const REASONS: Record<string, string> = {
+  'no-open-cell-nearby': "Can't grow there!",
+  unreachable: 'No way through!',
+  'already-owned': 'Already yours!',
+  'out-of-bounds': 'Off the map!',
+  'mold-eliminated': 'Your mold is gone!',
+  'unknown-building': "Can't build that!",
+  'not-your-cell': 'Build on your own mold!',
+  occupied: "Something's already there!",
+  'on-food': "Can't build on food!",
+  'limit-reached': 'No more of those allowed!',
+  'cant-afford': 'Not enough nutrients!',
+};
+
+export const reasonText = (reason: string): string => REASONS[reason] ?? reason;

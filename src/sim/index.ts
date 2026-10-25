@@ -7,6 +7,7 @@ import { deriveSeed } from './rng';
 import { createWorld } from './world';
 import type { DifficultyProfile, MoldId, MoldView, RoundOutcome, World } from './types';
 
+export { canPlace } from './buildings';
 export { enqueue } from './commands';
 export { stateHash } from './hash';
 export { readHud } from './hud';

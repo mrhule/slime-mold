@@ -1,12 +1,5 @@
 import type { HudModel } from '../sim/types';
-
-const REASONS: Record<string, string> = {
-  'no-open-cell-nearby': "Can't grow there!",
-  unreachable: 'No way through!',
-  'already-owned': 'Already yours!',
-  'out-of-bounds': 'Off the map!',
-  'mold-eliminated': 'Your mold is gone!',
-};
+import { reasonText } from './messages';
 
 /** Comic-panel HUD (R19) bound to a HudModel. Plain DOM, no framework. */
 export class Hud {
@@ -49,7 +42,7 @@ export class Hud {
 
   /** short message for a rejected command */
   reject(reason: string): void {
-    this.toast(REASONS[reason] ?? reason);
+    this.toast(reasonText(reason));
   }
 
   toast(message: string, seconds = 2): void {
