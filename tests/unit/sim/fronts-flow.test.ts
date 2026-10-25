@@ -7,6 +7,12 @@ import { addMold } from '../../../src/sim/molds';
 import { addCell } from '../../../src/sim/network';
 import { cellOf, createWorldWithMold } from '../../helpers';
 
+/** the most a piece can spend per second: the base cap plus the per-cell share */
+function budgetOf(world: ReturnType<typeof createWorldWithMold>['world'], moldId: number): number {
+  const comp = [...world.components.values()].find((c) => c.moldId === moldId)!;
+  return defaultBalance.spendRateCap + defaultBalance.spendRatePerCell * comp.cells.length;
+}
+
 /** an open world with a player mold and a rival whose cell touches the player's east arm */
 function contactWorld() {
   const { world, mold } = createWorldWithMold(60, 40, 10, 20, 1000);
@@ -20,7 +26,7 @@ function contactWorld() {
 describe('flow: fronts and the allocation slider (R4)', () => {
   it('splits the budget: tips get (1 - a), fronts get a', () => {
     const { world, mold } = contactWorld();
-    const budget = defaultBalance.spendRateCap;
+    const budget = budgetOf(world, mold.id);
     mold.allocation = 0.25;
     addTarget(world, mold.id, cellOf(world, 8, 5));
     solveFlow(world);
@@ -35,7 +41,7 @@ describe('flow: fronts and the allocation slider (R4)', () => {
     mold.allocation = 0;
     solveFlow(world);
     const pressure = mold.frontCells.reduce((s, c) => s + world.pressure[c]!, 0);
-    expect(pressure).toBeCloseTo(defaultBalance.spendRateCap, 4);
+    expect(pressure).toBeCloseTo(budgetOf(world, mold.id), 4);
   });
 
   it('gives the whole budget to growth when there is no front, whatever the slider says', () => {
@@ -44,7 +50,7 @@ describe('flow: fronts and the allocation slider (R4)', () => {
     mold.allocation = 1;
     addTarget(world, mold.id, cellOf(world, 30, 20));
     solveFlow(world);
-    expect(mold.targets[0]!.rate).toBeCloseTo(defaultBalance.spendRateCap, 4);
+    expect(mold.targets[0]!.rate).toBeCloseTo(budgetOf(world, mold.id), 4);
   });
 
   it('weights toward front cells with more enemy contact', () => {
@@ -69,6 +75,6 @@ describe('flow: fronts and the allocation slider (R4)', () => {
     world.conductivity.fill(0.2); // thin everywhere
     solveFlow(world);
     const pressure = mold.frontCells.reduce((s, c) => s + world.pressure[c]!, 0);
-    expect(pressure).toBeLessThan(defaultBalance.spendRateCap * 0.5);
+    expect(pressure).toBeLessThan(budgetOf(world, mold.id) * 0.5);
   });
 });

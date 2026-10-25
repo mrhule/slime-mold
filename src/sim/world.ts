@@ -87,6 +87,8 @@ export function createWorld(
     nextDropTick: Number.MAX_SAFE_INTEGER,
     nextTargetId: 1,
     reachableCells: 0,
+    mapAttempts: 0,
+    mapFallback: false,
     outcome: 'playing',
     victoryReason: null,
     rng: new RngStreams(seed),

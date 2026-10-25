@@ -6,9 +6,9 @@ export const INK_RGB: [number, number, number] = [0x14 / 255, 0x11 / 255, 0x0f /
 /** Player is warm yellow; rivals use a color-blind-safe (Okabe-Ito derived) set, pushed to comic saturation. */
 export const MOLD_COLORS = [0xf2c744, 0xe8872b, 0x4fb0e8, 0x1fae7b, 0xe0432a, 0xc4709f] as const;
 
-/** plain, diagonal hatching, halftone dots, dotted rings, cross-hatch */
-export const PATTERN_COUNT = 5;
-export const PATTERN_NAMES = ['plain', 'hatching', 'halftone', 'rings', 'cross-hatch'] as const;
+/** one pattern per possible mold (up to 6), so no two molds share one */
+export const PATTERN_COUNT = 6;
+export const PATTERN_NAMES = ['plain', 'hatching', 'halftone', 'rings', 'cross-hatch', 'waves'] as const;
 
 export const moldColor = (index: number): number => MOLD_COLORS[index % MOLD_COLORS.length] as number;
 export const moldPattern = (index: number): number => index % PATTERN_COUNT;

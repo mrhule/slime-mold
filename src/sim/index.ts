@@ -39,7 +39,9 @@ export function createRound(opts: CreateRoundOptions): World {
 
   let world: World | null = null;
   let map: GeneratedMap | null = null;
+  let attempts = 0;
   for (let attempt = 0; attempt < balance.mapgenAttempts; attempt++) {
+    attempts = attempt + 1;
     const candidate = createWorld(difficulty.mapWidth, difficulty.mapHeight, balance, seed, opts.roundNumber, difficulty);
     const generated = generateMap(candidate, candidate.rng.get(attempt === 0 ? 'mapgen' : `mapgen:${attempt}`), rivals + 1);
     if (validateMap(candidate, generated.starts)) {
@@ -54,7 +56,9 @@ export function createRound(opts: CreateRoundOptions): World {
     world = createWorld(difficulty.mapWidth, difficulty.mapHeight, flat, seed, opts.roundNumber, difficulty);
     map = generateMap(world, world.rng.get('mapgen:fallback'), rivals + 1);
     world.balance = balance;
+    world.mapFallback = true;
   }
+  world.mapAttempts = attempts;
 
   world.replay.runSeed = opts.runSeed;
   const { starts, playerIndex } = map;

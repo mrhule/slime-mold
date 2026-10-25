@@ -317,6 +317,9 @@ export interface World {
   nextDropTick: number;
   nextTargetId: number;
   reachableCells: number;
+  /** how many generation attempts the map needed, and whether the open-map fallback was used */
+  mapAttempts: number;
+  mapFallback: boolean;
   outcome: RoundOutcome;
   victoryReason: VictoryReason | null;
 

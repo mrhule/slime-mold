@@ -10,7 +10,8 @@ export interface BalanceConfig {
   coreIncome: number;          // 0.5 /s, start core base income (R3)
   upkeepPerCell: number;       // 0.004 /s per owned cell
   cellBuildCost: number;       // 1.0 nutrient per cell × terrain cost
-  spendRateCap: number;        // 6 /s max spend per component (about 6 cells/s)
+  spendRateCap: number;        // 6 /s base max spend per component (about 6 cells/s)
+  spendRatePerCell: number;    // 0.01 /s extra per owned cell: bigger molds grow and fight faster
   playerStartNutrients: number;// 30
   rivalStartNutrientsBase: number; // 30 (× difficulty multiplier)
 
@@ -31,6 +32,8 @@ export interface BalanceConfig {
   attackEff: number;           // 0.12 biomass per nutrient
   consumeRefund: number;       // 0.4
   biomassRegen: number;        // 0.2 /s when supplied and not in contact
+
+  basePressure: number;        // 0.4, pressure every front cell exerts with no nutrients delivered
 
   // vision (R7)
   visionRadius: number;        // 10 cells

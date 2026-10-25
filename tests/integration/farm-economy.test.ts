@@ -21,7 +21,7 @@ describe('farm economy (US1)', () => {
     expect(withFarm).toBeGreaterThan(without + 30);
   });
 
-  it('a farm pays back its cost in about 75 seconds of game time', () => {
+  it('a farm pays back its cost in about 22 seconds of game time', () => {
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, 100, { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0 });
     const cell = cellOf(world, 11, 20);
     const comp = world.components.get(world.component[cell]!)!;

@@ -38,7 +38,7 @@ detailed further when started, and US2 and US4 wait for the combat and rival sto
 
 **⚠️ CRITICAL**: No story work can begin until this phase is complete
 
-- [X] T002 Add the buildings table to `src/config/balance.ts` (`BalanceConfig.buildings` with `farm: { cost: 30, upkeep: 0.1, limit: 6, income: 0.5 }`) and the same fields to `specs/002-buildings/` data model notes if values change
+- [X] T002 Add the buildings table to `src/config/balance.ts` (`BalanceConfig.buildings` with `farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5 }`) and the same fields to `specs/002-buildings/` data model notes if values change
 - [X] T003 Extend `src/sim/types.ts`: `BuildingType = 'farm'`, `Building` (`id`, `type`, `moldId`, `cell`, `placedTick`, `destroyed`), `World.buildings` and `World.buildingAt`, the `placeBuilding` command, the `buildingPlaced` and `buildingDestroyed` events, and the `BuildOption` and HUD fields from contracts/sim-api.md
 - [X] T004 Add `buildings: []` and `buildingAt` (`Int16Array`, filled with -1) to `createWorld` in `src/sim/world.ts`, and extend `assertInvariants`: "every live building's cell is owned by its owner and points back at it through `buildingAt`; no two live buildings share a cell; destroyed buildings have `buildingAt === -1` on their cell"
 - [X] T005 Hash `buildings` and `buildingAt` in `src/sim/hash.ts`

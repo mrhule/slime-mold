@@ -363,7 +363,7 @@ measured need).
 | Food density | `max(1 − 0.05(n−1), 0.5)` | 1.0 | 0.8 | 0.55 | 0.5 (round 11) |
 | Rival aggression | `min(0.2 + 0.08(n−1), 0.9)` | 0.2 | 0.52 | 0.9 | 0.9 (round 10) |
 | Rival start nutrients ×| `1 + 0.1(n−1)` (uncapped) | 1.0 | 1.4 | 1.9 | — |
-| AI think interval | `max(1.4 − 0.05(n−1), 0.8)` s | 1.4 | 1.2 | 0.95 | 0.8 |
+| AI think interval | `max(3.0 − 0.25(n−1), 0.8)` s | 3.0 | 2.0 | 0.8 | 0.8 (round 9) |
 | Drop interval | 35 s ± 10 s (constant) | | | | |
 
 Every parameter is monotonic toward harder. Rival start nutrients is uncapped, so every round

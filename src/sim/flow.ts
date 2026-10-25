@@ -86,7 +86,7 @@ function solveComponent(world: World, comp: Component, dtF: number): void {
 
   // the allocation splits one budget between growth and fighting; whichever side has nothing to
   // feed hands its share to the other, so nothing is wasted while idle (R4)
-  const budget = Math.min(b.spendRateCap, income + comp.pool / b.demandHorizon);
+  const budget = Math.min(b.spendRateCap + b.spendRatePerCell * comp.cells.length, income + comp.pool / b.demandHorizon);
   const tipShare = fronts.length === 0 ? 1 : tips.length === 0 ? 0 : 1 - mold.allocation;
   const frontShare = tips.length === 0 ? (fronts.length === 0 ? 0 : 1) : fronts.length === 0 ? 0 : mold.allocation;
 

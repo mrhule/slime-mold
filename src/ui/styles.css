@@ -269,6 +269,7 @@ html, body {
 .swatch.p1 { background-image: repeating-linear-gradient(45deg, rgba(20, 17, 15, 0.7) 0 2px, transparent 2px 6px); }
 .swatch.p2 { background-image: radial-gradient(rgba(20, 17, 15, 0.75) 2px, transparent 2.5px); background-size: 6px 6px; }
 .swatch.p3 { background-image: radial-gradient(circle, transparent 3px, rgba(20, 17, 15, 0.75) 3.5px 4.5px, transparent 5px); }
+.swatch.p5 { background-image: repeating-linear-gradient(0deg, rgba(20, 17, 15, 0.7) 0 2px, transparent 2px 6px); }
 .swatch.p4 { background-image: repeating-linear-gradient(45deg, rgba(20, 17, 15, 0.7) 0 2px, transparent 2px 6px), repeating-linear-gradient(-45deg, rgba(20, 17, 15, 0.7) 0 2px, transparent 2px 6px); }
 
 /* Screens */

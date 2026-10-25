@@ -30,6 +30,8 @@ export interface BalanceConfig {
   upkeepPerCell: number;
   cellBuildCost: number;
   spendRateCap: number;
+  /** extra spend rate per owned cell in a piece: bigger molds grow and fight faster */
+  spendRatePerCell: number;
   playerStartNutrients: number;
   rivalStartNutrientsBase: number;
 
@@ -121,6 +123,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   upkeepPerCell: 0.004,
   cellBuildCost: 1.0,
   spendRateCap: 6,
+  spendRatePerCell: 0.01,
   playerStartNutrients: 30,
   rivalStartNutrientsBase: 30,
 
@@ -176,7 +179,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    farm: { cost: 30, upkeep: 0.1, limit: 6, income: 0.5 },
+    farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5 },
   },
 
   difficulty: {
@@ -193,8 +196,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     aggressionStep: 0.08,
     aggressionMax: 0.9,
     startNutrientsStep: 0.1,
-    thinkBase: 1.4,
-    thinkStep: 0.05,
+    thinkBase: 3.0,
+    thinkStep: 0.25,
     thinkMin: 0.8,
   },
 });

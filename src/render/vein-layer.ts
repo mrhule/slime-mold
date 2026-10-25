@@ -2,7 +2,7 @@ import { Buffer, BufferUsage, Container, Geometry, Mesh, Shader } from 'pixi.js'
 import { hash2 } from '../sim/noise';
 import { neighbor } from '../sim/grid';
 import type { World } from '../sim/types';
-import { INK_RGB, moldColor, rgbUnit } from './palette';
+import { INK_RGB, moldColor, moldPattern, rgbUnit } from './palette';
 import { CELL } from './units';
 import vertex from './shaders/vein.vert?raw';
 import fragment from './shaders/vein.frag?raw';
@@ -58,6 +58,7 @@ export class VeinLayer {
             uMold: { value: rgbUnit(moldColor(colorIndex)), type: 'vec3<f32>' },
             uInk: { value: INK_RGB, type: 'vec3<f32>' },
             uTime: { value: 0, type: 'f32' },
+            uPattern: { value: moldPattern(colorIndex), type: 'f32' },
           },
         },
       });

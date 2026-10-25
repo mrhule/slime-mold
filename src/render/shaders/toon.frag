@@ -34,6 +34,7 @@ float patternMask(int id, vec2 p) {
   if (id == 2) return 1.0 - step(0.2, length(fract(p * 1.8) - 0.5));
   if (id == 3) return 1.0 - step(0.06, abs(length(fract(p * 1.3) - 0.5) - 0.3));
   if (id == 4) return max(step(0.7, fract((p.x + p.y) * 1.6)), step(0.7, fract((p.x - p.y) * 1.6)));
+  if (id == 5) return step(0.6, fract(p.y * 1.5 + sin(p.x * 3.2) * 0.35));
   return 0.0;
 }
 

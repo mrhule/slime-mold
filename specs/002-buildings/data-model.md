@@ -38,9 +38,9 @@ A farm is always `working` while it stands. The `idle` state in the spec is for 
 | Field | Farm default | Notes |
 |---|---|---|
 | `cost` | 30 | nutrients, paid up front from the piece's pool |
-| `upkeep` | 0.1 /s | paid from the piece's pool, on top of per-cell upkeep |
+| `upkeep` | 0.15 /s | paid from the piece's pool, on top of per-cell upkeep |
 | `limit` | 6 | per mold |
-| `income` | 0.5 /s | farm only: nutrients per second into its piece |
+| `income` | 1.5 /s | farm only: nutrients per second into its piece |
 
 ## World additions
 

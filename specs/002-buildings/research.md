@@ -57,9 +57,9 @@ would have no effect and a cut-off island could not live on its own farm).
   left.
 - A building is destroyed with its cell and nothing is refunded (FR-005).
 
-**Starting values** (farm): cost 30, upkeep 0.1/s, income 0.5/s, limit 6. Net +0.4/s, so a farm
-pays back in about 75 s. Six farms add up to +2.4/s net, on top of the core's 0.5/s. The
-core-only break-even is about 125 cells; each farm lifts that by about 100 cells.
+**Starting values** (farm): cost 30, upkeep 0.15/s, income 1.5/s, limit 6. Net +1.35/s, so a farm
+pays back in about 22 s. Six farms add up to +8.1/s net, on top of the core's 0.5/s. The
+core-only break-even is about 125 cells; each farm lifts that by about 340 cells. (Raised from 0.5/s income after playtest feedback that the first value gave no real return.)
 
 **Rationale**: A fixed limit is easier to read and to balance than a rising cost, and it keeps
 farms from snowballing. Paying from the local pool makes where you build matter.

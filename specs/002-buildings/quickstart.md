@@ -23,8 +23,8 @@ Same setup as [001 quickstart](../001-core-game-loop/quickstart.md): `npm instal
    existing farm. The ghost turns red each time and the tooltip names the reason.
 3. **Cannot afford (US1-3)**: Spend your stock on growth, then try to place. The button is gray,
    a click is refused with a toast, and no nutrients are lost.
-4. **Income and upkeep (US1-4)**: Watch the income readout. A working farm adds about 0.4/s net
-   (0.5 income, 0.1 upkeep) and pays back its 30 nutrients in about 75 s.
+4. **Income and upkeep (US1-4)**: Watch the income readout. A working farm adds about 1.35/s net
+   (1.5 income, 0.15 upkeep) and pays back its 30 nutrients in about 22 s.
 5. **Cut-off farm (US1-5)**: Place a farm on a branch, then starve or cut the branch so the farm's
    piece is separate. The piece keeps living on its own farm.
 6. **Destroyed with its cell (US1-6)**: Let the farm's cell starve (or cut it off with no
