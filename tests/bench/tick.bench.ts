@@ -10,6 +10,8 @@ import { createRound, enqueue, step, viewFor } from '../../src/sim';
 import type { AiState, World } from '../../src/sim';
 import { neighbor } from '../../src/sim/grid';
 import { addCell } from '../../src/sim/network';
+import { placeBuilding } from '../../src/sim/buildings';
+import type { BuildingType } from '../../src/sim';
 
 const BUDGET_MS = 6;
 const NETWORK_CELLS = 4000;
@@ -49,6 +51,34 @@ function foragingWorld(round: number): World {
   return world;
 }
 
+/**
+ * The growth-only world with every building type at its per-mold limit (farms on fertile ground,
+ * store houses boosting growing tips), so the building and boost code runs at its worst.
+ */
+function buildingsWorld(round: number): World {
+  const world = foragingWorld(round);
+  for (const comp of world.components.values()) comp.pool = 1e6;
+  const spec = world.balance.buildings;
+  const own: number[] = [];
+  for (let c = 0; c < world.owner.length; c++) if (world.owner[c] === 1 && (world.food[c] as number) <= 0 && world.buildingAt[c]! < 0) own.push(c);
+  const plan: [BuildingType, number][] = [
+    ['storehouse', spec.storehouse.limit],
+    ['farm', spec.farm.limit],
+    ['booster', spec.booster.limit],
+  ];
+  let k = 0;
+  const stride = Math.floor(own.length / 20);
+  for (const [type, count] of plan) {
+    for (let i = 0; i < count; i++) {
+      const cell = own[(k++ * stride + 7) % own.length]!;
+      if (type === 'farm') world.fertile[cell] = 1;
+      placeBuilding(world, 1, type, cell);
+    }
+  }
+  for (const comp of world.components.values()) comp.pool = 500;
+  return world;
+}
+
 /** A full round with every mold AI-driven (the player too), warmed up so fronts, fog and AI all run. */
 function rivalWorld(round: number): { world: World; drive: (tick: number) => void } {
   const world = createRound({ runSeed: 5, roundNumber: round });
@@ -76,6 +106,14 @@ const scenarios: Scenario[] = [
   ...[1, 10].map((round): Scenario => ({
     label: (w) => `growth only, round ${round} (${w.width}x${w.height}, ${w.molds[0]!.cellCount} cells, 4000-cell network)`,
     build: () => ({ world: foragingWorld(round) }),
+  })),
+  ...[1, 10].map((round): Scenario => ({
+    label: (w) => `every building at its limit, round ${round} (${w.width}x${w.height}, ${w.molds[0]!.cellCount} cells, ${w.buildings.length} placed, ${w.buildings.filter((b) => !b.destroyed).length} standing at the end)`,
+    build: () => {
+      const world = buildingsWorld(round);
+      // keep the pieces stocked so upkeep never starves a building away during the run
+      return { world, drive: () => { for (const c of world.components.values()) if (c.moldId === 1) c.pool = 500; } };
+    },
   })),
   ...[1, 10].map((round): Scenario => ({
     label: (w) => `AI vs AI, round ${round} (${w.width}x${w.height}, ${w.molds.length} molds, ${w.molds.reduce((s, m) => s + m.cellCount, 0)} cells, ${w.molds.reduce((s, m) => s + m.frontCells.length, 0)} front cells)`,

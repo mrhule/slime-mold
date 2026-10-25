@@ -10,6 +10,10 @@ const MIN_SPACING = 9;
 const EXPLORE_SAMPLES = 10;
 /** how many own cells to try when looking for a spot to build */
 const BUILD_TRIES = 80;
+/** grow toward fertile ground until the mold has this many farms */
+const FARM_WISH = 3;
+/** what a patch of fertile ground is worth when scoring growth targets (an oat flake is 40) */
+const FERTILE_VALUE = 18;
 /** a booster factory this close to a front (as the crow flies) strengthens it well along the veins */
 const BOOSTER_REACH = 10;
 /** food worth a harvester: roughly bread crumb size and up */
@@ -145,6 +149,21 @@ export function think(view: MoldView, state: AiState, rng: Rng, maxCommands: num
   for (const f of view.knownFood()) {
     if (view.ownerAt(f.cell) === me) continue;
     candidates.push({ cell: f.cell, kind: 'food', score: score(f.cell, f.amount * (f.stale ? 0.6 : 1)) });
+  }
+  // fertile ground to farm on (003): worth growing to while the mold has few farms; the nearest
+  // few unowned fertile cells are candidates (fertile ground is public terrain)
+  if (view.farms().length < FARM_WISH) {
+    const near: Candidate[] = [];
+    for (let y = 1; y < h - 1; y += 2) {
+      for (let x = 1; x < w - 1; x += 2) {
+        const c = y * w + x;
+        if (!view.fertileAt(c) || view.ownerAt(c) === me) continue;
+        const sc = score(c, FERTILE_VALUE);
+        if (sc > 0) near.push({ cell: c, kind: 'food', score: sc });
+      }
+    }
+    near.sort((u, v) => v.score - u.score || u.cell - v.cell);
+    for (const c of near.slice(0, 2)) candidates.push(c);
   }
   for (const d of view.dropWarnings()) {
     const from = view.nearestOwn(d.cell);

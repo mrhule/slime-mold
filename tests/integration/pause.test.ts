@@ -40,7 +40,7 @@ describe('pause (US5, SC-007)', () => {
     loop.speed = 0;
     enqueue(world, { type: 'setAllocation', mold: 1, value: 0.7 });
     const hud = readHud(world, 1);
-    expect(hud.storedNutrients).toBeCloseTo(30);
+    expect(hud.storedNutrients).toBeCloseTo(world.balance.playerStartNutrients);
     expect(hud.elapsedSeconds).toBe(0);
   });
 });

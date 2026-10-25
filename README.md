@@ -15,9 +15,13 @@ Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatchi
   more. Every so often food drops from above: a warning burst with a countdown shows where, for
   everyone, so it becomes a race.
 - **Spend.** Growing costs nutrients and every cell costs upkeep. If you grow past what your
-  income can pay for, your outermost cells starve. Build **Nutrient Farms** (`F`, then click one
-  of your cells) for steady extra income, **Harvesters** (`M`) beside big food to eat it faster, and
-  **Booster Factories** (`B`) to make your cells nearby stronger in fights.
+  income can pay for, your outermost cells starve. Each connected piece of vein holds only so many
+  nutrients, so build **Store Houses** (`T`) to raise that cap. **Nutrient Farms** (`F`) only go on
+  **fertile ground** (green patches with inked tufts, visible even in the fog) and only pay while a
+  store house is on their vein; click a farm to dial its output up or down (`[` / `]`). A store
+  house also speeds up tips and **Harvesters** (`M`, beside big food) along its vein, fading with
+  distance, at a small drain on the stock. **Booster Factories** (`B`) make the whole vein they sit
+  on stronger in fights.
 - **Fight.** Where two molds touch, a battle front forms. The **Growth / Fight** slider (or
   `Q` / `E`) decides how much of your nutrients go to growing and how much to the fronts. Cut a
   rival's vein and everything beyond the cut withers.
@@ -32,7 +36,8 @@ Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatchi
 |---|---|
 | Left-click | Set a growth target (or place a building in placement mode) |
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
-| `F` / `B` / `M` | Place a Nutrient Farm / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
+| `F` / `T` / `B` / `M` | Place a Nutrient Farm / Store House / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
+| Click your farm, then `[` / `]` | Open its output panel and lower / raise its output (income and upkeep move together) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |
 | `1` `2` `3` | Speed 1x, 2x, 3x |

@@ -55,6 +55,10 @@ interface GameResult {
   cells: number;
   rivalCells: number;
   tickMs: number;
+  /** the player model's farms and store houses at the end, and when its first farm paid (minutes, -1 if never) */
+  farms: number;
+  stores: number;
+  firstFarmMin: number;
 }
 
 /**
@@ -74,7 +78,7 @@ function maybeBuildFarm(world: World): void {
     let best = -1;
     let bestD = Infinity;
     for (const comp of world.components.values()) {
-      if (comp.moldId !== 1 || comp.pool < cost + 15 || !want(comp)) continue;
+      if (comp.moldId !== 1 || comp.pool < cost + 3 || !want(comp)) continue;
       for (const c of comp.cells) {
         const d = ((c % w) - cx) ** 2 + (Math.floor(c / w) - cy) ** 2;
         if (d < bestD && canPlace(world, 1, type, c).ok) {
@@ -106,6 +110,7 @@ function playGame(round: number, seed: number): GameResult {
   const maxTicks = Math.round((maxMinutes * 60) / TICK_DT);
   let tickMsTotal = 0;
   let ticks = 0;
+  let firstFarm = -1;
   while (world.tick < maxTicks && world.outcome === 'playing') {
     if (world.tick % interval === 0 && world.molds[0]!.status === 'alive') {
       for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
@@ -115,6 +120,7 @@ function playGame(round: number, seed: number): GameResult {
     step(world);
     tickMsTotal += performance.now() - t0;
     ticks++;
+    if (firstFarm < 0 && world.tick % 20 === 0 && world.buildings.some((b) => !b.destroyed && b.moldId === 1 && b.type === 'farm' && b.linked)) firstFarm = (world.tick * TICK_DT) / 60;
   }
   return {
     outcome: world.outcome === 'playing' ? 'timeout' : world.outcome,
@@ -122,6 +128,9 @@ function playGame(round: number, seed: number): GameResult {
     cells: world.molds[0]!.cellCount,
     rivalCells: world.molds.slice(1).reduce((a, m) => a + m.cellCount, 0),
     tickMs: tickMsTotal / Math.max(1, ticks),
+    farms: world.buildings.filter((b) => !b.destroyed && b.moldId === 1 && b.type === 'farm').length,
+    stores: world.buildings.filter((b) => !b.destroyed && b.moldId === 1 && b.type === 'storehouse').length,
+    firstFarmMin: firstFarm,
   };
 }
 
@@ -133,7 +142,7 @@ for (let round = roundFrom; round <= roundTo; round++) {
   for (let g = 0; g < games; g++) {
     const res = playGame(round, baseSeed * 1000 + g);
     results.push(res);
-    if (verbose) console.log(`  round ${round} game ${g}: ${res.outcome} in ${res.minutes.toFixed(1)} min, ${res.cells} cells vs ${res.rivalCells}`);
+    if (verbose) console.log(`  round ${round} game ${g}: ${res.outcome} in ${res.minutes.toFixed(1)} min, ${res.cells} cells vs ${res.rivalCells}; farms ${res.farms}, stores ${res.stores}, first paying farm ${res.firstFarmMin < 0 ? 'never' : res.firstFarmMin.toFixed(1) + ' min'}`);
   }
   const wins = results.filter((r) => r.outcome === 'victory').length;
   const losses = results.filter((r) => r.outcome === 'defeat').length;

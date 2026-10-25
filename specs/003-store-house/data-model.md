@@ -40,11 +40,11 @@ and its piece is not `unpaid`).
 ## Balance additions (`src/config/balance.ts`)
 
 ```ts
-pool: { baseCap: 120 }
+pool: { baseCap: 300 }
 buildings.farm: { …existing, defaultLevel: 4, levelStep: 0.25, maxLevel: 6 }
 buildings.storehouse: {
-  cost: 40, upkeep: 0.2, limit: 4,
-  capacity: 180, perPiece: 3,
+  cost: 25, upkeep: 0.2, limit: 4,
+  capacity: 300, perPiece: 3,
   reach: 20, bonus: 0.5, stackCap: 1.0,
   drain: 0.5,        // nutrients per second per working Store House while something is boosted
   lowStock: 15,      // boost stops below this pool level, resumes at lowStock × 1.25
@@ -55,7 +55,7 @@ fertile: {
 }
 ```
 
-`playerStartNutrients` and `rivalStartNutrientsBase` may change in the balance pass (research S12).
+The farm's cost is now 25 and `playerStartNutrients` is 50 (research S12, balance pass).
 
 ## Command (see [contracts/commands.md](contracts/commands.md))
 

@@ -12,6 +12,11 @@ soldiers: they simply make the area they are in stronger. Nutrients come in diff
 larger pieces provide more, so the player can build a factory next to a large resource to mine
 it faster. A tech tree may come later."
 
+> **Update (003):** [003-store-house](../003-store-house/spec.md) changes the farm described
+> here: farms now stand only on fertile ground, pay only while a store house is in their piece, and
+> have an output dial. The booster now strengthens its whole vein (tapering with distance along it)
+> instead of a square area. Read 003 for the current rules.
+
 This builds on [001-core-game-loop](../001-core-game-loop/spec.md): the same sim, commands,
 fog of war, and comic art direction (FR-032, FR-033) apply. It adds a second way to spend
 nutrients: instead of only growing veins, the player can place **buildings** on their mold.

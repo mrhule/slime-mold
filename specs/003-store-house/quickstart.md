@@ -21,7 +21,7 @@ npx vitest run tests/unit/sim/store-house.test.ts
 npx vitest run tests/unit/sim/fertile.test.ts
 npx vitest run tests/unit/sim/farm-output.test.ts
 npx vitest run tests/unit/sim/store-boost.test.ts
-npx vitest run tests/integration/store-house-round.test.ts
+npx vitest run tests/integration/rival-round.test.ts tests/integration/farm-economy.test.ts
 npm test                                  # the whole suite, incl. determinism over 20 seeds
 npx tsx tests/bench/tick.bench.ts         # tick cost with every building at its limit
 npm run sim:batch -- --rounds 1-3 --games 20   # balance proxy with the new farm routine

@@ -188,7 +188,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   cellBuildCost: 1.0,
   spendRateCap: 6,
   spendRatePerCell: 0.01,
-  playerStartNutrients: 30,
+  playerStartNutrients: 50,
   rivalStartNutrientsBase: 30,
 
   flowEvery: 5,
@@ -245,8 +245,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5, defaultLevel: 4, levelStep: 0.25, maxLevel: 6 },
-    storehouse: { cost: 40, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
+    farm: { cost: 25, upkeep: 0.15, limit: 6, income: 1.5, defaultLevel: 4, levelStep: 0.25, maxLevel: 6 },
+    storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },

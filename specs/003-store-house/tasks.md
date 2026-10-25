@@ -176,10 +176,10 @@ description: "Task list for 003-store-house"
 
 **Purpose**: Balance, performance, docs, and a clean-clone check
 
-- [ ] T055 Balance pass with `tools/batch-sim.ts`: tune `storehouse.cost`, `playerStartNutrients`, `pool.baseCap`, `storehouse.drain` and the boost so round 1 is playable before the first Store House, a Store House plus a farm pays back in a sensible time, and the AI stand-in keeps roughly its earlier win rates; record the numbers and the decision in `specs/003-store-house/research.md` (S12)
-- [ ] T056 [P] Performance: extend `tests/bench/tick.bench.ts` to place every building at its limit and run the boost; confirm the tick stays inside the 6 ms budget and the terrain bake with the fertile overlay stays under about 1 s on the largest map; record results in Implementation notes
-- [ ] T057 [P] Update `README.md` (Store House, fertile ground, farm dial, new keys `T`, `[`, `]`) and the 002 docs where they describe the farm (`specs/002-buildings/spec.md` note that 003 changes farm placement and income)
-- [ ] T058 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what they show
+- [X] T055 Balance pass with `tools/batch-sim.ts`: tune `storehouse.cost`, `playerStartNutrients`, `pool.baseCap`, `storehouse.drain` and the boost so round 1 is playable before the first Store House, a Store House plus a farm pays back in a sensible time, and the AI stand-in keeps roughly its earlier win rates; record the numbers and the decision in `specs/003-store-house/research.md` (S12)
+- [X] T056 [P] Performance: extend `tests/bench/tick.bench.ts` to place every building at its limit and run the boost; confirm the tick stays inside the 6 ms budget and the terrain bake with the fertile overlay stays under about 1 s on the largest map; record results in Implementation notes
+- [X] T057 [P] Update `README.md` (Store House, fertile ground, farm dial, new keys `T`, `[`, `]`) and the 002 docs where they describe the farm (`specs/002-buildings/spec.md` note that 003 changes farm placement and income)
+- [X] T058 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what they show
 - [ ] T059 Fresh-clone validation: clone, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts` all pass
 
 ---

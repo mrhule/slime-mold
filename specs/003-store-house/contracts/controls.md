@@ -17,7 +17,7 @@ speed, `Space` pause, `Q/E` as in 001, `Esc` cancel.
 | Building | What the ghost shows |
 |---|---|
 | Farm | valid only on fertile ground; reason text "Farms need fertile ground" otherwise; a warning badge "No store house on this vein" when the piece has none |
-| Store House | the piece's cap as `120 → 300` text, and the boost glow along the vein it would cover |
+| Store House | the piece's cap as `300 → 600` text, and the boost glow along the vein it would cover |
 
 ## Farm selection and the output dial
 

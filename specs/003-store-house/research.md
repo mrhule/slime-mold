@@ -147,7 +147,7 @@ the batch simulator and playtests (see S12). Earlier decisions: [001](../001-cor
   cap and a spend is not planned. The AI sets a farm's level only to turn farms down while its net
   income is negative. All through `MoldView` (`fertileAt`, `capOf`, `farmsLinked` are public
   information).
-- **Decision (balance)**: first numbers: `pool.baseCap 120`; Store House cost 40, upkeep 0.2,
+- **Decision (balance, first guess, superseded by the Balance pass below)**: first numbers: `pool.baseCap 120`; Store House cost 40, upkeep 0.2,
   limit 4, capacity 180, `perPiece` 3, reach 20, bonus 0.5, stack cap 1.0, drain 0.5/s, low stock
   15; farm unchanged otherwise (income 1.5, upkeep 0.15, default level 4). The early game is the
   risk: a player starts with 30 nutrients, a Store House costs 40, and a farm 30, so the first
@@ -157,6 +157,35 @@ the batch simulator and playtests (see S12). Earlier decisions: [001](../001-cor
 - **Rationale**: the AI follows the same rules (Constitution II); numbers stay in one config (IV).
 - **Alternatives**: start every mold with a free Store House (would contradict the spec's
   "a mold begins a round with none"; kept as the fallback if the early game proves too slow).
+
+## S12b. Balance pass (T055)
+
+Measured with `tools/batch-sim.ts` (the AI stand-in plays the player: store house first, then farms
+on fertile ground; 40–60 games per cell, rounds 1–4). Before 003 the stand-in won about 83% / 78% /
+88% of rounds 1–3. After the first 003 numbers (store house 40, farm 30, start 30, cap 120 then 300)
+it won only about 57% / 45% / 63%.
+
+What the runs showed:
+
+- **Not the cap.** A huge base cap changed nothing; neither did cheaper store houses alone, a higher
+  farm income, closer fertile patches (`fertile.nearRadius` 11 or 14), or switching rival building off.
+- **The affordable pair.** Games were bimodal: either a store house and farms went down in the first
+  minute (win) or never (loss, "farms 0, stores 0"), because growth spends the stock as fast as it
+  arrives, so it never reached store house + farm. With a start of 30 and a 40-nutrient store house
+  the pair was out of reach at the start. Raising only the start (50) made it worse (18%): the store
+  house was bought and the farm never was. What fixed it was making **store house + farm affordable
+  from the starting stock**.
+- **Chosen numbers**: `playerStartNutrients` 50, store house cost 25, farm cost 25 (upkeep, capacity
+  300, base cap 300, `perPiece` 3, boost and drain unchanged). Store house + farm pay back in about
+  43 s (50 nutrients at +1.15/s net). Stand-in result: **76% / 82% / 88% / 80%** for rounds 1–4
+  (50 games each), against 83% / 78% / 88% before 003.
+- **AI change kept**: rivals and the stand-in grow toward fertile ground (value 18, nearest two
+  cells) until they have three farms. Its measured effect is within noise at this sample size; it is
+  kept because a mold with no farm site cannot use the new economy at all.
+- **Not tuned**: the boost strength (+50% at the store house, 20-cell reach), the drain (0.5/s) and the
+  dial curve. The stand-in does not use them in a way a person would; they need playtesting.
+- **Rival starts** (`rivalStartNutrientsBase` 30) are unchanged; rivals rarely build early because
+  the build reserve gates them.
 
 ## S13. Risks to watch
 
