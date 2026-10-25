@@ -1,5 +1,5 @@
-import { DX, DY, dirBetween, edgeSlot, neighbor, octile, popcount8 } from './grid';
-import { refreshSources, removeCell } from './network';
+import { dirBetween, edgeSlot, neighbor, octile } from './grid';
+import { refreshSources } from './network';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { CellIndex, Component, GrowthTarget, World } from './types';
@@ -8,7 +8,7 @@ import type { CellIndex, Component, GrowthTarget, World } from './types';
  * Tree-routed Physarum flow (R2). Every `flowEvery` ticks, for each connected piece:
  * route income (toward the root) and tip demand (away from it) through a BFS tree, cap what
  * reaches each tip by the thinnest vein on its path, let each vein's conductivity relax toward
- * the flow it carries, and retract unused leaf branches.
+ * the flow it carries (thinning to a floor when idle, never retracting).
  */
 export function solveFlow(world: World): void {
   const dtF = world.balance.flowEvery * TICK_DT;
@@ -143,39 +143,9 @@ function solveComponent(world: World, comp: Component, dtF: number): void {
       }
       let d = world.conductivity[slot] as number;
       d += (q - b.conductivityDecay * d) * dtF;
-      d = Math.min(b.maxConductivity, Math.max(0, d));
-      // a live edge keeps a tiny floor so it still reads as an edge until it is retracted
-      world.conductivity[slot] = Math.max(d, 1e-4);
+      // unused veins thin to a floor but are never removed (FR-005)
+      world.conductivity[slot] = Math.min(b.maxConductivity, Math.max(b.minConductivity, d));
       world.edgeFlow[slot] = sign * q;
-      world.lowFlowTime[slot] = d < b.retractThreshold ? (world.lowFlowTime[slot] as number) + dtF : 0;
     }
   }
-
-  retractLeaves(world, comp);
 }
-
-/** Remove dead-end branch cells whose vein has carried almost nothing for `retractDelay`. */
-function retractLeaves(world: World, comp: Component): void {
-  const b = world.balance;
-  const mold = moldOf(world, comp.moldId);
-  const w = world.width;
-  const dead: CellIndex[] = [];
-  for (const cell of comp.cells) {
-    const cdx = Math.abs((cell % w) - (mold.core % w));
-    const cdy = Math.abs(Math.floor(cell / w) - Math.floor(mold.core / w));
-    if (Math.max(cdx, cdy) <= b.coreSafeRadius) continue;
-    const bits = world.edges[cell] as number;
-    if (popcount8(bits) !== 1) continue;
-    if ((world.food[cell] as number) > 0) continue;
-    let k = 0;
-    while (!(bits & (1 << k))) k++;
-    const slot = edgeSlot(w, cell, k);
-    if ((world.lowFlowTime[slot] as number) >= b.retractDelay) dead.push(cell);
-  }
-  for (const cell of dead) {
-    removeCell(world, cell);
-    comp.pool += b.retractRefund * b.cellBuildCost;
-  }
-}
-
-export { DX, DY };

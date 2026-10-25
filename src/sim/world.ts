@@ -59,7 +59,6 @@ export function createWorld(
     biomass: new Float32Array(cells),
     edges: new Uint8Array(cells),
     conductivity: new Float32Array(cells * 4),
-    lowFlowTime: new Float32Array(cells * 4),
     edgeFlow: new Float32Array(cells * 4),
     component,
     food: new Float32Array(cells),

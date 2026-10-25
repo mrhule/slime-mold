@@ -42,8 +42,11 @@ the mold reaches the food, absorbs it, and the nutrient total rises enough to fu
    and the HUD shows that growth is starved.
 4. **Given** an obstacle between the mold and a target, **When** the mold grows, **Then** it routes
    around the obstacle and never grows through it.
-5. **Given** a branch that carries no nutrient flow for a sustained period, **When** time passes,
-   **Then** that branch thins and eventually retracts, returning part of its nutrients.
+5. **Given** a branch that carries no nutrient flow, **When** time passes, **Then** it thins to a
+   minimum thickness but stays in place; idle veins are never removed.
+6. **Given** a piece of the mold whose upkeep is more than its income and stored nutrients,
+   **When** time passes, **Then** its thinnest, outermost leaf cells starve and die one at a time
+   until income covers upkeep again (the core never starves).
 
 ---
 
@@ -180,9 +183,11 @@ confirm the orders take effect. Check that each HUD value matches the game state
 - **FR-003**: Growth MUST cost nutrients. Growth speed MUST scale with the nutrients allocated
   to growth.
 - **FR-004**: Veins MUST route around obstacles. Some terrain MAY slow growth without blocking it.
-- **FR-005**: Vein thickness MUST reflect the nutrient flow it carries. Veins with no flow for a
-  sustained period MUST thin and retract, returning part of their nutrient cost.
-- **FR-006**: Each mold MUST pay ongoing upkeep in proportion to the size of its network.
+- **FR-005**: Vein thickness MUST reflect the nutrient flow it carries. Veins with no flow MUST
+  thin to a minimum thickness but MUST NOT be removed for being idle.
+- **FR-006**: Each mold MUST pay ongoing upkeep in proportion to the size of its network. When a
+  piece cannot pay, its thinnest, outermost leaf cells MUST starve and die one at a time until
+  upkeep is covered again, and the core MUST never starve.
 
 **Resources**
 
@@ -314,5 +319,7 @@ confirm the orders take effect. Check that each HUD value matches the game state
 
 - Q: When do you win a round? → A: When every rival is eliminated or the player controls 75% of the map.
 - Q: What happens when you lose a round? → A: The run ends and the next one restarts at round 1, roguelike style.
+- Q: Should unused veins retract? → A: No. Veins persist and only thin. The brake on expansion is
+  upkeep: a mold that grows beyond what its income can pay for loses its outermost cells.
 - Q: How much of the map can you see? → A: Fog of war. Terrain is always visible; food and
   rivals only near your veins, with last-known state remembered. Rivals obey the same fog.

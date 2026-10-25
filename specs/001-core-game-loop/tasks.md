@@ -73,7 +73,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 ## Phase 3: User Story 1 - Grow and Forage (Priority: P1) 🎯 MVP
 
-**Goal**: A single mold on a generated map grows toward clicked targets, absorbs food, thickens used veins, and retracts unused ones
+**Goal**: A single mold on a generated map grows toward clicked targets, absorbs food, thickens used veins, and thins idle ones (never removing them)
 
 **Independent Test**: A round with no rivals. Set targets toward food and confirm the mold reaches it, absorbs it, and nutrients rise enough to fund more growth (quickstart scenarios 1–4)
 
@@ -83,7 +83,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 - [X] T022 [P] [US1] Network tests in `tests/unit/sim/network.test.ts`: adding an edge sets bits on both endpoints; component labeling; merge "the pools are added together, and the merged piece keeps the lower id"; split pool "shared out by cell count (rounded down; the remainder goes to the piece with the lowest id)"; an orphaned piece loses `orphanDecay·dt` biomass per tick
 - [X] T023 [P] [US1] Growth tests in `tests/unit/sim/growth.test.ts`: a target inside an obstacle snaps to the nearest open cell within 6 cells, otherwise it is rejected `no-open-cell-nearby`; A* never enters terrain 2 or 3 and routes around obstacles; terrain costs open 1.0 / rough 2.5; the 4th target replaces the oldest (`createdTick`); the tip advances one cell per `cellBuildCost × terrainCost` delivered; the state becomes `starved` after 1 s without delivery and `arrived` removes the target; `cancelTarget`/`clearTargets` keep built veins
-- [X] T024 [P] [US1] Flow tests in `tests/unit/sim/flow.test.ts`: an edge's flow equals the summed subtree demand; `D += (|Q| − decay·D)·dt`; delivery is capped by the bottleneck `capacityPerD·D` along the path; an edge below `retractThreshold` for `retractDelay` (8 s) is removed with a 50% `retractRefund`; with no front sinks the full budget goes to growth (spillover, R4); spend ≤ `min(pool, spendRateCap·dt)` after upkeep
+- [X] T024 [P] [US1] Flow tests in `tests/unit/sim/flow.test.ts`: an edge's flow equals the summed subtree demand; `D += (|Q| − decay·D)·dt`; delivery is capped by the bottleneck `capacityPerD·D` along the path; idle edges thin to `minConductivity` and are never removed; with no front sinks the full budget goes to growth (spillover, R4); spend ≤ `min(pool, spendRateCap·dt)` after upkeep
 - [X] T025 [P] [US1] Food tests in `tests/unit/sim/food.test.ts`: per tick, each owned food cell transfers `min(food[i], absorbRate·dt)` to its component pool; `remaining = Σ food[cells]`; at 0 the source is removed and `foodDepleted` is emitted; the oatFlake footprint is 2×2 with 40 nutrients at 2.0/cell/s
 - [X] T026 [US1] Forage integration test in `tests/integration/forage.test.ts`: fixed seed, no rivals, scripted `setTarget` at the nearest food. The mold reaches it within 60 s of game time (1200 ticks), stored nutrients end higher than they started, and `assertInvariants` holds every tick
 
@@ -93,7 +93,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 - [X] T028 [US1] Implement the network in `src/sim/network.ts`: add/remove cell and edge, BFS component relabel on change, merge and split with pool rules (T022), orphan detection (`sources.length === 0`) with `pieceOrphaned` events, and orphan biomass decay
 - [X] T029 [US1] Implement food absorption and `FoodSource` lifecycle in `src/sim/food.ts` (drops come in US3)
 - [X] T030 [US1] Implement growth in `src/sim/growth.ts`: `setTarget` snapping and validation, nearest owned attach cell by BFS ring search, A* over the 8-connected grid with the terrain costs from `balance.terrainCost`, string-pulling, tip advance, re-path on invalidation, and tip state transitions per data-model.md
-- [X] T031 [US1] Implement the flow solve in `src/sim/flow.ts`: per component, a multi-source BFS tree from sources (food cells with `food > 0` and the owned `core`); growth-sink demand split by distance to target; subtree accumulation; bottleneck-capped delivery; conductivity update; low-flow timers and retraction with refund (R2, R4)
+- [X] T031 [US1] Implement the flow solve in `src/sim/flow.ts`: per component, a multi-source BFS tree from sources (food cells with `food > 0` and the owned `core`); growth-sink demand split by distance to target; subtree accumulation; bottleneck-capped delivery; conductivity update with a floor (R2, R4); unpaid upkeep starves leaf cells in `src/sim/upkeep.ts`
 - [X] T032 [US1] Wire the economy into `src/sim/step.ts`: `coreIncome` (0.5/s), upkeep `upkeepPerCell × cellCount` per component, growth delivery each tick, flow every `flowEvery` ticks; set up `createRound` for single-mold rounds with `playerStartNutrients` (30) and `defaultAllocation` (0.3); make `setTarget`, `cancelTarget`, and `clearTargets` real in `src/sim/commands.ts`
 - [X] T033 [US1] Implement `readHud` (stored nutrients, 2 s smoothed net income, allocation, `growthStarved`, targets) in `src/sim/hud.ts`, exported from `src/sim/index.ts`
 - [X] T034 [P] [US1] Terrain layer: bake terrain (grimy scratched surface with grunge overlay, inked rough patches, outlined cel-shaded obstacle shards and pebbles with hatched shadows, dish wall) once per map into a 2× cell-resolution texture in `src/render/terrain-layer.ts`
@@ -120,8 +120,11 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 > - T037: food is drawn with a redrawn `Graphics`, not a pre-baked atlas.
 > - T042: vein rebuild cost was profiled, but frame rate was not (browser pane hidden); see
 >   `checklists/playtest.md`.
-> - Added during the build: `coreSafeRadius` (cells next to the core never retract) and a lower
->   `spendRateCap` (40 to 6); "starved" now means an empty stock with growth running on income.
+> - Added during the build: a lower `spendRateCap` (40 to 6); "starved" now means an empty stock
+>   with growth running on income.
+> - Changed after review (2026-10-25): veins no longer retract (FR-005 amended). Idle veins thin to
+>   `minConductivity`; unpaid upkeep starves the thinnest, outermost leaf cell one at a time
+>   (`src/sim/upkeep.ts`, FR-006). `retract*` and `coreSafeRadius` settings and `lowFlowTime` removed.
 
 ---
 

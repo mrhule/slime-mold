@@ -42,8 +42,9 @@ Run `npm run dev` and open the game.
 2. **Obstacle routing (US1-4)**: Click a spot behind an obstacle. The vein routes around it.
 3. **Starved growth (US1-3)**: Set 3 far targets right away. The HUD shows "growth starved"
    until income catches up.
-4. **Retraction (US1-5)**: Build a branch to used-up food and leave it. Within about 10 s it thins
-   and retracts.
+4. **Idle veins persist (US1-5/6)**: Build a branch to food, let the food run out, and leave it.
+   The branch thins but stays. Then grow far past the core's means (about 125 cells with no food
+   income) and watch the outermost leaf cells starve one at a time.
 5. **Front and slider (US2-1/2)**: Grow into the rival. A front forms (sparks). Drag the slider
    toward Fight. Your side of the front should start winning, and growth elsewhere slows.
 6. **Cut a supply line (US2-3)**: Target a thin rival vein between its core and its food. The

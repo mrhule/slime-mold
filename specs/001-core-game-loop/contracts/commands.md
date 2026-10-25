@@ -20,7 +20,7 @@ type Command =
 | Command | Effect | Rejections (no state change; event `CommandRejected{reason}`) |
 |---|---|---|
 | `setTarget` | Snap to the nearest open cell within 6 cells, plan a path (R5), and add a target. If the mold already has 3, the oldest is replaced. | `out-of-bounds`, `no-open-cell-nearby`, `unreachable`, `mold-eliminated` |
-| `cancelTarget` | Remove that target. Built veins remain (and may retract later if unused). | `unknown-target`, `not-owner` |
+| `cancelTarget` | Remove that target. Built veins remain. | `unknown-target`, `not-owner` |
 | `clearTargets` | Remove all of the mold's targets. | `mold-eliminated` |
 | `setAllocation` | `allocation = clamp(value, 0, 1)`, rounded to 0.05 steps. | `mold-eliminated` |
 

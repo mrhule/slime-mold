@@ -18,9 +18,8 @@ export interface BalanceConfig {
   flowEvery: number;           // 5 ticks
   conductivityDecay: number;   // 0.8
   capacityPerD: number;        // 6.0 nutrients/s per unit D
-  retractThreshold: number;    // 0.05
-  retractDelay: number;        // 8 s
-  retractRefund: number;       // 0.5
+  minConductivity: number;     // 0.15, idle veins thin to this but are never removed
+  starveDecay: number;         // 0.1 biomass/s lost by the leaf starving when upkeep is unpaid
   orphanDecay: number;         // 0.25 biomass/s
 
   // growth (R5)

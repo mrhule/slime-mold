@@ -58,28 +58,26 @@ describe('flow', () => {
     expect(mold.targets[0]!.rate).toBeLessThanOrEqual(defaultBalance.capacityPerD * 0.02);
   });
 
-  it('retracts an unused dead-end branch one cell at a time and refunds half the cost', () => {
-    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 50);
-    world.balance = { ...world.balance, coreIncome: 0, upkeepPerCell: 0 };
+  it('never retracts idle veins, they only thin to the conductivity floor', () => {
+    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 500);
     extendEast(world, mold.id, 6);
-    const startCells = mold.cellCount;
-    const comp = world.components.get(world.component[mold.core]!)!;
-    const poolBefore = comp.pool;
-    for (let i = 0; i < 20 * 20; i++) step(world); // 20 s with nothing carrying flow
-    expect(mold.cellCount).toBeLessThan(startCells);
-    expect(world.owner[mold.core]).toBe(mold.id); // the core never retracts
-    expect(comp.pool).toBeGreaterThan(poolBefore);
-    const removed = startCells - mold.cellCount;
-    expect(comp.pool - poolBefore).toBeCloseTo(removed * 0.5, 5);
+    const cells = mold.cellCount;
+    const slot = edgeSlot(world.width, cellOf(world, 12, 20), 0);
+    for (let i = 0; i < 20 * 120; i++) step(world); // two idle minutes
+    expect(mold.cellCount).toBe(cells);
+    expect(world.conductivity[slot]!).toBeCloseTo(defaultBalance.minConductivity, 3);
     assertInvariants(world);
   });
 
-  it('does not retract a branch that is carrying flow', () => {
+  it('thickens a branch that is carrying flow', () => {
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, 500);
     const end = extendEast(world, mold.id, 6);
     addTarget(world, mold.id, cellOf(world, 50, 20));
-    for (let i = 0; i < 20 * 12; i++) step(world);
+    for (let i = 0; i < 20 * 3; i++) step(world); // still growing
+    expect(mold.targets).toHaveLength(1);
     expect(world.owner[end]).toBe(mold.id);
+    const slot = edgeSlot(world.width, cellOf(world, 12, 20), 0);
+    expect(world.conductivity[slot]!).toBeGreaterThan(defaultBalance.minConductivity * 4);
   });
 
   it('never spends more than the pool holds', () => {

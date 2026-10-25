@@ -12,14 +12,14 @@ Build: Phases 1–2 and US1 (T001–T041). Seeds 12345 and 777, map 160×120 (ro
 | 1 | First food (US1-1, US1-2, SC-001) | **Pass.** Clicking the nearest food (13 cells away) set a target marker and the mold grew to it. All 40 nutrients were absorbed (food retired) and the stock rose from 30.0 to 56.4. Reached well inside 60 s. |
 | 2 | Obstacle routing (US1-4) | **Pass.** A click on a glass obstacle snapped to its nearest open edge and the vein routed around the obstacle, never through it. |
 | 3 | Starved growth (US1-3) | **Pass, after a fix.** First run showed 0.0 nutrients but no warning, because a trickle of core income kept resetting the starvation timer. "Starved" now means the stock is nearly empty so growth runs on income alone; the red "GROWTH STARVED!" burst appeared about 12 s after two far targets were set. Regression tests added. |
-| 4 | Retraction (US1-5) | **Pass.** With all targets cleared, a 45-cell network held for about 10 s, then retracted from the tips inward: 45 cells to 14 after about 18 s, refunding nutrients (stock 21.8). The core and its four arms never retract. |
+| 4 | Idle veins (US1-5/6) | **Superseded.** The first build retracted idle veins (45 cells to 14 in about 18 s). That was removed on 2026-10-25: idle veins now thin to a floor and stay, and unpaid upkeep starves one outermost leaf cell at a time. Covered by tests (`flow.test.ts`, `upkeep.test.ts`); re-run in the browser at the next playtest. |
 
 ### Observations
 
-- Whole idle networks retract back to the core within about 20 s. That follows FR-005 as
-  written, but it makes holding territory impossible without constant flow. Needs a decision in
-  the balance pass (T093): longer `retractDelay`, slower `conductivityDecay`, or retraction only
-  when the piece is starved.
+- Idle networks used to retract back to the core within about 20 s. Decision (2026-10-25): veins
+  never retract; upkeep starvation is the brake on expansion instead (FR-005, FR-006). The core's
+  0.5/s income pays upkeep for about 125 cells with no other income, so food and (later) farms
+  are what let a mold grow bigger.
 - Growth speed: `spendRateCap` was 40 and let a funded tip build about 40 cells/s. Lowered to 6
   (about 6 cells/s). Final value is for the balance pass.
 - Opening budget is tight: 30 starting nutrients is about 25 cells, and the nearest food is

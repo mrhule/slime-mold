@@ -11,6 +11,7 @@ export function newComponent(world: World, moldId: MoldId): Component {
     cells: [],
     sources: [],
     orphaned: false,
+    starveCell: -1,
   };
   world.components.set(c.id, c);
   return c;
@@ -40,7 +41,6 @@ export function linkCells(world: World, a: CellIndex, b: CellIndex): void {
   const slot = edgeSlot(w, a, k);
   if ((world.conductivity[slot] as number) === 0) {
     world.conductivity[slot] = world.balance.initialConductivity;
-    world.lowFlowTime[slot] = 0;
   }
   const ca = world.component[a] as number;
   const cb = world.component[b] as number;
@@ -55,7 +55,6 @@ export function unlinkCells(world: World, a: CellIndex, b: CellIndex): void {
   world.edges[b] = (world.edges[b] as number) & ~(1 << ((k + 4) & 7));
   const slot = edgeSlot(w, a, k);
   world.conductivity[slot] = 0;
-  world.lowFlowTime[slot] = 0;
   world.edgeFlow[slot] = 0;
 }
 

@@ -10,7 +10,7 @@ A single-player browser RTS in which the player is a slime mold, racing and figh
 molds over procedurally generated maps across rounds that get harder. Technically, it's a
 pure, deterministic, fixed-tick (20 Hz) simulation over a cell grid in typed arrays. On top of
 the grid sits a vein graph whose nutrient flow and thickness follow a simplified Physarum
-model (tree-routed demand, conductivity reinforcement, retraction). Combat is resolved by
+model (tree-routed demand, conductivity reinforcement, upkeep starvation). Combat is resolved by
 nutrients delivered to contact cells. Rivals are utility AIs that see the world only through
 a fog-filtered `MoldView` and act only through the player's `Command` set. PixiJS renders
 the grid as a comic / cel-shaded "ink film" (heavy outlines, flat color bands, hatching) with
@@ -105,7 +105,7 @@ src/
 │   ├── difficulty.ts          # difficultyFor(round) (R14)
 │   ├── commands.ts            # apply/validate commands
 │   ├── network.ts             # edges, components (split/merge), orphaning (R3)
-│   ├── flow.ts                # demand routing, conductivity, retraction (R2, R4)
+│   ├── flow.ts                # demand routing, conductivity (R2, R4)
 │   ├── growth.ts              # targets, A*, tips (R5)
 │   ├── combat.ts              # contact scan, pressure, cell death (R6)
 │   ├── food.ts                # absorption, drop scheduling (FR-007, FR-017)
@@ -162,7 +162,7 @@ Each step ends in a playable build (Constitution VI):
 1. **Foundation**: Vite + TS + Vitest scaffold, rng, grid, balance, sim API skeleton, game loop,
    Pixi app with camera, boundary test.
 2. **US1 Grow and forage (P1)**: simple mapgen (no rivals), growth, flow, food absorption,
-   retraction, film and vein rendering, basic HUD.
+   idle-vein thinning, film and vein rendering, basic HUD.
 3. **US5 Time control and HUD (P1)**: pause, speed, command queue while paused, auto-pause,
    full HUD, title and round-end screens.
 4. **US2 Rivals and battle fronts (P1)**: multi-mold starts, combat, splitting and orphaning, fog

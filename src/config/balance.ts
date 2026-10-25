@@ -23,11 +23,10 @@ export interface BalanceConfig {
   flowEvery: number;
   conductivityDecay: number;
   capacityPerD: number;
-  retractThreshold: number;
-  retractDelay: number;
-  retractRefund: number;
-  /** cells within this many cells (Chebyshev) of the core never retract */
-  coreSafeRadius: number;
+  /** idle veins thin to this conductivity but are never removed */
+  minConductivity: number;
+  /** biomass per second lost by the leaf cell starving when upkeep cannot be paid */
+  starveDecay: number;
   orphanDecay: number;
   initialConductivity: number;
   maxConductivity: number;
@@ -109,10 +108,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   flowEvery: 5,
   conductivityDecay: 0.8,
   capacityPerD: 6.0,
-  retractThreshold: 0.05,
-  retractDelay: 8,
-  retractRefund: 0.5,
-  coreSafeRadius: 1,
+  minConductivity: 0.15,
+  starveDecay: 0.1,
   orphanDecay: 0.25,
   initialConductivity: 0.5,
   maxConductivity: 20,

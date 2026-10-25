@@ -67,6 +67,8 @@ export interface Component {
   cells: CellIndex[];
   sources: CellIndex[];
   orphaned: boolean;
+  /** leaf cell currently starving because upkeep cannot be paid, or -1 */
+  starveCell: CellIndex;
 }
 
 export interface FoodSource {
@@ -210,7 +212,6 @@ export interface World {
   edges: Uint8Array;
   /** conductivity D for the 4 forward directions (E, SE, S, SW) of each cell */
   conductivity: Float32Array;
-  lowFlowTime: Float32Array;
   /** signed flow per edge slot (+ = along the forward direction); render-only pulse info */
   edgeFlow: Float32Array;
   component: Int32Array;

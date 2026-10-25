@@ -22,7 +22,6 @@ The whole simulation state for one round.
 | `biomass` | `Float32Array[cells]` | 0..1; cell health and visual density |
 | `edges` | `Uint8Array[cells]` | 8-bit mask of vein links to neighbors (bit k = direction k) |
 | `conductivity` | `Float32Array[cells × 4]` | `D` for the 4 "forward" directions (E, SE, S, SW), so each edge is stored once |
-| `lowFlowTime` | `Float32Array[cells × 4]` | seconds the edge has spent below `retractThreshold` |
 | `component` | `Int32Array[cells]` | network-piece id for owned cells, -1 otherwise |
 | `food` | `Float32Array[cells]` | nutrients remaining on that cell (0 = none) |
 | `foodSourceId` | `Int16Array[cells]` | which `FoodSource` the cell belongs to, -1 otherwise |
@@ -82,9 +81,10 @@ A connected set of cells owned by one mold.
 | `cellCount` | int | |
 | `sources` | cell index[] | cells over food with `food > 0`, plus `core` if owned |
 | `orphaned` | bool | `sources.length === 0` ⇒ no income; cells decay by `orphanDecay` |
+| `starveCell` | cell index | the leaf cell currently starving because upkeep cannot be paid, or -1 |
 
 **Lifecycle**
-- **Split** (after a cell dies or an edge retracts): BFS relabels the affected component. The
+- **Split** (after a cell dies in combat or is orphaned): BFS relabels the affected component. The
   pool is shared out by cell count (rounded down; the remainder goes to the piece with the
   lowest id, for determinism).
 - **Merge** (when growth links two pieces of the same mold): the pools are added together, and

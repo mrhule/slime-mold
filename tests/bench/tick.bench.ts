@@ -30,9 +30,7 @@ function prebuild(world: World, cells: number): void {
 }
 
 function foragingWorld(round: number): World {
-  // idle veins would retract; keep them so the tick cost is a worst case
-  const balance = { ...defaultBalance, retractDelay: 1e9 };
-  const world = createRound({ runSeed: 5, roundNumber: round, balance });
+  const world = createRound({ runSeed: 5, roundNumber: round, balance: defaultBalance });
   const mold = world.molds[0]!;
   prebuild(world, NETWORK_CELLS);
   for (const comp of world.components.values()) comp.pool = 1e6;

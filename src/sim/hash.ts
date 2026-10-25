@@ -37,7 +37,6 @@ export function stateHash(world: World): number {
   h.array(world.biomass);
   h.array(world.edges);
   h.array(world.conductivity);
-  h.array(world.lowFlowTime);
   h.array(world.component);
   h.array(world.food);
   for (const m of world.molds) {
@@ -59,6 +58,7 @@ export function stateHash(world: World): number {
     h.num(c.id);
     h.num(c.pool);
     h.num(c.cells.length);
+    h.num(c.starveCell);
   }
   for (const f of world.foodSources) {
     h.num(f.remaining);

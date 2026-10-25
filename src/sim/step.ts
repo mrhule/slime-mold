@@ -3,6 +3,7 @@ import { solveFlow } from './flow';
 import { tickFood } from './food';
 import { tickGrowth } from './growth';
 import { decayOrphans } from './network';
+import { tickUpkeep } from './upkeep';
 import { TICK_DT } from './types';
 import type { Component, World } from './types';
 
@@ -19,17 +20,6 @@ function tickIncome(world: World): void {
     mold.incomeTick += gain;
   }
   tickFood(world);
-}
-
-function tickUpkeep(world: World): void {
-  const rate = world.balance.upkeepPerCell * TICK_DT;
-  for (const comp of world.components.values()) {
-    const due = rate * comp.cells.length;
-    const paid = Math.min(due, comp.pool);
-    comp.pool -= paid;
-    const mold = world.molds[comp.moldId - 1];
-    if (mold) mold.upkeepTick += paid;
-  }
 }
 
 function settleNetIncome(world: World): void {

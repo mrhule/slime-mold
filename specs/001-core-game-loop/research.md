@@ -40,10 +40,13 @@ flow tick (every 5 sim ticks, i.e. 4×/s):
    `D += (|Q| - decay·D)·dt`. Rendered vein thickness ∝ `D`.
 5. A sink's delivered amount is capped by the bottleneck capacity `kCap·D` along its path,
    so thick established veins deliver more to the front than fresh thin ones.
-6. Edges whose `D` stays below `retractThreshold` for `retractDelay` seconds are removed,
-   refunding `retractRefund` (50%) of their build cost (FR-005).
+6. Edges with no flow thin toward `minConductivity` but are never removed (FR-005). Expansion is
+   limited by upkeep instead (FR-006): when a piece cannot pay `upkeepPerCell`, its thinnest,
+   outermost leaf cell loses `starveDecay` biomass per second and dies at zero, one at a time,
+   until income covers upkeep again. A half-starved cell heals once upkeep is paid. The core
+   never starves, and removing a leaf never splits a piece.
 
-**Rationale**: Gives the key Physarum behaviors (used routes thicken, unused ones retract,
+**Rationale**: Gives the key Physarum behaviors (used routes thicken, unused ones thin,
 reinforcing supply lines matters) in O(nodes) per component per flow tick, with no linear
 solve. Only `+ − × ÷` and `sqrt` are used, which are exactly specified by IEEE-754, keeping
 determinism (R11).
@@ -275,8 +278,8 @@ Sub-systems run at their own cadence, derived from the tick counter (determinist
 
 | System | Cadence |
 |---|---|
-| Combat, growth, absorption, upkeep | every tick |
-| Flow solve, vein D update, retraction | every 5 ticks |
+| Combat, growth, absorption, upkeep and starvation | every tick |
+| Flow solve, vein D update | every 5 ticks |
 | Fog incremental / full | every 5 ticks / every 40 ticks |
 | AI think | every 16–28 ticks (difficulty R14 plus seeded jitter per rival) |
 | Win/loss check, map-control % | every 10 ticks |
