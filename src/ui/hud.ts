@@ -5,6 +5,7 @@ export interface HudActions {
   onTogglePause(): void;
   onSpeed(speed: 1 | 2 | 3): void;
   onAllocation(value: number): void;
+  onToggleMute(): void;
 }
 
 export interface HudClock {
@@ -58,10 +59,20 @@ export class Hud {
         <div class="rivals" data-hud="rivals"></div>
         <div class="hint">Click the map to grow there. Right-click a marker to cancel.</div>
       </div>
+      <button type="button" class="mute-btn" data-hud="mute" aria-label="Mute" aria-pressed="false" title="Mute or unmute sound">
+        <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
+          <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M3 9 H8 L14 4 V20 L8 15 H3 Z" fill="#fff6dc"/>
+            <g data-part="waves" fill="none"><path d="M18 8 Q21 12 18 16"/><path d="M21 5 Q26 12 21 19"/></g>
+            <path data-part="slash" d="M17 6 L26 18" stroke="#e0432a" stroke-width="3" hidden/>
+          </g>
+        </svg>
+      </button>
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute']) this.el[k] = q(k);
+    this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.slider = q('alloc') as HTMLInputElement;
     this.speedButtons = [...root.querySelectorAll<HTMLButtonElement>('.clock button')];
 
@@ -78,6 +89,16 @@ export class Hud {
         b.blur();
       });
     }
+  }
+
+  /** show the sound state on the mute button */
+  setMuted(muted: boolean): void {
+    const btn = this.el.mute!;
+    btn.setAttribute('aria-pressed', String(muted));
+    btn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    btn.classList.toggle('muted', muted);
+    (btn.querySelector('[data-part="slash"]') as SVGElement).toggleAttribute('hidden', !muted);
+    (btn.querySelector('[data-part="waves"]') as SVGElement).style.opacity = muted ? '0.35' : '1';
   }
 
   update(hud: HudModel, clock: HudClock): void {

@@ -1,3 +1,4 @@
+import type { Settings } from '../audio/settings';
 import type { Run } from '../game/run';
 import { MOLD_COLORS } from '../render/palette';
 
@@ -11,6 +12,12 @@ export interface ScreenActions {
   newRun(): void;
 }
 
+/** how the menu reads and changes the player's settings (saved by the caller) */
+export interface SettingsApi {
+  get(): Settings;
+  set(change: Partial<Settings>): void;
+}
+
 const fmtTime = (seconds: number): string => {
   const s = Math.floor(seconds);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -21,7 +28,11 @@ export class Screens {
   private readonly root: HTMLElement;
   private lastKey = '';
 
-  constructor(parent: HTMLElement, private readonly actions: ScreenActions) {
+  constructor(
+    parent: HTMLElement,
+    private readonly actions: ScreenActions,
+    private readonly settings: SettingsApi,
+  ) {
     parent.insertAdjacentHTML('beforeend', '<div class="screens"></div>');
     this.root = parent.querySelector('.screens') as HTMLElement;
     this.root.addEventListener('click', (e) => {
@@ -33,6 +44,18 @@ export class Screens {
       const act = btn.dataset.act as keyof ScreenActions;
       this.actions[act]();
     });
+    // settings controls apply at once and are saved by the caller; the menu is not re-rendered, so a
+    // slider keeps its focus while it is dragged
+    const onSetting = (e: Event): void => {
+      const el = e.target as HTMLInputElement | HTMLSelectElement;
+      const key = el.dataset?.setting as keyof Settings | undefined;
+      if (!key) return;
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') this.settings.set({ [key]: el.checked } as Partial<Settings>);
+      else if (el instanceof HTMLInputElement && el.type === 'range') this.settings.set({ [key]: Number(el.value) } as Partial<Settings>);
+      else this.settings.set({ [key]: el.value } as Partial<Settings>);
+    };
+    this.root.addEventListener('input', onSetting);
+    this.root.addEventListener('change', onSetting);
   }
 
   update(run: Run): void {
@@ -73,12 +96,34 @@ export class Screens {
     </div></div>`;
   }
 
+  private settingsSection(): string {
+    const s = this.settings.get();
+    const slider = (key: string, value: number): string => `<input type="range" min="0" max="1" step="0.05" value="${value}" data-setting="${key}" />`;
+    return `<div class="settings">
+      <h3>Settings</h3>
+      <label class="setting"><span>Sound</span>${slider('sfxVolume', s.sfxVolume)}</label>
+      <label class="setting"><span>Music</span>${slider('musicVolume', s.musicVolume)}</label>
+      <label class="setting"><span>Mute all</span><input type="checkbox" data-setting="muted" ${s.muted ? 'checked' : ''} /></label>
+    </div>`;
+  }
+
+  /** keep the menu's controls in step when a setting changes elsewhere (the HUD mute button) */
+  syncSettings(): void {
+    const s = this.settings.get();
+    for (const el of this.root.querySelectorAll<HTMLInputElement>('[data-setting]')) {
+      const key = el.dataset.setting as keyof Settings;
+      if (el.type === 'checkbox') el.checked = Boolean(s[key]);
+      else if (el.type === 'range') el.value = String(s[key]);
+    }
+  }
+
   private menu(): string {
     return `<div class="screen"><div class="panel big">
       <h2>Paused</h2>
       <button class="btn" data-act="closeMenu">Resume</button>
       <button class="btn" data-act="restartRun">Restart run</button>
       <button class="btn" data-act="quitToTitle">Quit to title</button>
+      ${this.settingsSection()}
     </div></div>`;
   }
 

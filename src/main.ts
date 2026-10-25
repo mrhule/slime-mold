@@ -1,8 +1,13 @@
 import './ui/styles.css';
 import { Application } from 'pixi.js';
+import { Director } from './audio/director';
+import { AudioEngine } from './audio/engine';
+import { loadSettings, saveSettings } from './audio/settings';
+import type { Settings } from './audio/settings';
 import { FixedStepLoop } from './game/loop';
 import { Run } from './game/run';
-import { createStorage } from './game/storage';
+import { visibleDeaths } from './game/frame-events';
+import { createStorage, safeLocalStorage } from './game/storage';
 import { GameRenderer } from './render/renderer';
 import { createRound, enqueue, pendingAllocation, placePreview, readHud, roundOutcome, step } from './sim';
 import type { BuildingType, Command, SimEvent } from './sim';
@@ -54,13 +59,33 @@ async function main(): Promise<void> {
     if (outcome !== 'playing') run.finishRound(outcome);
   });
 
+  // sound: settings are loaded once, changes apply at once and are saved; the engine starts on the
+  // first click or key press (browser autoplay rules) and does nothing if audio is unavailable
+  const store = safeLocalStorage();
+  let settings: Settings = loadSettings(store);
+  const engine = new AudioEngine();
+  const director = new Director();
+  engine.setSettings(settings);
+  const unlockAudio = (): void => {
+    engine.unlock();
+    engine.startMusic();
+    if (engine.available) {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    }
+  };
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+
   const send = (cmd: Command): void => enqueue(run.world, cmd);
+  let applySettings: (change: Partial<Settings>) => void = () => {};
   const hud = new Hud(
     ui,
     {
       onTogglePause: () => run.togglePause(),
       onSpeed: (s) => run.setSpeed(s),
       onAllocation: (value) => send({ type: 'setAllocation', mold: PLAYER, value }),
+      onToggleMute: () => applySettings({ muted: !settings.muted }),
     },
     run.world.balance.victoryControl,
   );
@@ -80,7 +105,15 @@ async function main(): Promise<void> {
     quitToTitle: () => run.quitToTitle(),
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
-  });
+  }, { get: () => settings, set: (change) => applySettings(change) });
+  applySettings = (change) => {
+    settings = { ...settings, ...change };
+    saveSettings(settings, store);
+    engine.setSettings(settings);
+    hud.setMuted(settings.muted);
+    screens.syncSettings();
+  };
+  hud.setMuted(settings.muted);
   const debug = dev ? new DebugOverlay(ui, params.has('debug')) : null;
 
   // the clock stops when the tab is hidden or loses focus (FR-027)
@@ -113,6 +146,7 @@ async function main(): Promise<void> {
       builtVersion = run.worldVersion;
       renderer.build(run.world);
       input.placing = null;
+      director.rebase();
     }
 
     loop.speed = run.loopSpeed;
@@ -153,6 +187,24 @@ async function main(): Promise<void> {
         if (src) renderer.fx.addLanding(src.y * run.world.width + src.x, run.world.width, (Math.max(src.w, src.h) * 8) / 2 + 6);
       }
       if (e.type === 'moldEliminated' && e.mold !== PLAYER) hud.toast(`Rival ${e.mold - 1} was eaten!`, 3);
+    }
+
+    // sound: the engine only runs while the game is playing and the tab is visible, and the director
+    // reads one snapshot per rendered frame (so fast-forward cannot multiply cues)
+    engine.setRunning(run.state === 'playing' && !document.hidden);
+    const player = run.world.molds[PLAYER - 1];
+    if (player) {
+      const requests = director.update({
+        playerId: PLAYER,
+        nowMs: performance.now(),
+        playerCells: player.cellCount,
+        playerGathered: player.stats.nutrientsGathered,
+        runState: run.state,
+        outcome: run.outcome,
+        visibleDeaths: visibleDeaths(run.world, frameEvents, PLAYER),
+        events: frameEvents,
+      });
+      for (const request of requests) engine.play(request);
     }
     frameEvents.length = 0;
 

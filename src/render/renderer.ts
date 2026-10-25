@@ -8,6 +8,7 @@ import { FoodLayer } from './food-layer';
 import { FxLayer } from './fx-layer';
 import type { PlacementGhost } from './fx-layer';
 import { bakeTerrain } from './terrain-layer';
+import type { QualityLevel } from './style';
 import { VeinLayer } from './vein-layer';
 import { CELL } from './units';
 
@@ -25,6 +26,8 @@ export class GameRenderer {
   fog!: FogLayer;
   fx!: FxLayer;
   private timeSeconds = 0;
+  /** the quality level layers read to decide which passes to draw (A14) */
+  quality: QualityLevel = 'high';
 
   constructor(readonly app: Application, sim: Readonly<World>) {
     this.camera = new Camera(sim.width * CELL, sim.height * CELL);
@@ -47,6 +50,11 @@ export class GameRenderer {
     const core = sim.molds[0]?.core ?? 0;
     this.camera.zoom = 1.2;
     this.camera.centerOn((core % sim.width) * CELL, Math.floor(core / sim.width) * CELL);
+  }
+
+  /** switch the quality level; layers pick it up on their next draw */
+  setQuality(level: QualityLevel): void {
+    this.quality = level;
   }
 
   resize(): void {

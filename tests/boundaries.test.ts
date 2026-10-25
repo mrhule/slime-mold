@@ -53,6 +53,33 @@ describe('import boundaries (Constitution I, II)', () => {
     }
   });
 
+  it('nothing in src/sim imports src/audio (or render, ui, game)', () => {
+    for (const f of simFiles) {
+      for (const imp of importsOf(strip(readFileSync(f, 'utf8')))) {
+        expect(imp, `${relative(root, f)} imports ${imp}`).not.toMatch(/audio/);
+      }
+    }
+  });
+
+  it('src/audio imports only sim types, the sim entry point (types), and other audio files', () => {
+    const audioDir = join(root, 'src', 'audio');
+    let exists = true;
+    try {
+      statSync(audioDir);
+    } catch {
+      exists = false;
+    }
+    if (!exists) return;
+    const allowed = /^\.\.\/sim\/(types|index)$|^\.\/[\w-]+$/;
+    for (const f of files(audioDir)) {
+      const src = strip(readFileSync(f, 'utf8'));
+      for (const imp of importsOf(src)) {
+        expect(imp, `${relative(root, f)} imports ${imp}`).toMatch(allowed);
+        expect(imp, `${relative(root, f)} imports pixi, render, ui or game code`).not.toMatch(/pixi|\/render|\/ui|\/game/);
+      }
+    }
+  });
+
   it('render only reads the sim through its public entry points', () => {
     const renderDir = join(root, 'src', 'render');
     let exists = true;

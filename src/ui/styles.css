@@ -111,6 +111,30 @@ html, body {
 }
 .hud .warn[hidden] { display: none; }
 
+.mute-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 52px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: #fff6dc;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.mute-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.mute-btn.muted { background: #ffd9d0; }
+
+.settings { margin: 10px 0 6px; padding-top: 8px; border-top: 3px solid var(--ink); text-align: left; }
+.settings h3 { font-family: var(--display); font-size: 20px; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 6px; }
+.settings .setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 0; font-weight: 800; }
+.settings .setting input[type='range'] { width: 150px; }
+.settings .setting select { font: inherit; font-weight: 800; padding: 2px 6px; border: 3px solid var(--ink); background: #fff6dc; }
+.settings .setting input[type='checkbox'] { width: 22px; height: 22px; accent-color: #f2c744; }
+
 .farm-panel {
   position: absolute;
   top: 16px;
