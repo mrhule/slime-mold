@@ -49,7 +49,7 @@ A farm is always `working` while it stands. The `idle` state in the spec is for 
 | `cost` | 40 | 25 |
 | `upkeep` | 0.15 /s | 0.1 /s |
 | `limit` | 4 | 4 |
-| type-specific | `radius` 6 cells, `bonus` +50% per factory, `stackCap` +100% total | `minFoodCells` 9, `rateMult` 2 |
+| type-specific | `reach` 24 cells along the veins (linear taper), `bonus` +75% at the factory, `stackCap` +100% total | `minFoodCells` 9, `rateMult` 2 |
 
 - `Building.target` is the food source a harvester works on (-1 for the others).
 - `World.boost` holds each cell's combat strength multiplier (1 = none), rebuilt every tick from the

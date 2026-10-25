@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { boosterCover } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -120,26 +121,13 @@ export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: nu
   else drawHarvester(g, cx, cy, color, style);
 }
 
-/** A hand-inked dashed square around the cells a booster factory strengthens. */
-export function drawBoosterArea(g: Graphics, cx: number, cy: number, radiusCells: number, color: number, alpha = 0.85): void {
-  const half = (radiusCells + 0.5) * CELL;
-  const corners: [number, number][] = [[cx - half, cy - half], [cx + half, cy - half], [cx + half, cy + half], [cx - half, cy + half]];
-  const dashes = (): void => {
-    for (let i = 0; i < 4; i++) {
-      const [x0, y0] = corners[i] as [number, number];
-      const [x1, y1] = corners[(i + 1) % 4] as [number, number];
-      const len = Math.hypot(x1 - x0, y1 - y0);
-      for (let d = 0; d < len; d += 17) {
-        const a = d / len;
-        const b = Math.min(1, (d + 10) / len);
-        g.moveTo(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a).lineTo(x0 + (x1 - x0) * b, y0 + (y1 - y0) * b);
-      }
-    }
-  };
-  dashes();
-  g.stroke({ width: 5, color: INK, alpha: alpha * 0.8, cap: 'round' });
-  dashes();
-  g.stroke({ width: 2.4, color, alpha, cap: 'round' });
+/** A soft glow along every vein a booster factory strengthens, fading with its taper. */
+export function drawBoosterCover(g: Graphics, width: number, cover: { cell: number; bonus: number }[], maxBonus: number, color: number, alpha = 1): void {
+  for (const { cell, bonus } of cover) {
+    const [x, y] = cellCenter(cell, width);
+    const t = Math.max(0, bonus / maxBonus);
+    g.circle(x, y, CELL * (0.7 + 0.5 * t)).fill({ color, alpha: alpha * (0.1 + 0.3 * t) });
+  }
 }
 
 /** Buildings drawn above the veins, redrawn only when what the player can see changes. */
@@ -175,6 +163,8 @@ export class BuildingLayer {
       key += shown(b) ? `${b.id}${idle},` : 'x';
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
+    // the veins a booster covers keep growing, so redraw its glow a few times a second
+    if (world.buildings.some((b) => b.type === 'booster' && !b.destroyed)) key += `t${Math.floor(world.tick / 10)}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
 
@@ -184,13 +174,13 @@ export class BuildingLayer {
       const [x, y] = cellCenter(r.cell, world.width);
       drawBuilding(this.g, r.type, x, y, 0, { stale: true });
     }
-    const radius = world.balance.buildings.booster.radius;
+    const boosterSpec = world.balance.buildings.booster;
     for (const b of world.buildings) {
       if (!shown(b)) continue;
       const [x, y] = cellCenter(b.cell, world.width);
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
-      if (b.type === 'booster') drawBoosterArea(this.areas, x, y, radius, color);
+      if (b.type === 'booster') drawBoosterCover(this.areas, world.width, boosterCover(world, b.cell), boosterSpec.bonus, color);
       const food = foodOf(b);
       const idle = b.type === 'harvester' && (food?.depleted ?? true);
       if (b.type === 'harvester' && !idle && food) {

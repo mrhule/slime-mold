@@ -19,9 +19,9 @@ export interface BuildingSpec {
 }
 
 export interface BoosterSpec extends BuildingSpec {
-  /** cells (Chebyshev) around the factory that it strengthens */
-  radius: number;
-  /** extra combat strength per factory, as a fraction (0.5 = +50%) */
+  /** how far along the veins the boost reaches, in cells; it tapers off linearly to nothing */
+  reach: number;
+  /** extra combat strength per factory right at the factory, as a fraction (0.5 = +50%) */
   bonus: number;
   /** most extra strength overlapping factories can add together */
   stackCap: number;
@@ -205,7 +205,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   buildings: {
     farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5 },
-    booster: { cost: 40, upkeep: 0.15, limit: 4, radius: 6, bonus: 0.5, stackCap: 1.0 },
+    booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 

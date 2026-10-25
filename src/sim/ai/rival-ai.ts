@@ -10,8 +10,8 @@ const MIN_SPACING = 9;
 const EXPLORE_SAMPLES = 10;
 /** how many own cells to try when looking for a spot to build */
 const BUILD_TRIES = 80;
-/** a booster factory strengthens cells this close to it (public knowledge) */
-const BOOSTER_REACH = 5;
+/** a booster factory this close to a front (as the crow flies) strengthens it well along the veins */
+const BOOSTER_REACH = 10;
 /** food worth a harvester: roughly bread crumb size and up */
 const HARVEST_WORTH = 100;
 

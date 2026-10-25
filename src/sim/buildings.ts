@@ -1,3 +1,4 @@
+import { DX, DY } from './grid';
 import { TICK_DT } from './types';
 import type { Building, BuildingType, CellIndex, Component, FoodSource, MoldId, PlaceResult, World } from './types';
 
@@ -135,14 +136,40 @@ export function boosterWorking(world: Readonly<World>, b: Building): boolean {
 }
 
 /**
- * Rebuild the combat strength multiplier from the working booster factories (FR-010, FR-012):
- * the owner's cells within `radius` get +`bonus` per factory, capped at +`stackCap` in total.
- * Cheap enough to run every tick (a handful of factories, each covering a small square).
+ * The cells a booster factory at `start` strengthens, and how much: the whole vein network it is
+ * wired into, fading linearly with distance along the veins (not through the air), from the full
+ * `bonus` at the factory to nothing at `reach` cells (FR-010, FR-012).
+ */
+export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
+  const spec = world.balance.buildings.booster;
+  const w = world.width;
+  const out: { cell: CellIndex; bonus: number }[] = [];
+  const dist = new Map<CellIndex, number>([[start, 0]]);
+  const queue: CellIndex[] = [start];
+  for (let head = 0; head < queue.length; head++) {
+    const c = queue[head] as CellIndex;
+    const d = dist.get(c) as number;
+    out.push({ cell: c, bonus: spec.bonus * (1 - d / spec.reach) });
+    if (d + 1 >= spec.reach) continue;
+    const bits = world.edges[c] as number;
+    for (let k = 0; k < 8; k++) {
+      if (!(bits & (1 << k))) continue;
+      const n = c + (DX[k] as number) + (DY[k] as number) * w;
+      if (dist.has(n)) continue;
+      dist.set(n, d + 1);
+      queue.push(n);
+    }
+  }
+  return out;
+}
+
+/**
+ * Rebuild the combat strength multiplier from the working booster factories: each adds its taper
+ * to the cells its veins reach, capped at +`stackCap` in total. Cheap enough to run every tick (a
+ * handful of factories, each covering at most a few hundred cells).
  */
 export function recomputeBoost(world: World): void {
   const spec = world.balance.buildings.booster;
-  const w = world.width;
-  const h = world.height;
   let any = false;
   for (const b of world.buildings) if (b.type === 'booster' && !b.destroyed) any = true;
   if (!any && !world.boostActive) return;
@@ -151,23 +178,8 @@ export function recomputeBoost(world: World): void {
   for (const b of world.buildings) {
     if (!boosterWorking(world, b)) continue;
     world.boostActive = true;
-    const cx = b.cell % w;
-    const cy = Math.floor(b.cell / w);
-    for (let y = Math.max(0, cy - spec.radius); y <= Math.min(h - 1, cy + spec.radius); y++) {
-      for (let x = Math.max(0, cx - spec.radius); x <= Math.min(w - 1, cx + spec.radius); x++) {
-        const c = y * w + x;
-        if (world.owner[c] !== b.moldId) continue;
-        const next = (world.boost[c] as number) + spec.bonus;
-        world.boost[c] = Math.min(1 + spec.stackCap, next);
-      }
+    for (const { cell, bonus } of boosterCover(world, b.cell)) {
+      world.boost[cell] = Math.min(1 + spec.stackCap, (world.boost[cell] as number) + bonus);
     }
   }
-}
-
-/** the cells a booster factory strengthens, for drawing its area */
-export function boosterArea(world: Readonly<World>, b: Building): { x0: number; y0: number; x1: number; y1: number } {
-  const r = world.balance.buildings.booster.radius;
-  const cx = b.cell % world.width;
-  const cy = Math.floor(b.cell / world.width);
-  return { x0: cx - r, y0: cy - r, x1: cx + r, y1: cy + r };
 }

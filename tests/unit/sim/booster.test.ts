@@ -37,7 +37,7 @@ function line(world: World, moldId: number, from: [number, number], to: [number,
 }
 
 describe('booster factory area (FR-010, FR-012)', () => {
-  it('strengthens only its owner\'s cells inside the radius', () => {
+  it('strengthens its own\'s whole vein, fading with distance along it', () => {
     const { world, a, e } = arena();
     const cells = line(world, a, [20, 10], [34, 10]); // 15 cells in a row
     world.components.get(world.component[cells[0]!]!)!.pool = 200;
@@ -47,9 +47,14 @@ describe('booster factory area (FR-010, FR-012)', () => {
     expect(placeBuilding(world, a, 'booster', factory)).toEqual({ ok: true });
     for (const c of cells) {
       const dx = Math.abs((c % world.width) - 27);
-      expect(world.boost[c], `cell x=${c % world.width}`).toBe(dx <= spec.radius ? 1 + spec.bonus : 1);
+      expect(world.boost[c], `cell x=${c % world.width}`).toBeCloseTo(1 + spec.bonus * (1 - dx / spec.reach), 5);
     }
-    expect(world.boost[enemy]).toBe(1); // not the enemy's cell, even inside the radius
+    expect(world.boost[factory]!).toBeGreaterThan(world.boost[cells[0]!]!); // fades along the vein
+    const apart = cellOf(world, 27, 14); // same mold, not wired in
+    addCell(world, a, apart, -1);
+    recomputeBoost(world);
+    expect(world.boost[apart]).toBe(1);
+    expect(world.boost[enemy]).toBe(1); // not the enemy's cell, even next to the vein
     expect(world.boost[cellOf(world, 27, 20)]).toBe(1); // empty ground
   });
 
@@ -118,7 +123,7 @@ describe('booster factory in a fight', () => {
     const plain = fight(false);
     const boosted = fight(true);
     const base = b.basePressure * b.attackEff * TICK_DT;
-    const m = 1 + spec.bonus;
+    const m = 1 + spec.bonus * (1 - 2 / spec.reach); // the front cell is two cells down the vein
     // plain: both lose the same
     expect(plain.world.biomass[plain.front]!).toBeCloseTo(1 - base, 6);
     expect(plain.world.biomass[plain.enemyFront]!).toBeCloseTo(1 - base, 6);

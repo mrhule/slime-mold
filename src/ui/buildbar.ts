@@ -5,7 +5,7 @@ const SHORT: Record<BuildingType, string> = { farm: 'Farm', booster: 'Booster', 
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
   farm: 'Slow, steady nutrient income.',
-  booster: 'Makes your cells nearby hit harder and take less damage in fights.',
+  booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
