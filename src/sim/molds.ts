@@ -13,6 +13,7 @@ export function addMold(
   core: CellIndex,
   startNutrients: number,
   aggression = 0,
+  buildReserve = 100,
 ): Mold {
   const cells = world.width * world.height;
   const id = world.molds.length + 1;
@@ -36,8 +37,9 @@ export function addMold(
     vision: new Uint8Array(cells),
     memOwner: new Uint8Array(cells),
     memFood: new Float32Array(cells),
+    memBuilding: new Uint8Array(cells),
     seenCells: new Uint32Array(8),
-    ai: kind === 'rival' ? { aggression, debug: [] } : null,
+    ai: kind === 'rival' ? { aggression, buildReserve, debug: [] } : null,
     aiNext: 0,
   };
   world.molds.push(mold);

@@ -65,7 +65,7 @@ export function createRound(opts: CreateRoundOptions): World {
   addMold(world, 'player', starts[playerIndex] as number, balance.playerStartNutrients);
   starts.forEach((cell, i) => {
     if (i === playerIndex) return;
-    addMold(world as World, 'rival', cell, balance.rivalStartNutrientsBase * difficulty.rivalStartNutrients, difficulty.rivalAggression);
+    addMold(world as World, 'rival', cell, balance.rivalStartNutrientsBase * difficulty.rivalStartNutrients, difficulty.rivalAggression, difficulty.rivalBuildReserve);
   });
   const jitter = world.rng.get('jitter');
   for (const m of world.molds) if (m.ai) m.aiNext = Math.floor(jitter.range(10, 30));

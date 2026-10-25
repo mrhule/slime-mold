@@ -49,6 +49,7 @@ describe('difficultyFor (R14)', () => {
       rivalStartNutrients: 1,
       aiThinkInterval: -1,
       dropInterval: 0,
+      rivalBuildReserve: -1,
     };
     for (let n = 1; n < 50; n++) {
       const a = difficultyFor(n);
@@ -62,6 +63,13 @@ describe('difficultyFor (R14)', () => {
       }
       expect(strictly, `round ${n} to ${n + 1} is strictly harder somewhere`).toBe(true);
     }
+  });
+
+  it('rivals build sooner as rounds go on: a smaller reserve, down to a floor', () => {
+    expect(difficultyFor(1).rivalBuildReserve).toBe(700);
+    expect(difficultyFor(5).rivalBuildReserve).toBe(420);
+    expect(difficultyFor(10).rivalBuildReserve).toBe(70);
+    expect(difficultyFor(40).rivalBuildReserve).toBe(60);
   });
 
   it('treats a non-positive or fractional round as round 1 or the floor', () => {

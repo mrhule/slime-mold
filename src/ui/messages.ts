@@ -11,6 +11,9 @@ export const REASONS: Record<string, string> = {
   'on-food': "Can't build on food!",
   'limit-reached': 'No more of those allowed!',
   'cant-afford': 'Not enough nutrients!',
+  'no-food-nearby': 'Build next to big food!',
+  'food-too-small': 'That food is too small!',
+  'already-harvested': 'Already harvesting that!',
 };
 
 export const FOOD_NAMES: Record<string, string> = {

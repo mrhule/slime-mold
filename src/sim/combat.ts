@@ -1,5 +1,6 @@
 import { DX, DY, neighbor } from './grid';
 import { addCell, removeCellAndSplit } from './network';
+import { recomputeBoost } from './buildings';
 import { moldOf, moldsInOrder } from './world';
 import { TICK_DT } from './types';
 import type { Component, World } from './types';
@@ -51,6 +52,7 @@ export function tickCombat(world: World): void {
   const dt = TICK_DT;
   const sc = world.scratch;
   const { width: w, height: h } = world;
+  recomputeBoost(world);
   sc.hit.length = 0;
   const stamp = ++sc.damageStampN;
 
@@ -59,7 +61,8 @@ export function tickCombat(world: World): void {
       const comp = world.components.get(world.component[cell] as number) as Component;
       const grant = Math.min((world.pressure[cell] as number) * dt, comp.pool);
       comp.pool -= grant;
-      const eff = grant / dt + b.basePressure;
+      // a booster factory in range makes this cell hit harder (FR-010)
+      const eff = (grant / dt + b.basePressure) * (world.boost[cell] as number);
       sc.eff[cell] = eff;
       const share = eff / (world.enemyAdj[cell] as number);
       const dmg = share * b.attackEff * dt;
@@ -88,7 +91,8 @@ export function tickCombat(world: World): void {
   for (const n of sc.hit) {
     const defender = moldOf(world, world.owner[n] as number);
     const before = world.biomass[n] as number;
-    const dmg = sc.damage[n] as number;
+    // ...and tougher: damage taken is divided by the same multiplier
+    const dmg = (sc.damage[n] as number) / (world.boost[n] as number);
     defender.lossTick += Math.min(before, dmg);
     world.biomass[n] = before - dmg;
     if (before - dmg <= 0) dead.push(n);

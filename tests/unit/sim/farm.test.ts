@@ -14,7 +14,7 @@ const farm = defaultBalance.buildings.farm;
 
 /** no core income and no per-cell upkeep, so only farm numbers move the pool */
 function isolated(farmOverrides: Partial<typeof farm> = {}): BalanceConfig {
-  return { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0, buildings: { farm: { ...farm, ...farmOverrides } } };
+  return { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0, buildings: { ...defaultBalance.buildings, farm: { ...farm, ...farmOverrides } } };
 }
 
 function extendEast(world: World, moldId: number, len: number): number[] {
@@ -57,9 +57,8 @@ describe('farm income and upkeep', () => {
     const hud = readHud(world, mold.id);
     expect(hud.buildingIncome).toBeCloseTo(farm.income);
     expect(hud.netIncome).toBeCloseTo(farm.income - farm.upkeep, 1);
-    expect(hud.build).toEqual([
-      { type: 'farm', cost: farm.cost, upkeep: farm.upkeep, income: farm.income, count: 1, limit: farm.limit, affordable: true },
-    ]);
+    expect(hud.build.map((o) => o.type)).toEqual(['farm', 'booster', 'harvester']);
+    expect(hud.build[0]).toEqual({ type: 'farm', cost: farm.cost, upkeep: farm.upkeep, income: farm.income, count: 1, limit: farm.limit, affordable: true });
   });
 
   it('marks a build option unaffordable when no piece can pay', () => {
@@ -133,7 +132,7 @@ describe('destroying a farm', () => {
 describe('starvation and buildings', () => {
   it('spares a building cell while another leaf can starve instead', () => {
     // nothing comes in and the pool is empty, so upkeep goes unpaid and a leaf starves
-    const balance: BalanceConfig = { ...defaultBalance, coreIncome: 0, buildings: { farm: { ...farm, income: 0 } } };
+    const balance: BalanceConfig = { ...defaultBalance, coreIncome: 0, buildings: { ...defaultBalance.buildings, farm: { ...farm, income: 0 } } };
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, farm.cost, balance);
     const east = extendEast(world, mold.id, 20);
     const farmCell = east[19]!; // the outermost leaf, which would normally starve first
@@ -149,7 +148,7 @@ describe('starvation and buildings', () => {
   });
 
   it('takes a building cell only when no other leaf is left', () => {
-    const balance: BalanceConfig = { ...defaultBalance, coreIncome: 0, buildings: { farm: { ...farm, income: 0 } } };
+    const balance: BalanceConfig = { ...defaultBalance, coreIncome: 0, buildings: { ...defaultBalance.buildings, farm: { ...farm, income: 0 } } };
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, farm.cost, balance);
     const east = extendEast(world, mold.id, 3);
     const farmCell = east[2]!;

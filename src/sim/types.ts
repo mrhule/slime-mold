@@ -13,7 +13,11 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice';
 
-export type BuildingType = 'farm';
+export type BuildingType = 'farm' | 'booster' | 'harvester';
+
+/** what `Mold.memBuilding` stores for each building type (0 = none) */
+export const BUILDING_CODE: Record<BuildingType, number> = { farm: 1, booster: 2, harvester: 3 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'farm', 'booster', 'harvester'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -47,6 +51,8 @@ export interface MoldStats {
 export interface AiState {
   /** 0..1, from the difficulty profile */
   aggression: number;
+  /** from the difficulty profile; defaults to 100 */
+  buildReserve?: number;
   /** last few decisions, for the debug overlay */
   debug: string[];
 }
@@ -77,6 +83,8 @@ export interface Mold {
   vision: Uint8Array;
   memOwner: Uint8Array;
   memFood: Float32Array;
+  /** last-seen building on each cell: 0 none, 1 farm, 2 booster, 3 harvester */
+  memBuilding: Uint8Array;
   /** for the player: enemy cells currently in view (HUD rival list) */
   seenCells: Uint32Array;
   /** rivals only */
@@ -93,6 +101,8 @@ export interface Component {
   orphaned: boolean;
   /** leaf cell currently starving because upkeep cannot be paid, or -1 */
   starveCell: CellIndex;
+  /** true while the piece could not pay this tick's upkeep (booster factories stop working) */
+  unpaid: boolean;
 }
 
 export interface FoodSource {
@@ -116,6 +126,8 @@ export interface Building {
   moldId: MoldId;
   cell: CellIndex;
   placedTick: number;
+  /** harvester only: the food source it speeds up, otherwise -1 */
+  target: number;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
 }
@@ -144,7 +156,10 @@ export type PlaceReason =
   | 'occupied'
   | 'on-food'
   | 'limit-reached'
-  | 'cant-afford';
+  | 'cant-afford'
+  | 'no-food-nearby'
+  | 'food-too-small'
+  | 'already-harvested';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -168,6 +183,8 @@ export interface DifficultyProfile {
   rivalStartNutrients: number;
   aiThinkInterval: number;
   dropInterval: number;
+  /** nutrients a rival keeps in hand beyond a building's cost before it builds: lower builds sooner */
+  rivalBuildReserve: number;
 }
 
 export type RoundOutcome = 'playing' | 'victory' | 'defeat';
@@ -243,6 +260,14 @@ export interface MoldView {
   dropWarnings(): { cell: CellIndex; type: FoodType; landsInTicks: number }[];
   /** the own cell nearest to `cell`, or -1 if the mold has none */
   nearestOwn(cell: CellIndex): CellIndex;
+  /** every cell of the mold outside orphaned pieces */
+  ownCells(): CellIndex[];
+  /** would a building be allowed here right now? (same rules as the player, own cells only) */
+  canBuild(type: BuildingType, cell: CellIndex): boolean;
+  /** the most nutrients any one piece of the mold holds */
+  richestPool(): number;
+  /** what a building costs (public knowledge) */
+  buildCost(type: BuildingType): number;
   /** approximate cost to grow from one cell to another (distance plus terrain along the line) */
   pathCost(from: CellIndex, to: CellIndex): number;
   tick: number;
@@ -310,6 +335,10 @@ export interface World {
   buildings: Building[];
   /** building id on each cell, or -1 */
   buildingAt: Int16Array;
+  /** combat strength multiplier from booster factories (1 = none) */
+  boost: Float32Array;
+  /** true while any working booster factory is boosting some cells (lets recomputing be skipped) */
+  boostActive: boolean;
   drops: DropEvent[];
   /** walkable cells reachable from the starts; drops only fall where molds can get to them */
   reachable: Uint8Array;

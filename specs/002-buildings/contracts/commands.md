@@ -28,6 +28,9 @@ failure nothing changes and `commandRejected { mold, reason, cell }` is emitted.
 | `on-food` | the cell holds food (farms) |
 | `limit-reached` | the mold already has the maximum of this type |
 | `cant-afford` | the piece holding the cell has less than the cost |
+| `no-food-nearby` | harvester: no undepleted food item touches the cell |
+| `food-too-small` | harvester: the food item is smaller than `minFoodCells` |
+| `already-harvested` | harvester: this mold already has one on that food item |
 
 Checks run in the order shown, so the first failing reason is the one reported (for example, a
 click far from the mold is `not-your-cell`, not `cant-afford`).

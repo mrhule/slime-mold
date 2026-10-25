@@ -65,14 +65,18 @@ export function foodCells(world: World, src: FoodSource): CellIndex[] {
 
 /** Absorb nutrients from every food cell a mold holds, and retire used-up food. */
 export function tickFood(world: World): void {
+  // which (mold, food item) pairs have a working harvester (FR-015)
+  const harvested = new Set<number>();
+  for (const b of world.buildings) if (!b.destroyed && b.type === 'harvester') harvested.add(b.moldId * 65536 + b.target);
+  const mult = world.balance.buildings.harvester.rateMult;
   for (const src of world.foodSources) {
     if (src.depleted) continue;
-    const rate = world.balance.foodTypes[src.type].absorbRate * TICK_DT;
+    const baseRate = world.balance.foodTypes[src.type].absorbRate * TICK_DT;
     for (const c of foodCells(world, src)) {
       const left = world.food[c] as number;
       const owner = world.owner[c] as number;
       if (left <= 0 || owner === 0) continue;
-      const amount = Math.min(left, rate);
+      const amount = Math.min(left, harvested.has(owner * 65536 + src.id) ? baseRate * mult : baseRate);
       world.food[c] = left - amount;
       src.remaining -= amount;
       const comp = world.components.get(world.component[c] as number) as Component;

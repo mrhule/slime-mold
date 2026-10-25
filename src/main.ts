@@ -5,7 +5,7 @@ import { Run } from './game/run';
 import { createStorage } from './game/storage';
 import { GameRenderer } from './render/renderer';
 import { canPlace, createRound, enqueue, pendingAllocation, readHud, roundOutcome, step } from './sim';
-import type { Command, SimEvent } from './sim';
+import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
@@ -119,11 +119,11 @@ async function main(): Promise<void> {
     renderer.resize();
 
     // placement preview: ask the sim whether it would allow the building under the cursor
-    let ghost: { cell: number; ok: boolean } | null = null;
+    let ghost: { cell: number; ok: boolean; type: BuildingType } | null = null;
     const pointer = input.pointerPosition;
     if (input.placing && input.hoverCell !== null && pointer) {
       const result = canPlace(run.world, PLAYER, input.placing, input.hoverCell);
-      ghost = { cell: input.hoverCell, ok: result.ok };
+      ghost = { cell: input.hoverCell, ok: result.ok, type: input.placing };
       buildBar.showHint(result.ok ? 'Click to build' : reasonText(result.reason), pointer.x, pointer.y, result.ok);
     } else {
       buildBar.showHint(null, 0, 0, true);

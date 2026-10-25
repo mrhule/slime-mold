@@ -1,3 +1,4 @@
+import { canPlace } from './buildings';
 import { SQRT2, octile } from './grid';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -82,6 +83,10 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
         .filter((d) => d.state === 'warning')
         .map((d) => ({ cell: d.cell, type: d.type, landsInTicks: Math.max(0, d.landTick - world.tick) }));
     },
+    ownCells: () => ownCells.slice(),
+    canBuild: (type, cell) => ownCells.length > 0 && world.owner[cell] === moldId && canPlace(world, moldId, type, cell).ok,
+    buildCost: (type) => world.balance.buildings[type].cost,
+    richestPool: () => components.reduce((best, c) => (c.pool > best ? c.pool : best), 0),
     nearestOwn(cell) {
       let best = -1;
       let bestD = Infinity;

@@ -42,6 +42,30 @@ A farm is always `working` while it stands. The `idle` state in the spec is for 
 | `limit` | 6 | per mold |
 | `income` | 1.5 /s | farm only: nutrients per second into its piece |
 
+### Booster factory and harvester (added with US2 and US3)
+
+| Field | Booster | Harvester |
+|---|---|---|
+| `cost` | 40 | 25 |
+| `upkeep` | 0.15 /s | 0.1 /s |
+| `limit` | 4 | 4 |
+| type-specific | `radius` 6 cells, `bonus` +50% per factory, `stackCap` +100% total | `minFoodCells` 9, `rateMult` 2 |
+
+- `Building.target` is the food source a harvester works on (-1 for the others).
+- `World.boost` holds each cell's combat strength multiplier (1 = none), rebuilt every tick from the
+  working boosters: a booster works unless its piece could not pay upkeep this tick
+  (`Component.unpaid`). The multiplier scales a front cell's delivered pressure and divides the
+  damage that cell takes. It does not touch growth or income (FR-010).
+- Harvester placement (extra reasons, checked after `occupied`): the cell must sit in or touch
+  (8-adjacent) an undepleted food item (`no-food-nearby`) of at least `minFoodCells` cells
+  (`food-too-small`) that this mold does not already harvest (`already-harvested`). A harvester
+  may stand on a food cell; farms and boosters may not (`on-food`).
+- A harvester multiplies how fast its owner absorbs that item; the item's total is unchanged, and
+  once it is used up the harvester is idle (still standing, no effect, drawn crossed out).
+- `Mold.memBuilding` remembers the last-seen building on each cell for fog of war (0 none, 1 farm,
+  2 booster, 3 harvester), so a rival's building seen once stays on the map, dimmed, until the
+  player looks again.
+
 ## World additions
 
 | Field | Type | Notes |

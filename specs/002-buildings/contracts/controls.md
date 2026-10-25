@@ -5,7 +5,7 @@ every 001 control is unchanged.
 
 | Input | Action |
 |---|---|
-| Click a build bar button, or press its hotkey (`F` = Nutrient Farm) | Enter placement mode for that building |
+| Click a build bar button, or press its hotkey (`F` = Nutrient Farm, `B` = Booster Factory, `M` = Harvester) | Enter placement mode for that building |
 | Move the mouse (placement mode) | The ghost follows the cursor, snapped to a cell; green outline = valid, red = invalid, with the reason in a tooltip |
 | Left-click (placement mode) | Place the building (`placeBuilding`). The mode ends after a successful placement, unless Shift is held. It stays on after a refusal so the spot can be fixed |
 | `Esc` or right-click (placement mode) | Cancel placement, no cost |

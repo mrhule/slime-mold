@@ -82,3 +82,34 @@ describe('fog of war', () => {
     expect(b.vision[cellOf(world, 70, 40)]).toBe(2);
   });
 });
+
+describe('remembered buildings (US4)', () => {
+  it('an enemy building seen once stays on the map as last known, even after it is gone or out of sight', async () => {
+    const { placeBuilding } = await import('../../../src/sim/buildings');
+    const world = createOpenWorld(80, 50);
+    const me = addMold(world, 'player', cellOf(world, 20, 20), 10);
+    const rival = addMold(world, 'rival', cellOf(world, 60, 40), 10);
+    const theirs = cellOf(world, 28, 20);
+    addCell(world, rival.id, theirs, -1);
+    world.components.get(world.component[theirs]!)!.pool = 100;
+    placeBuilding(world, rival.id, 'farm', theirs);
+    updateVision(world);
+    expect(me.memBuilding[theirs]).toBe(1); // a farm
+    // the player pulls back; the farm is destroyed meanwhile, but the player does not know
+    for (const comp of [...world.components.values()]) {
+      if (comp.moldId !== me.id) continue;
+      for (const c of [...comp.cells]) removeCell(world, c);
+    }
+    addCell(world, me.id, cellOf(world, 5, 5), -1);
+    removeCell(world, theirs);
+    updateVision(world);
+    expect(me.vision[theirs]).toBe(1);
+    expect(me.memBuilding[theirs]).toBe(1); // stale, until the player looks again
+    for (let x = 6; x < 30; x++) addCell(world, me.id, cellOf(world, x, 5), cellOf(world, x - 1, 5));
+    addCell(world, me.id, cellOf(world, 28, 6), cellOf(world, 28, 5));
+    for (let y = 7; y <= 19; y++) addCell(world, me.id, cellOf(world, 28, y), cellOf(world, 28, y - 1));
+    updateVision(world);
+    expect(me.vision[theirs]).toBe(2);
+    expect(me.memBuilding[theirs]).toBe(0); // seen again: it is gone
+  });
+});

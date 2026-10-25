@@ -65,6 +65,7 @@ export function stateHash(world: World): number {
     h.num(b.id);
     h.num(b.moldId);
     h.num(b.cell);
+    h.num(b.target);
     h.num(b.destroyed ? 1 : 0);
   }
   h.num(world.nextDropTick);

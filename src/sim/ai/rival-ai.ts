@@ -1,6 +1,6 @@
 import { octile } from '../grid';
 import type { Rng } from '../rng';
-import type { AiState, CellIndex, Command, FoodType, MoldView } from '../types';
+import type { AiState, BuildingType, CellIndex, Command, FoodType, MoldView } from '../types';
 
 /** Public knowledge of what each food type is worth, for judging drops from a warning. */
 const FOOD_VALUE: Record<FoodType, number> = { oatFlake: 40, breadCrumb: 120, sugarCube: 300, fruitSlice: 500 };
@@ -8,11 +8,75 @@ const FOOD_VALUE: Record<FoodType, number> = { oatFlake: 40, breadCrumb: 120, su
 const GROW_SPEED = 5;
 const MIN_SPACING = 9;
 const EXPLORE_SAMPLES = 10;
+/** how many own cells to try when looking for a spot to build */
+const BUILD_TRIES = 80;
+/** a booster factory strengthens cells this close to it (public knowledge) */
+const BOOSTER_REACH = 5;
+/** food worth a harvester: roughly bread crumb size and up */
+const HARVEST_WORTH = 100;
 
 interface Candidate {
   cell: CellIndex;
   score: number;
   kind: 'food' | 'drop' | 'attack' | 'explore';
+}
+
+/**
+ * Decide whether to build something this think, using only what the view shows. A rival builds
+ * only when it holds more than the building costs plus a reserve (set by difficulty: a smaller
+ * reserve means it builds sooner). Same command, costs, and limits as the player (FR-019).
+ */
+function planBuild(view: MoldView, state: AiState): Command | null {
+  const reserve = state.buildReserve ?? 100;
+  const rich = view.richestPool();
+  const me = view.self.id;
+  const own = view.ownCells();
+  if (own.length === 0) return null;
+  const w = view.width;
+  const place = (type: BuildingType, cell: CellIndex): Command => ({ type: 'placeBuilding', mold: me, building: type, cell });
+  const affords = (type: BuildingType, spare: number): boolean => rich >= view.buildCost(type) + reserve * spare;
+
+  // under pressure on a front: a booster factory close behind it
+  if (view.self.frontCells.length > 0 && view.self.frontLoss > 0.15 && affords('booster', 0.4)) {
+    const front = view.self.frontCells[0] as CellIndex;
+    let best = -1;
+    let bestD = Infinity;
+    for (let i = 0; i < Math.min(own.length, BUILD_TRIES * 4); i++) {
+      const c = own[i] as CellIndex;
+      const d = octile(w, c, front);
+      if (d < bestD && d <= BOOSTER_REACH && view.canBuild('booster', c)) {
+        bestD = d;
+        best = c;
+      }
+    }
+    if (best >= 0) {
+      return place('booster', best);
+    }
+  }
+
+  // big food within reach: a harvester to pay it out sooner
+  if (affords('harvester', 0.5)) {
+    for (const f of view.knownFood()) {
+      if (f.stale || f.amount < HARVEST_WORTH) continue;
+      for (let i = 0; i < Math.min(own.length, BUILD_TRIES * 4); i++) {
+        const c = own[i] as CellIndex;
+        if (octile(w, c, f.cell) <= 4 && view.canBuild('harvester', c)) {
+              return place('harvester', c);
+        }
+      }
+    }
+  }
+
+  // otherwise a farm, for steady income
+  if (affords('farm', 1)) {
+    for (let i = 0; i < Math.min(own.length, BUILD_TRIES); i++) {
+      const c = own[i] as CellIndex;
+      if (view.canBuild('farm', c)) {
+          return place('farm', c);
+      }
+    }
+  }
+  return null;
 }
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
@@ -87,6 +151,10 @@ export function think(view: MoldView, state: AiState, rng: Rng, maxCommands: num
   }
   for (const c of picks) commands.push({ type: 'setTarget', mold: me, cell: c.cell });
 
+  const build = planBuild(view, state);
+  if (build) commands.splice(Math.min(1, commands.length), 0, build);
+
   state.debug = candidates.slice(0, 3).map((c) => `${c.kind}@${c.cell % w},${Math.floor(c.cell / w)} ${c.score.toFixed(2)}`);
+  if (build && build.type === 'placeBuilding') state.debug.unshift(`build ${build.building}`);
   return commands.slice(0, maxCommands);
 }

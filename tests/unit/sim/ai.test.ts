@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { think } from '../../../src/sim/ai/rival-ai';
+import { enqueue } from '../../../src/sim/commands';
+import { step } from '../../../src/sim/step';
 import { scanFronts } from '../../../src/sim/combat';
 import { updateVision } from '../../../src/sim/fog';
 import { placeFood } from '../../../src/sim/food';
@@ -137,5 +139,97 @@ describe('rival AI', () => {
     const { world, id, state } = rivalWorld();
     world.molds[id - 1]!.cellCount = 0;
     expect(think(viewFor(world, id), state, new Rng(1), 3)).toEqual([]);
+  });
+});
+
+describe('rival AI building (US4)', () => {
+  const placements = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'placeBuilding' }> => c.type === 'placeBuilding');
+
+  function rich(pool: number, reserve: number) {
+    const { world, id, state } = rivalWorld(0.5);
+    state.buildReserve = reserve;
+    for (const c of world.components.values()) if (c.moldId === id) c.pool = pool;
+    updateVision(world);
+    return { world, id, state };
+  }
+
+  it('builds a farm through the same command when it has more than cost + reserve', () => {
+    const { world, id, state } = rich(200, 60);
+    const cmds = placements(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0]).toMatchObject({ mold: id, building: 'farm' });
+    expect(world.owner[cmds[0]!.cell]).toBe(id);
+  });
+
+  it('does not build when it cannot afford cost + reserve', () => {
+    const { world, id, state } = rich(60, 60);
+    expect(placements(think(viewFor(world, id), state, new Rng(1), 3))).toHaveLength(0);
+  });
+
+  it('a smaller reserve means it builds sooner (difficulty changes timing only)', () => {
+    const early = rich(70, 10);
+    const late = rich(70, 200);
+    expect(placements(think(viewFor(early.world, early.id), early.state, new Rng(1), 3))).toHaveLength(1);
+    expect(placements(think(viewFor(late.world, late.id), late.state, new Rng(1), 3))).toHaveLength(0);
+  });
+
+  it('pays the same cost and obeys the same limits as the player when the command runs', () => {
+    const { world, id, state } = rich(500, 20);
+    const cmd = placements(think(viewFor(world, id), state, new Rng(1), 3))[0]!;
+    const comp = world.components.get(world.component[cmd.cell]!)!;
+    const before = comp.pool;
+    enqueue(world, cmd);
+    step(world);
+    expect(before - comp.pool).toBeGreaterThanOrEqual(world.balance.buildings.farm.cost - 1); // minus a tick of income
+    expect(world.buildings.filter((b) => b.moldId === id)).toHaveLength(1);
+    // fill the limit: the AI stops asking, and the sim would refuse anyway
+    for (const comp2 of world.components.values()) if (comp2.moldId === id) comp2.pool = 5000;
+    for (let i = 0; i < 12; i++) {
+      for (const cm of placements(think(viewFor(world, id), state, new Rng(i), 3))) enqueue(world, cm);
+      step(world);
+    }
+    expect(world.buildings.filter((b) => b.moldId === id && b.type === 'farm').length).toBeLessThanOrEqual(world.balance.buildings.farm.limit);
+  });
+
+  it('builds a booster factory near a front it is losing', () => {
+    const { world, id, state } = rich(300, 30);
+    addCell(world, 1, cellOf(world, 22, 30), -1); // an enemy cell touching its east arm
+    scanFronts(world);
+    world.molds[id - 1]!.frontLoss = 1;
+    updateVision(world);
+    const cmds = placements(think(viewFor(world, id), state, new Rng(2), 3));
+    expect(cmds[0]).toMatchObject({ mold: id, building: 'booster' });
+  });
+
+  it('builds a harvester next to big food it can see', () => {
+    const { world, id, state } = rich(200, 20);
+    placeFood(world, 'sugarCube', 24, 28, 'initial');
+    // grow the mold up to the food so it has cells touching it
+    let prev = cellOf(world, 21, 30);
+    for (let x = 22; x <= 23; x++) {
+      addCell(world, id, cellOf(world, x, 30), prev);
+      prev = cellOf(world, x, 30);
+    }
+    updateVision(world);
+    const cmds = placements(think(viewFor(world, id), state, new Rng(3), 3));
+    expect(cmds.some((c) => c.building === 'harvester')).toBe(true);
+  });
+
+  it('cannot see (or harvest) big food it has never seen', () => {
+    const { world, id, state } = rich(200, 20);
+    placeFood(world, 'sugarCube', 80, 10, 'initial'); // far away, never seen
+    updateVision(world);
+    const view = viewFor(world, id);
+    expect(view.knownFood()).toHaveLength(0);
+    const cmds = placements(think(view, state, new Rng(3), 3));
+    expect(cmds.some((c) => c.building === 'harvester')).toBe(false);
+  });
+
+  it('can only ask about its own cells', () => {
+    const { world, id } = rich(500, 0);
+    const view = viewFor(world, id);
+    expect(view.canBuild('farm', cellOf(world, 21, 30))).toBe(true);
+    expect(view.canBuild('farm', cellOf(world, 50, 10))).toBe(false); // empty ground
+    expect(view.canBuild('farm', cellOf(world, 90, 50))).toBe(false); // the other mold's core
   });
 });

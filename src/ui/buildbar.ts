@@ -1,11 +1,19 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { farm: 'Nutrient Farm' };
-const SHORT: Record<BuildingType, string> = { farm: 'Farm' };
+const NAMES: Record<BuildingType, string> = { farm: 'Nutrient Farm', booster: 'Booster Factory', harvester: 'Harvester' };
+const SHORT: Record<BuildingType, string> = { farm: 'Farm', booster: 'Booster', harvester: 'Harvest' };
+/** what each building does, for the button tooltip */
+const BLURB: Record<BuildingType, string> = {
+  farm: 'Slow, steady nutrient income.',
+  booster: 'Makes your cells nearby hit harder and take less damage in fights.',
+  harvester: 'Place beside big food to absorb it faster (same total).',
+};
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'farm' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'farm', b: 'booster', m: 'harvester' };
 
 const ICONS: Record<BuildingType, string> = {
+  booster: '',
+  harvester: '',
   farm: `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
     <ellipse cx="21" cy="31" rx="15" ry="4" fill="#14110f" opacity=".45"/>
     <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
@@ -21,6 +29,30 @@ const ICONS: Record<BuildingType, string> = {
     <ellipse cx="14" cy="22.6" rx="5" ry="1.6" fill="#c58a4e"/>
   </svg>`,
 };
+
+const BOOSTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="32" rx="15" ry="3.4" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
+      <rect x="24" y="6" width="6" height="14" fill="#4b4f53"/>
+      <circle cx="28" cy="4" r="3.2" fill="#e8e6de"/>
+      <rect x="8" y="14" width="24" height="16" rx="2" fill="#4b4f53"/>
+      <rect x="10" y="16" width="20" height="8" fill="#7a7f84" stroke="none"/>
+      <polygon points="19,16 14,24 19,23 16,30 26,21 21,22 24,16" fill="#ffd23a" stroke-width="1.8"/>
+    </g>
+  </svg>`;
+const HARVESTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="32" rx="14" ry="3.2" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M20 5 L9 30 M20 5 L31 30 M20 5 L20 31" fill="none" stroke-width="5"/>
+      <path d="M20 5 L9 30 M20 5 L31 30 M20 5 L20 31" fill="none" stroke="#2f6a77" stroke-width="2"/>
+      <path d="M20 5 V21" fill="none" stroke-width="1.8"/>
+      <polygon points="14,21 26,21 24,28 16,28" fill="#4f9aa8"/>
+      <circle cx="20" cy="5" r="3.2" fill="#f2c744"/>
+    </g>
+  </svg>`;
+
+ICONS.booster = BOOSTER_ICON;
+ICONS.harvester = HARVESTER_ICON;
 
 /** Comic build bar (R19): one button per building, showing cost and count/limit. */
 export class BuildBar {
@@ -59,7 +91,7 @@ export class BuildBar {
       const full = opt.count >= opt.limit;
       btn.classList.toggle('disabled', !opt.affordable || full);
       const income = opt.income !== undefined ? `+${opt.income}/s income, ` : '';
-      btn.title = `${NAMES[opt.type]}: ${income}${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
+      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${income}${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
     }
   }
 

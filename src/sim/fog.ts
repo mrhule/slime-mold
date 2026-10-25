@@ -1,4 +1,5 @@
-import type { Mold, World } from './types';
+import { BUILDING_CODE } from './types';
+import type { BuildingType, Mold, World } from './types';
 
 /**
  * Fog of war (R7). Each live mold sees every cell within `visionRadius` (Chebyshev) of its own
@@ -35,7 +36,7 @@ function visionFor(world: World, mold: Mold): void {
   // vertical pass over the horizontal result, then fold into vision and memory
   const seen = mold.seenCells;
   seen.fill(0);
-  const { vision, memOwner, memFood } = mold;
+  const { vision, memOwner, memFood, memBuilding } = mold;
   const food = world.food;
   for (let x = 0; x < w; x++) {
     prefix[0] = 0;
@@ -49,6 +50,8 @@ function visionFor(world: World, mold: Mold): void {
         const o = owner[i] as number;
         memOwner[i] = o;
         memFood[i] = food[i] as number;
+        const bid = world.buildingAt[i] as number;
+        memBuilding[i] = bid >= 0 ? BUILDING_CODE[(world.buildings[bid] as { type: BuildingType }).type] : 0;
         if (o !== 0 && o !== id) seen[o] = (seen[o] as number) + 1;
       } else if (vision[i] === 2) {
         vision[i] = 1;

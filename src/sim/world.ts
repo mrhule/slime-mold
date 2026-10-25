@@ -40,6 +40,7 @@ const EMPTY_DIFFICULTY: DifficultyProfile = {
   rivalStartNutrients: 1,
   aiThinkInterval: 1,
   dropInterval: 35,
+  rivalBuildReserve: 100,
 };
 
 export function createWorld(
@@ -57,6 +58,7 @@ export function createWorld(
   foodSourceId.fill(-1);
   const buildingAt = new Int16Array(cells);
   buildingAt.fill(-1);
+  const boost = new Float32Array(cells).fill(1);
   return {
     width,
     height,
@@ -82,6 +84,8 @@ export function createWorld(
     foodSources: [],
     buildings: [],
     buildingAt,
+    boost,
+    boostActive: false,
     drops: [],
     reachable: new Uint8Array(cells).fill(1),
     nextDropTick: Number.MAX_SAFE_INTEGER,

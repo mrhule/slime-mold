@@ -16,5 +16,6 @@ export function difficultyFor(round: number, balance: BalanceConfig = defaultBal
     rivalStartNutrients: 1 + d.startNutrientsStep * (n - 1),
     aiThinkInterval: Math.max(d.thinkBase - d.thinkStep * (n - 1), d.thinkMin),
     dropInterval: balance.dropInterval,
+    rivalBuildReserve: Math.max(d.buildReserveMin, d.buildReserveBase - d.buildReserveStep * (n - 1)),
   };
 }

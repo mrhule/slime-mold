@@ -16,7 +16,8 @@ Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatchi
   everyone, so it becomes a race.
 - **Spend.** Growing costs nutrients and every cell costs upkeep. If you grow past what your
   income can pay for, your outermost cells starve. Build **Nutrient Farms** (`F`, then click one
-  of your cells) for steady extra income.
+  of your cells) for steady extra income, **Harvesters** (`M`) beside big food to eat it faster, and
+  **Booster Factories** (`B`) to make your cells nearby stronger in fights.
 - **Fight.** Where two molds touch, a battle front forms. The **Growth / Fight** slider (or
   `Q` / `E`) decides how much of your nutrients go to growing and how much to the fronts. Cut a
   rival's vein and everything beyond the cut withers.
@@ -31,7 +32,7 @@ Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatchi
 |---|---|
 | Left-click | Set a growth target (or place a building in placement mode) |
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
-| `F` | Place a Nutrient Farm (click a cell of yours; `Esc` or right-click cancels) |
+| `F` / `B` / `M` | Place a Nutrient Farm / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |
 | `1` `2` `3` | Speed 1x, 2x, 3x |
@@ -78,4 +79,4 @@ The project is organized with [Spec Kit](https://github.com/github/spec-kit): se
 spec, plan, tasks and playtest log:
 
 - `specs/001-core-game-loop`: the game itself
-- `specs/002-buildings`: farms, booster factories and harvesters (the farm is built)
+- `specs/002-buildings`: farms, booster factories, harvesters, and rivals that build them

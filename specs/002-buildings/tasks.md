@@ -82,37 +82,39 @@ detailed further when started, and US2 and US4 wait for the combat and rival sto
 
 ## Phase 4: User Story 2 - Booster Factory (Priority: P2)
 
-*Waits for 001's combat story (fronts and pressure). Detail when started.*
+*Built on 001's combat (fronts and pressure).*
 
-- [ ] T021 [US2] Widen `BuildingType` and the balance table with the booster (cost, upkeep, limit, radius, pressure and toughness multipliers, stack cap), per FR-010 (combat only) and FR-012
-- [ ] T022 [P] [US2] Tests: area membership, combat bonus at covered fronts only, bonus stops when upkeep is unpaid, capped stacking, bonus ends when the factory cell is destroyed
-- [ ] T023 [US2] Apply the bonus where front pressure and cell damage are computed in `src/sim/combat.ts`, with the area from `src/sim/buildings.ts`
-- [ ] T024 [P] [US2] Booster drawing, area ring (hand-inked) and build bar entry
-- [ ] T025 [US2] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US2 section)
+- [X] T021 [US2] Widen `BuildingType` and the balance table with the booster (cost, upkeep, limit, radius, pressure and toughness multipliers, stack cap), per FR-010 (combat only) and FR-012
+- [X] T022 [P] [US2] Tests: area membership, combat bonus at covered fronts only, bonus stops when upkeep is unpaid, capped stacking, bonus ends when the factory cell is destroyed
+- [X] T023 [US2] Apply the bonus where front pressure and cell damage are computed in `src/sim/combat.ts`, with the area from `src/sim/buildings.ts`
+- [X] T024 [P] [US2] Booster drawing, area ring (hand-inked) and build bar entry
+- [X] T025 [US2] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US2 section)
 
 ---
 
 ## Phase 5: User Story 3 - Harvester (Priority: P2)
 
-*Needs food sizes from 001. Detail when started.*
+*Built on 001's food sizes.*
 
-- [ ] T026 [US3] Widen the building type and balance table with the harvester (cost, upkeep, limit, minimum food size, rate multiplier), per FR-014 to FR-016
-- [ ] T027 [P] [US3] Tests: placement only on a cell touching large enough food, rate multiplier applies to the owner's cells only, totals unchanged, idle once the food is used up
-- [ ] T028 [US3] Apply the multiplier in `src/sim/food.ts` (`tickFood`) and allow harvesters on food-adjacent cells in `canPlace`
-- [ ] T029 [P] [US3] Harvester drawing, idle look, and build bar entry
-- [ ] T030 [US3] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US3 section)
+- [X] T026 [US3] Widen the building type and balance table with the harvester (cost, upkeep, limit, minimum food size, rate multiplier), per FR-014 to FR-016
+- [X] T027 [P] [US3] Tests: placement only on a cell touching large enough food, rate multiplier applies to the owner's cells only, totals unchanged, idle once the food is used up
+- [X] T028 [US3] Apply the multiplier in `src/sim/food.ts` (`tickFood`) and allow harvesters on food-adjacent cells in `canPlace`
+- [X] T029 [P] [US3] Harvester drawing, idle look, and build bar entry
+- [X] T030 [US3] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US3 section)
 
 ---
 
 ## Phase 6: User Story 4 - Rivals Build Too (Priority: P3)
 
-*Waits for 001's rival AI. Detail when started.*
+*Built on 001's rival AI.*
 
-- [ ] T031 [US4] Let the rival AI choose and place buildings through `placeBuilding` using its `MoldView` only, with difficulty changing only how early and how often (FR-019)
-- [ ] T032 [P] [US4] Tests: same costs and limits, no hidden information, enemy buildings shown as last-known when out of vision
-- [ ] T033 [US4] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US4 section)
+- [X] T031 [US4] Let the rival AI choose and place buildings through `placeBuilding` using its `MoldView` only, with difficulty changing only how early and how often (FR-019)
+- [X] T032 [P] [US4] Tests: same costs and limits, no hidden information, enemy buildings shown as last-known when out of vision
+- [X] T033 [US4] Playtest and record results in `specs/002-buildings/checklists/playtest.md` (US4 section)
 
 ---
+
+> **Implementation notes (US2–US4, 2026-10-25)**: hotkeys are `F` farm, `B` booster, `M` harvester. The area bonus is recomputed every tick from working boosters. The AI asks the same `canPlace` through `view.canBuild` and builds when it holds cost plus a difficulty-set reserve (700 down to 70 nutrients from round 1 to 10, tuned with the batch simulator so rivals building does not make round 1 harder than before): a booster behind a front it is losing, a harvester by big food it can see, otherwise a farm. T030/T033 are recorded in the playtest log. The farm was re-balanced (1.5/s income, 0.15/s upkeep) before this work; see research B4.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 

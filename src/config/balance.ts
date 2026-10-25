@@ -18,6 +18,22 @@ export interface BuildingSpec {
   limit: number;
 }
 
+export interface BoosterSpec extends BuildingSpec {
+  /** cells (Chebyshev) around the factory that it strengthens */
+  radius: number;
+  /** extra combat strength per factory, as a fraction (0.5 = +50%) */
+  bonus: number;
+  /** most extra strength overlapping factories can add together */
+  stackCap: number;
+}
+
+export interface HarvesterSpec extends BuildingSpec {
+  /** smallest food item (in cells) a harvester can be placed on */
+  minFoodCells: number;
+  /** how much faster its owner absorbs that food */
+  rateMult: number;
+}
+
 export interface FarmSpec extends BuildingSpec {
   /** nutrients per second into its piece */
   income: number;
@@ -95,7 +111,7 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { farm: FarmSpec };
+  buildings: { farm: FarmSpec; booster: BoosterSpec; harvester: HarvesterSpec };
 
   /** coefficients for difficultyFor(round), R14 */
   difficulty: {
@@ -115,6 +131,9 @@ export interface BalanceConfig {
     thinkBase: number;
     thinkStep: number;
     thinkMin: number;
+    buildReserveBase: number;
+    buildReserveStep: number;
+    buildReserveMin: number;
   };
 }
 
@@ -180,6 +199,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   buildings: {
     farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5 },
+    booster: { cost: 40, upkeep: 0.15, limit: 4, radius: 6, bonus: 0.5, stackCap: 1.0 },
+    harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 
   difficulty: {
@@ -199,5 +220,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     thinkBase: 3.0,
     thinkStep: 0.25,
     thinkMin: 0.8,
+    buildReserveBase: 700,
+    buildReserveStep: 70,
+    buildReserveMin: 60,
   },
 });

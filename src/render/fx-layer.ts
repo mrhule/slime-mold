@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
-import { cellCenter, drawFarm } from './building-layer';
-import type { Mold, World } from '../sim/types';
+import { cellCenter, drawBoosterArea, drawBuilding } from './building-layer';
+import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { CELL } from './units';
 
@@ -15,6 +15,7 @@ interface Ping {
 export interface PlacementGhost {
   cell: number;
   ok: boolean;
+  type: BuildingType;
 }
 
 const GHOST_OK = 0x2ea84a;
@@ -179,7 +180,8 @@ export class FxLayer {
       const [gx, gy] = cellCenter(ghost.cell, world.width);
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
-      drawFarm(g, gx, gy, moldColor(player.color), color);
+      if (ghost.type === 'booster') drawBoosterArea(g, gx, gy, world.balance.buildings.booster.radius, color, 0.7);
+      drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color });
     }
     this.pings = this.pings.filter((p) => (p.age += dt) < PING_SECONDS);
     for (const p of this.pings) {

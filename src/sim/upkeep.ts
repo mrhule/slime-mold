@@ -17,7 +17,8 @@ export function tickUpkeep(world: World): void {
     const paid = Math.min(due, comp.pool);
     comp.pool -= paid;
     moldOf(world, comp.moldId).upkeepTick += paid;
-    if (paid < due - 1e-12) starve(world, comp);
+    comp.unpaid = paid < due - 1e-12;
+    if (comp.unpaid) starve(world, comp);
     else recover(world, comp);
   }
 }
