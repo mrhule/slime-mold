@@ -10,7 +10,7 @@ import { addCell } from '../../../src/sim/network';
 import { Rng } from '../../../src/sim/rng';
 import type { AiState, Command, World } from '../../../src/sim/types';
 import { viewFor } from '../../../src/sim/view';
-import { cellOf, createOpenWorld } from '../../helpers';
+import { cellOf, createOpenWorld, withStoreHouse } from '../../helpers';
 
 function rivalWorld(aggression = 0.5): { world: World; id: number; state: AiState } {
   const world = createOpenWorld(100, 60);
@@ -153,12 +153,22 @@ describe('rival AI building (US4)', () => {
     return { world, id, state };
   }
 
-  it('builds a farm through the same command when it has more than cost + reserve', () => {
+  it('builds a store house first, through the same command, when it has more than cost + reserve', () => {
     const { world, id, state } = rich(200, 60);
     const cmds = placements(think(viewFor(world, id), state, new Rng(1), 3));
     expect(cmds).toHaveLength(1);
-    expect(cmds[0]).toMatchObject({ mold: id, building: 'farm' });
+    expect(cmds[0]).toMatchObject({ mold: id, building: 'storehouse' });
     expect(world.owner[cmds[0]!.cell]).toBe(id);
+  });
+
+  it('then builds a farm on fertile ground in the piece that has a store house', () => {
+    const { world, id, state } = rich(200, 60);
+    const core = world.molds[id - 1]!.core;
+    withStoreHouse(world, id, core + 1); // an arm of the core
+    const cmds = placements(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0]).toMatchObject({ mold: id, building: 'farm' });
+    expect(world.fertile[cmds[0]!.cell]).toBe(1);
   });
 
   it('does not build when it cannot afford cost + reserve', () => {

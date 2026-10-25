@@ -8,13 +8,18 @@ import { step } from '../../../src/sim/step';
 import { TICK_DT } from '../../../src/sim/types';
 import type { World } from '../../../src/sim/types';
 import { assertInvariants } from '../../../src/sim/world';
-import { cellOf, createWorldWithMold } from '../../helpers';
+import { cellOf, createWorldWithMold, withStoreHouse } from '../../helpers';
 
 const farm = defaultBalance.buildings.farm;
 
 /** no core income and no per-cell upkeep, so only farm numbers move the pool */
 function isolated(farmOverrides: Partial<typeof farm> = {}): BalanceConfig {
-  return { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0, buildings: { ...defaultBalance.buildings, farm: { ...farm, ...farmOverrides } } };
+  return {
+    ...defaultBalance,
+    coreIncome: 0,
+    upkeepPerCell: 0,
+    buildings: { ...defaultBalance.buildings, farm: { ...farm, ...farmOverrides }, storehouse: { ...defaultBalance.buildings.storehouse, upkeep: 0 } },
+  };
 }
 
 function extendEast(world: World, moldId: number, len: number): number[] {
@@ -36,6 +41,7 @@ describe('farm income and upkeep', () => {
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200, isolated({ upkeep: 0 }));
     const cell = cellOf(world, 11, 20);
     placeBuilding(world, mold.id, 'farm', cell);
+    withStoreHouse(world, mold.id, cellOf(world, 10, 21)); // a farm only pays with a store house on its vein
     const before = poolOf(world, cell);
     step(world);
     expect(poolOf(world, cell) - before).toBeCloseTo(farm.income * TICK_DT, 6);
@@ -53,6 +59,7 @@ describe('farm income and upkeep', () => {
   it('shows up in the HUD: income, build options, and net income', () => {
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200, isolated());
     placeBuilding(world, mold.id, 'farm', cellOf(world, 11, 20));
+    withStoreHouse(world, mold.id, cellOf(world, 10, 21));
     for (let i = 0; i < 20 * 20; i++) step(world); // let the 2 s smoothing settle
     const hud = readHud(world, mold.id);
     expect(hud.buildingIncome).toBeCloseTo(farm.income);
@@ -93,6 +100,7 @@ describe('farm as a source of supply', () => {
     const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200, isolated({ upkeep: 0 }));
     const cells = extendEast(world, mold.id, 10);
     placeBuilding(world, mold.id, 'farm', cells[9]!);
+    withStoreHouse(world, mold.id, cells[8]!); // on the far side of the cut
     removeCellAndSplit(world, cells[4]!);
     const before = poolOf(world, cells[9]!);
     for (let i = 0; i < 20; i++) step(world);

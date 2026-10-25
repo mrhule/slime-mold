@@ -136,6 +136,7 @@ async function main(): Promise<void> {
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });
     buildBar.update(model.build, input.placing);
+    buildBar.highlight(model.farms.unlinked > 0 && input.placing !== 'storehouse' ? 'storehouse' : null);
 
     for (const e of frameEvents) {
       if (e.type === 'commandRejected' && e.mold === PLAYER) {

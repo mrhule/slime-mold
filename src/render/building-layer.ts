@@ -20,6 +20,7 @@ const RIG = 0x4f9aa8;
 const RIG_SHADE = 0x2f6a77;
 const RIG_LIGHT = 0xa6dbe4;
 const STALE_GREY = 0x8a8a84;
+const UNLINKED = 0xf2a01e;
 const BARN_WOOD = 0x9a6a3a;
 const BARN_ROOF = 0xa8432f;
 const BARN_DOOR = 0x5e3a1b;
@@ -152,6 +153,17 @@ export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: nu
   else drawHarvester(g, cx, cy, color, style);
 }
 
+/** A small broken-chain mark above a farm that has no store house on its vein. */
+export function drawUnlinked(g: Graphics, cx: number, cy: number): void {
+  const y = cy - 19;
+  g.circle(cx - 4.5, y, 3.2).stroke({ width: 3.6, color: INK });
+  g.circle(cx + 4.5, y, 3.2).stroke({ width: 3.6, color: INK });
+  g.circle(cx - 4.5, y, 3.2).stroke({ width: 1.8, color: UNLINKED });
+  g.circle(cx + 4.5, y, 3.2).stroke({ width: 1.8, color: UNLINKED });
+  g.moveTo(cx - 1.5, y - 5).lineTo(cx + 1.5, y + 5).stroke({ width: 4, color: INK, cap: 'round' });
+  g.moveTo(cx - 1.5, y - 5).lineTo(cx + 1.5, y + 5).stroke({ width: 2, color: UNLINKED, cap: 'round' });
+}
+
 /** A soft glow along every vein a booster factory strengthens, fading with its taper. */
 export function drawBoosterCover(g: Graphics, width: number, cover: { cell: number; bonus: number }[], maxBonus: number, color: number, alpha = 1): void {
   for (const { cell, bonus } of cover) {
@@ -191,7 +203,7 @@ export class BuildingLayer {
     let key = '';
     for (const b of world.buildings) {
       const idle = b.type === 'harvester' ? (foodOf(b)?.depleted ? 'i' : 'a') : '';
-      key += shown(b) ? `${b.id}${idle},` : 'x';
+      key += shown(b) ? `${b.id}${idle}${b.type === 'farm' ? (b.linked ? 'l' : 'u') : ''},` : 'x';
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
     // the veins a booster covers keep growing, so redraw its glow a few times a second
@@ -222,6 +234,7 @@ export class BuildingLayer {
         for (let d = 8; d < len - 6; d += 9) this.areas.circle(x + (dx / len) * d, y + (dy / len) * d, 1.6).fill({ color: INK, alpha: 0.7 });
       }
       drawBuilding(this.g, b.type, x, y, color, { idle });
+      if (b.type === 'farm' && !b.linked) drawUnlinked(this.g, x, y);
     }
   }
 }

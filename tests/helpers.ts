@@ -20,7 +20,7 @@ export function createOpenWorld(
     }
   }
   world.reachableCells = (width - 2) * (height - 2);
-  if (opts.fertile) {
+  if (opts.fertile ?? true) {
     for (let i = 0; i < world.terrain.length; i++) if (world.terrain[i] === Terrain.Open) world.fertile[i] = 1;
   }
   return world;
@@ -36,6 +36,7 @@ export function withStoreHouse(world: World, moldId: number, cell: number): void
     placedTick: world.tick,
     target: -1,
     level: 0,
+    linked: false,
     destroyed: false,
   });
   world.buildingAt[cell] = world.buildings.length - 1;

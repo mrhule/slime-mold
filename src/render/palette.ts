@@ -32,6 +32,9 @@ export const MAP = {
   wall: 0x24211e,
   wallLight: 0x3a3631,
   scratch: 0x70725f,
+  fertile: 0x63762f,
+  fertileLight: 0x86a043,
+  fertileInk: 0x26300f,
 } as const;
 
 export const FOOD = {

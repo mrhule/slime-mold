@@ -10,8 +10,8 @@ import { think } from '../src/sim/ai/rival-ai';
 import { Rng } from '../src/sim/rng';
 import { defaultBalance } from '../src/config/balance';
 import type { BalanceConfig } from '../src/config/balance';
-import { canPlace, createRound, enqueue, step, viewFor } from '../src/sim';
-import type { AiState, World } from '../src/sim';
+import { canPlace, createRound, enqueue, step, viewFor, workingStoreHouses } from '../src/sim';
+import type { AiState, Component, World } from '../src/sim';
 import { TICK_DT } from '../src/sim/types';
 
 function arg(name: string, fallback: string): string {
@@ -57,28 +57,44 @@ interface GameResult {
   tickMs: number;
 }
 
-/** A human-ish habit: spend spare nutrients on a farm next to the core, up to `farms` of them. */
+/**
+ * A human-ish habit: a store house near the core first, then farms on fertile ground in a piece
+ * that has one, up to `farms` of them.
+ */
 function maybeBuildFarm(world: World): void {
   const mold = world.molds[0]!;
   if (mold.status !== 'alive' || farms <= 0) return;
   const spec = world.balance.buildings.farm;
-  if (world.buildings.filter((b) => !b.destroyed && b.moldId === 1).length >= farms) return;
+  const mine = world.buildings.filter((b) => !b.destroyed && b.moldId === 1);
+  if (mine.filter((b) => b.type === 'farm').length >= farms) return;
   const w = world.width;
   const cx = mold.core % w;
   const cy = Math.floor(mold.core / w);
-  let best = -1;
-  let bestD = Infinity;
-  for (const comp of world.components.values()) {
-    if (comp.moldId !== 1 || comp.pool < spec.cost + 15) continue;
-    for (const c of comp.cells) {
-      const d = (c % w - cx) ** 2 + (Math.floor(c / w) - cy) ** 2;
-      if (d < bestD && canPlace(world, 1, 'farm', c).ok) {
-        bestD = d;
-        best = c;
+  const nearest = (type: 'farm' | 'storehouse', cost: number, want: (comp: Component) => boolean): number => {
+    let best = -1;
+    let bestD = Infinity;
+    for (const comp of world.components.values()) {
+      if (comp.moldId !== 1 || comp.pool < cost + 15 || !want(comp)) continue;
+      for (const c of comp.cells) {
+        const d = ((c % w) - cx) ** 2 + (Math.floor(c / w) - cy) ** 2;
+        if (d < bestD && canPlace(world, 1, type, c).ok) {
+          bestD = d;
+          best = c;
+        }
       }
     }
+    return best;
+  };
+  const stocked = (comp: Component): boolean => workingStoreHouses(world, comp) > 0;
+  const farm = nearest('farm', spec.cost, stocked);
+  if (farm >= 0) {
+    enqueue(world, { type: 'placeBuilding', mold: 1, building: 'farm', cell: farm });
+    return;
   }
-  if (best >= 0) enqueue(world, { type: 'placeBuilding', mold: 1, building: 'farm', cell: best });
+  // no farm site in a stocked piece: first make sure a store house exists, near a fertile cell
+  if (mine.some((b) => b.type === 'storehouse')) return;
+  const store = nearest('storehouse', world.balance.buildings.storehouse.cost, () => true);
+  if (store >= 0) enqueue(world, { type: 'placeBuilding', mold: 1, building: 'storehouse', cell: store });
 }
 
 /** the player is run by the rival AI: think on the same cadence, through ordinary commands */

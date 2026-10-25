@@ -54,13 +54,14 @@ export class Hud {
           <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus fight" />
         </label>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
+        <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
         <div class="hint">Click the map to grow there. Right-click a marker to cancel.</div>
       </div>
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'rivals', 'toast']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast']) this.el[k] = q(k);
     this.slider = q('alloc') as HTMLInputElement;
     this.speedButtons = [...root.querySelectorAll<HTMLButtonElement>('.clock button')];
 
@@ -90,6 +91,9 @@ export class Hud {
     this.el.control!.textContent = `${Math.round(hud.mapControl * 100)}%`;
     (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / this.winControl) * 100)}%`;
     this.el.starved!.hidden = !hud.growthStarved;
+    const unlinked = hud.farms.unlinked;
+    this.el.unlinked!.hidden = unlinked === 0;
+    if (unlinked > 0) this.el.unlinked!.textContent = `${unlinked} ${unlinked === 1 ? 'farm is' : 'farms are'} not paying: build a Store House (T) on their vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
     for (const b of this.speedButtons) {
       const v = b.dataset.speed;

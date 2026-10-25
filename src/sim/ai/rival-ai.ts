@@ -67,13 +67,22 @@ function planBuild(view: MoldView, state: AiState): Command | null {
     }
   }
 
-  // otherwise a farm, for steady income
+  // otherwise a farm, for steady income: on fertile ground, with a store house on the same vein
   if (affords('farm', 1)) {
-    for (let i = 0; i < Math.min(own.length, BUILD_TRIES); i++) {
+    const stocked = new Set(view.self.components.filter((c) => c.storeHouses > 0).map((c) => c.id));
+    for (let i = 0; i < Math.min(own.length, BUILD_TRIES * 4); i++) {
       const c = own[i] as CellIndex;
-      if (view.canBuild('farm', c)) {
-          return place('farm', c);
+      if (!view.fertileAt(c) || !view.canBuild('farm', c)) continue;
+      if (!stocked.has(view.pieceOf(c))) {
+        // no store house in this piece yet: build one first, anywhere on it
+        if (!affords('storehouse', 1)) break;
+        const piece = view.pieceOf(c);
+        for (const s of own) {
+          if (view.pieceOf(s) === piece && view.canBuild('storehouse', s)) return place('storehouse', s);
+        }
+        break;
       }
+      return place('farm', c);
     }
   }
   return null;

@@ -1,4 +1,4 @@
-import { canPlace } from './buildings';
+import { canPlace, capOf, workingStoreHouses } from './buildings';
 import { SQRT2, octile } from './grid';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -27,7 +27,7 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
 
   const components = [...world.components.values()]
     .filter((c) => c.moldId === moldId)
-    .map((c) => ({ id: c.id, pool: c.pool, cellCount: c.cells.length, orphaned: c.orphaned }));
+    .map((c) => ({ id: c.id, pool: c.pool, cap: capOf(world, c), storeHouses: workingStoreHouses(world, c), cellCount: c.cells.length, orphaned: c.orphaned }));
 
   return {
     self: {
@@ -43,6 +43,8 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
     height: h,
     terrain: world.terrain,
     visibility,
+    fertileAt: (cell) => world.fertile[cell] === 1,
+    pieceOf: (cell) => (world.owner[cell] === moldId ? (world.component[cell] as number) : -1),
     ownerAt(cell) {
       const v = vision[cell];
       return v === 2 ? (world.owner[cell] as number) : v === 1 ? (mold.memOwner[cell] as number) : 0;

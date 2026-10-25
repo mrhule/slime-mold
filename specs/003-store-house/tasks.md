@@ -44,7 +44,7 @@ description: "Task list for 003-store-house"
 - [X] T005 [P] Hash `fertile`, each building's `level`, and `supply` in `src/sim/hash.ts`
 - [X] T006 Generalize `boosterCover` in `src/sim/buildings.ts` into `veinCover(world, start, reach, bonus)` (BFS over `world.edges`, linear taper `bonus × (1 − d/reach)`); keep `boosterCover` as a thin wrapper and export both from `src/sim/index.ts`; the existing `tests/unit/sim/booster.test.ts` must still pass unchanged
 - [X] T007 [P] Extend `tests/helpers.ts`: `createOpenWorld(..., { fertile })` option that marks every open cell fertile, and a `withStoreHouse(world, moldId, cell)` helper that places a Store House bypassing cost, so later tests stay short
-- [ ] T008 [P] Export `capOf`, `farmLinked`, `farmOutput`, `storeCover`, `placePreview` stubs from `src/sim/index.ts` (filled in by their stories) so render and UI code can be written against the contract in contracts/sim-api.md
+- [X] T008 [P] Export `capOf`, `farmLinked`, `farmOutput`, `storeCover`, `placePreview` stubs from `src/sim/index.ts` (filled in by their stories) so render and UI code can be written against the contract in contracts/sim-api.md
 
 **Checkpoint**: The world can hold fertile ground, levels and a supply layer, and `veinCover` is shared
 
@@ -86,22 +86,22 @@ description: "Task list for 003-store-house"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T019 [P] [US2] `tests/unit/sim/fertile.test.ts`: over 500 seeds and rival counts 1–5, every start has at least `fertile.minNear` fertile cells within `fairRadius`, richest-to-poorest within `fairTolerance`; fertile cells are only Open or Rough; the contested patches sit away from every start; same seed gives the same layer
-- [ ] T020 [P] [US2] `tests/unit/sim/farm.test.ts` (update) and `tests/unit/sim/farm-link.test.ts` (new): `canPlace('farm', …)` returns `not-fertile` off fertile ground; an unlinked farm pays 0 and emits no income; a linked farm pays `farm.income` at any vein distance in the same piece; cutting the vein between them unlinks it and emits `farmLinkChanged`; destroying the Store House unlinks all its farms at once; a piece whose only source is an unlinked farm is not orphaned (FR-014)
-- [ ] T021 [P] [US2] `tests/unit/sim/farm-throttle.test.ts`: with the pool at the cap a linked farm pays 0; with headroom smaller than one tick's output it pays exactly the headroom; the pool never exceeds the cap; upkeep is unchanged while throttled (S5)
-- [ ] T022 [US2] Update `tests/integration/farm-economy.test.ts`, `tests/unit/sim/buildings.test.ts` and any other test that places a farm: use fertile ground and a Store House; confirm they pass
+- [X] T019 [P] [US2] `tests/unit/sim/fertile.test.ts`: over 500 seeds and rival counts 1–5, every start has at least `fertile.minNear` fertile cells within `fairRadius`, richest-to-poorest within `fairTolerance`; fertile cells are only Open or Rough; the contested patches sit away from every start; same seed gives the same layer
+- [X] T020 [P] [US2] `tests/unit/sim/farm.test.ts` (update) and `tests/unit/sim/farm-link.test.ts` (new): `canPlace('farm', …)` returns `not-fertile` off fertile ground; an unlinked farm pays 0 and emits no income; a linked farm pays `farm.income` at any vein distance in the same piece; cutting the vein between them unlinks it and emits `farmLinkChanged`; destroying the Store House unlinks all its farms at once; a piece whose only source is an unlinked farm is not orphaned (FR-014)
+- [X] T021 [P] [US2] `tests/unit/sim/farm-throttle.test.ts`: with the pool at the cap a linked farm pays 0; with headroom smaller than one tick's output it pays exactly the headroom; the pool never exceeds the cap; upkeep is unchanged while throttled (S5)
+- [X] T022 [US2] Update `tests/integration/farm-economy.test.ts`, `tests/unit/sim/buildings.test.ts` and any other test that places a farm: use fertile ground and a Store House; confirm they pass
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] In `src/sim/mapgen.ts`: after terrain, starts and food, place `fertile.nearPatches` blobs per start (radius `patchMin`–`patchMax`, noise-warped edge, Open/Rough cells within `fertile.nearRadius` path distance) and `fertile.contested` patches (+1 per two rivals) at cells farthest from every start, drawing only from the map-generation stream; extend `validateMap` with the `minNear` and fairness checks (S9)
-- [ ] T024 [US2] In `src/sim/buildings.ts`: `canPlace('farm', …)` returns `not-fertile` when `world.fertile[cell] === 0` (placed in PlaceReason order after `on-food`); add `farmLinked(world, building)` and `farmOutput(world, building)` (0 when unlinked; level handling arrives in US3, use the default level until then); emit `farmLinkChanged` when a farm's state flips
-- [ ] T025 [US2] Rewrite `tickBuildings` in `src/sim/buildings.ts`: per piece, `desired = Σ output × dt`, `scale = min(1, headroom / desired)`, each farm pays `output × dt × scale` (S5); update `buildingIncome` to the sum of current outputs
-- [ ] T026 [US2] Make `sourceRate` in `src/sim/flow.ts` use `farmOutput`; keep farm cells in `comp.sources` regardless of link (S4)
-- [ ] T027 [P] [US2] Bake fertile ground in `src/render/terrain-layer.ts`: generalize `occupancy` to take a predicate, add a flat green-brown wash with a soft inked edge and short ink tufts over fertile cells (S10); verify it reads in grayscale and differs from rough ground by shape
-- [ ] T028 [P] [US2] Draw an unlinked marker above unlinked farms and dim parked ones in `src/render/building-layer.ts`; farm ghost shows valid only on fertile ground and a "No store house on this vein" badge in `src/render/fx-layer.ts`
-- [ ] T029 [US2] HUD and messages: `farms { total, linked, unlinked }` in `src/sim/hud.ts`; amber "N farms unlinked" line in `src/ui/hud.ts` that highlights the Store House button; reason texts `not-fertile` ("Farms need fertile ground") in `src/ui/messages.ts`
-- [ ] T030 [US2] Update the farm proxy in `tools/batch-sim.ts` to place a Store House first and then farms on fertile cells in the same piece; run `npm run sim:batch -- --rounds 1-3 --games 20` and record the result in Implementation notes
-- [ ] T031 [US2] Playtest checklist (US2 section): fertile ground readable in fog and grayscale; the unlinked warning is noticed within a few seconds; the first linked farm is affordable within about two minutes on round 1
+- [X] T023 [US2] In `src/sim/mapgen.ts`: after terrain, starts and food, place `fertile.nearPatches` blobs per start (radius `patchMin`–`patchMax`, noise-warped edge, Open/Rough cells within `fertile.nearRadius` path distance) and `fertile.contested` patches (+1 per two rivals) at cells farthest from every start, drawing only from the map-generation stream; extend `validateMap` with the `minNear` and fairness checks (S9)
+- [X] T024 [US2] In `src/sim/buildings.ts`: `canPlace('farm', …)` returns `not-fertile` when `world.fertile[cell] === 0` (placed in PlaceReason order after `on-food`); add `farmLinked(world, building)` and `farmOutput(world, building)` (0 when unlinked; level handling arrives in US3, use the default level until then); emit `farmLinkChanged` when a farm's state flips
+- [X] T025 [US2] Rewrite `tickBuildings` in `src/sim/buildings.ts`: per piece, `desired = Σ output × dt`, `scale = min(1, headroom / desired)`, each farm pays `output × dt × scale` (S5); update `buildingIncome` to the sum of current outputs
+- [X] T026 [US2] Make `sourceRate` in `src/sim/flow.ts` use `farmOutput`; keep farm cells in `comp.sources` regardless of link (S4)
+- [X] T027 [P] [US2] Bake fertile ground in `src/render/terrain-layer.ts`: generalize `occupancy` to take a predicate, add a flat green-brown wash with a soft inked edge and short ink tufts over fertile cells (S10); verify it reads in grayscale and differs from rough ground by shape
+- [X] T028 [P] [US2] Draw an unlinked marker above unlinked farms and dim parked ones in `src/render/building-layer.ts`; farm ghost shows valid only on fertile ground and a "No store house on this vein" badge in `src/render/fx-layer.ts`
+- [X] T029 [US2] HUD and messages: `farms { total, linked, unlinked }` in `src/sim/hud.ts`; amber "N farms unlinked" line in `src/ui/hud.ts` that highlights the Store House button; reason texts `not-fertile` ("Farms need fertile ground") in `src/ui/messages.ts`
+- [X] T030 [US2] Update the farm proxy in `tools/batch-sim.ts` to place a Store House first and then farms on fertile cells in the same piece; run `npm run sim:batch -- --rounds 1-3 --games 20` and record the result in Implementation notes
+- [X] T031 [US2] Playtest checklist (US2 section): fertile ground readable in fog and grayscale; the unlinked warning is noticed within a few seconds; the first linked farm is affordable within about two minutes on round 1
 
 **Checkpoint**: MVP. A mold needs storage and fertile ground to farm; the economy works end to end.
 
@@ -214,5 +214,12 @@ description: "Task list for 003-store-house"
 - T002/T012 balance: a base cap of 120 stalled the combat and rival-round tests (the spend budget uses the pool), so the first numbers are `pool.baseCap 300` and store house `capacity 300` (perPiece 3). The balance pass (T055) retunes them; research S12 still lists the earlier 120/180.
 - T004: the "no pool above its cap" invariant is checked in tests, not in `assertInvariants` (many existing tests set pools by hand); the "farm stands on fertile ground" invariant arrives with T024.
 - Build bar order is farm, store house, booster, harvester.
+
+- T008: `farmLinked`, `farmOutput`, `capOf`, `placePreview`, `storeCover`, `veinCover` are exported from `src/sim/index.ts` (`storeCover` is used by US4).
+- T024/T036: the output-level curve and level-scaled upkeep were implemented together with the link rule (they share `farmOutput`); US3 still owes the `setFarmOutput` command, the panel, and its tests.
+- T023: fertile fairness uses `(1 - 2 x fairTolerance)` of the richest start (a blob is lumpier than food), checked over 300 seeds in `tests/unit/sim/fertile.test.ts`.
+- T022: test worlds are fertile by default (`createOpenWorld` option `fertile`, default true); tests that need a farm to pay place a store house with `withStoreHouse`.
+- T030 batch-sim, rounds 1-3, 20 games each, AI stand-in (store house first, then farms on fertile ground): win 55% / 75% / 55% (it was 90% / 80% / 80% before this feature). The early game is slower because a store house (40) comes before the first paying farm; the balance pass (T055) retunes cost, start nutrients and cap.
+- US2 also pulled forward a minimal rival AI (store house first, then farms on fertile ground) so rival rounds still decide; US5 refines it.
 
 (more notes as tasks complete)

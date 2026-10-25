@@ -36,9 +36,10 @@ export function bakeTerrain(world: Readonly<World>): Sprite {
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
   const img = ctx.createImageData(pw, ph);
-  const rough = occupancy(world, Terrain.Rough, pw, ph);
-  const glass = occupancy(world, Terrain.Obstacle, pw, ph);
-  paintGround(img, rough, glass, pw, ph);
+  const rough = occupancy(world, (i) => world.terrain[i] === Terrain.Rough, pw, ph);
+  const glass = occupancy(world, (i) => world.terrain[i] === Terrain.Obstacle, pw, ph);
+  const fertile = occupancy(world, (i) => world.fertile[i] === 1, pw, ph);
+  paintGround(img, rough, glass, fertile, pw, ph);
   ctx.putImageData(img, 0, 0);
 
   paintWall(world, ctx);
@@ -50,13 +51,13 @@ export function bakeTerrain(world: Readonly<World>): Sprite {
   return sprite;
 }
 
-/** 1 where a cell of this terrain sits, blurred into a soft field the size of the texture */
-function occupancy(world: Readonly<World>, kind: number, pw: number, ph: number): Float32Array {
+/** 1 where a cell matches, blurred into a soft field the size of the texture */
+function occupancy(world: Readonly<World>, match: (cell: number) => boolean, pw: number, ph: number): Float32Array {
   const w = world.width;
   const field = new Float32Array(pw * ph);
   for (let cy = 0; cy < world.height; cy++) {
     for (let cx = 0; cx < w; cx++) {
-      if (world.terrain[cy * w + cx] !== kind) continue;
+      if (!match(cy * w + cx)) continue;
       for (let y = cy * CELL; y < (cy + 1) * CELL; y++) field.fill(1, y * pw + cx * CELL, y * pw + (cx + 1) * CELL);
     }
   }
@@ -94,7 +95,7 @@ function boxBlur(a: Float32Array, tmp: Float32Array, w: number, h: number, r: nu
   }
 }
 
-function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, pw: number, ph: number): void {
+function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, fertile: Float32Array, pw: number, ph: number): void {
   const data = img.data;
   const bands: Rgb[] = [rgb(MAP.dark), rgb(MAP.mid), rgb(MAP.base)];
   const roughC = rgb(MAP.rough);
@@ -103,6 +104,9 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
   const glassDarkC = rgb(MAP.glassDark);
   const glassLightC = rgb(MAP.glassLight);
   const ink = rgb(INK);
+  const fertileC = rgb(MAP.fertile);
+  const fertileLightC = rgb(MAP.fertileLight);
+  const fertileInkC = rgb(MAP.fertileInk);
 
   const at = (f: Float32Array, x: number, y: number): number => {
     const xx = x < 0 ? 0 : x >= pw ? pw - 1 : x;
@@ -140,6 +144,26 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
         mixIn(roughInk, inside * smooth(EDGE + 0.1, EDGE + 0.2, rv) * line * 0.7);
         const rim = smooth(EDGE - 0.02, EDGE + 0.02, rv) * (1 - smooth(EDGE + 0.06, EDGE + 0.1, rv));
         mixIn(roughInk, rim * 0.45);
+      }
+
+      // fertile ground: a flat green wash with a soft inked edge and short inked tufts, so it reads
+      // by shape as well as tone (S10)
+      const fv = (fertile[i] as number) + wobble;
+      if (fv > EDGE - 0.05) {
+        const inside = smooth(EDGE - 0.02, EDGE + 0.02, fv);
+        const lit = smooth(0.5, 0.52, valueNoise(x / 20, y / 20, 61));
+        mixIn(fertileC, inside * 0.92);
+        mixIn(fertileLightC, inside * lit * 0.55);
+        const rim = smooth(EDGE - 0.02, EDGE + 0.02, fv) * (1 - smooth(EDGE + 0.05, EDGE + 0.1, fv));
+        mixIn(fertileInkC, rim * 0.7);
+        // one tuft per 9px block, drawn as a small V opening upward
+        const bx = Math.floor(x / 9);
+        const by = Math.floor(y / 9);
+        if (hash2(bx, by, 83) < 0.45 && fv > EDGE + 0.12) {
+          const dx = x - (bx * 9 + 2 + Math.floor(hash2(bx, by, 84) * 5));
+          const dy = y - (by * 9 + 3 + Math.floor(hash2(bx, by, 85) * 4));
+          if (dy >= -4 && dy <= 0 && Math.abs(Math.abs(dx) + dy * 0.5) < 0.8 && Math.abs(dx) <= 2.5) mixIn(fertileInkC, inside * 0.85);
+        }
       }
 
       // glass obstacles: hatched drop shadow, flat cel bands, a lit rim, a heavy ink outline

@@ -1,6 +1,6 @@
 import { DX, DY, cellAt } from './grid';
 import { heapPop, heapPush } from './heap';
-import { fbm2 } from './noise';
+import { fbm2, hash2 } from './noise';
 import type { Rng } from './rng';
 import { canPlaceFood, placeFood } from './food';
 import { Terrain } from './types';
@@ -58,6 +58,7 @@ export function generateMap(world: World, rng: Rng, startCount: number): Generat
 
   scatterFood(world, rng, starts, reach);
   balanceFood(world, rng, starts, reach);
+  placeFertile(world, rng, starts, reach);
   return { starts, playerIndex: rng.int(starts.length) };
 }
 
@@ -260,11 +261,111 @@ function balanceFood(world: World, rng: Rng, starts: CellIndex[], reach: Uint8Ar
   }
 }
 
+/** fertile cells within `fairRadius` steps of a start */
+export function fertileNear(world: World, start: CellIndex, radius = world.balance.fairRadius): number {
+  let n = 0;
+  for (const c of foodNear(world, start, radius).cells) if (world.fertile[c]) n++;
+  return n;
+}
+
+/** mark a rough disk of fertile ground; only on reachable open or rough cells that hold no food */
+function paintFertile(world: World, reach: Uint8Array, cx: number, cy: number, r: number): number {
+  const { width: w, height: h } = world;
+  let added = 0;
+  for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) {
+    for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
+      if (x <= 0 || y <= 0 || x >= w - 1 || y >= h - 1) continue;
+      const c = cellAt(w, x, y);
+      const t = world.terrain[c];
+      if (!reach[c] || (t !== Terrain.Open && t !== Terrain.Rough) || (world.foodSourceId[c] as number) >= 0 || world.fertile[c]) continue;
+      // a wobbly edge so patches are blobs, not discs
+      const edge = r + (hash2(x, y, world.seed) - 0.5) * 1.6;
+      if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > edge * edge) continue;
+      world.fertile[c] = 1;
+      added++;
+    }
+  }
+  return added;
+}
+
+/**
+ * Fertile ground (003 S9): a few patches near every start, a top-up so no start is left poor, and
+ * contested patches placed as far from every start as the samples allow.
+ */
+function placeFertile(world: World, rng: Rng, starts: CellIndex[], reach: Uint8Array): void {
+  const { width: w, balance: b } = world;
+  const f = b.fertile;
+  const radius = (): number => f.patchMin + rng.int(f.patchMax - f.patchMin + 1);
+  const nearPatch = (start: CellIndex): number => {
+    const sx = start % w;
+    const sy = Math.floor(start / w);
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const dx = rng.int(2 * f.nearRadius + 1) - f.nearRadius;
+      const dy = rng.int(2 * f.nearRadius + 1) - f.nearRadius;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > f.nearRadius * f.nearRadius || d2 < (b.startClearRadius + 2) * (b.startClearRadius + 2)) continue;
+      const c = cellAt(w, sx + dx, sy + dy);
+      if (!reach[c] || world.terrain[c] === Terrain.Wall) continue;
+      const added = paintFertile(world, reach, sx + dx, sy + dy, radius());
+      if (added > 0) return added;
+    }
+    return 0;
+  };
+
+  for (const s of starts) for (let i = 0; i < f.nearPatches; i++) nearPatch(s);
+
+  // so no start is left poor next to a rich one
+  for (let round = 0; round < 6; round++) {
+    const counts = starts.map((s) => fertileNear(world, s));
+    const target = Math.max(f.minNear, (1 - 2 * b.fairTolerance) * Math.max(...counts));
+    let changed = false;
+    for (let i = 0; i < starts.length; i++) {
+      let have = counts[i] as number;
+      for (let k = 0; k < 4 && have < target; k++) {
+        const added = nearPatch(starts[i] as number);
+        have += added;
+        if (added > 0) changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // contested ground: best-candidate sampling away from every start and earlier patches
+  const rivals = starts.length - 1;
+  const placed: [number, number][] = [];
+  const count = f.contested + Math.floor(rivals / 2);
+  for (let n = 0; n < count; n++) {
+    let best = -1;
+    let bestD = -1;
+    for (let k = 0; k < 60; k++) {
+      const c = rng.int(world.terrain.length);
+      if (!reach[c] || (world.terrain[c] !== Terrain.Open && world.terrain[c] !== Terrain.Rough)) continue;
+      const x = c % w;
+      const y = Math.floor(c / w);
+      let d = Infinity;
+      for (const s of starts) d = Math.min(d, (x - (s % w)) ** 2 + (y - Math.floor(s / w)) ** 2);
+      for (const [px, py] of placed) d = Math.min(d, (x - px) ** 2 + (y - py) ** 2);
+      if (d > bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    if (best < 0) continue;
+    const x = best % w;
+    const y = Math.floor(best / w);
+    if (paintFertile(world, reach, x, y, radius()) > 0) placed.push([x, y]);
+  }
+}
+
 /** Does the map pass its checks? Used to reject and regenerate (R12 step 6). */
 export function validateMap(world: World, starts: CellIndex[]): boolean {
   if (!startsConnected(world, starts)) return false;
   if (world.reachableCells < world.balance.minReachableArea * world.width * world.height) return false;
   const values = starts.map((s) => foodNear(world, s).value);
   const richest = Math.max(...values);
-  return values.every((v) => v >= (1 - world.balance.fairTolerance) * richest - 1e-6);
+  if (!values.every((v) => v >= (1 - world.balance.fairTolerance) * richest - 1e-6)) return false;
+  // every start has fertile ground in reach, in comparable amounts (003 FR-015)
+  const fertile = starts.map((s) => fertileNear(world, s));
+  const most = Math.max(...fertile);
+  return fertile.every((n) => n >= world.balance.fertile.minNear && n >= (1 - 2 * world.balance.fairTolerance) * most - 1e-6);
 }

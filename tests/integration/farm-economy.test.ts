@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { assertInvariants, createRound, enqueue, readHud, stateHash, step } from '../../src/sim';
 import { placeBuilding } from '../../src/sim/buildings';
 import { defaultBalance } from '../../src/config/balance';
-import { cellOf, createWorldWithMold } from '../helpers';
+import { cellOf, createWorldWithMold, withStoreHouse } from '../helpers';
 
 describe('farm economy (US1)', () => {
   it('a mold with a farm keeps growing where one without cannot, with no food in reach', () => {
     const run = (withFarm: boolean): number => {
       const { world, mold } = createWorldWithMold(220, 40, 10, 20, 100);
-      if (withFarm) placeBuilding(world, mold.id, 'farm', cellOf(world, 11, 20));
+      if (withFarm) {
+        placeBuilding(world, mold.id, 'farm', cellOf(world, 11, 20));
+        placeBuilding(world, mold.id, 'storehouse', cellOf(world, 10, 21));
+      }
       enqueue(world, { type: 'setTarget', mold: mold.id, cell: cellOf(world, 210, 20) });
       for (let t = 0; t < 20 * 500; t++) {
         step(world);
@@ -22,10 +25,16 @@ describe('farm economy (US1)', () => {
   });
 
   it('a farm pays back its cost in about 22 seconds of game time', () => {
-    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 100, { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0 });
+    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 100, {
+      ...defaultBalance,
+      coreIncome: 0,
+      upkeepPerCell: 0,
+      buildings: { ...defaultBalance.buildings, storehouse: { ...defaultBalance.buildings.storehouse, upkeep: 0 } },
+    });
     const cell = cellOf(world, 11, 20);
     const comp = world.components.get(world.component[cell]!)!;
     placeBuilding(world, mold.id, 'farm', cell);
+    withStoreHouse(world, mold.id, cellOf(world, 10, 21));
     const afterCost = comp.pool;
     const { cost, income, upkeep } = defaultBalance.buildings.farm;
     for (let t = 0; t < Math.ceil((cost / (income - upkeep)) * 20); t++) step(world);
@@ -36,8 +45,9 @@ describe('farm economy (US1)', () => {
     const play = (): { hash: number; log: ReturnType<typeof createRound>['replay'] } => {
       const world = createRound({ runSeed: 21, roundNumber: 1 });
       const arm = world.molds[0]!.core + 1;
+      world.components.get(world.component[world.molds[0]!.core]!)!.pool = 100; // a store house costs more than the 30 a round starts with
       const food = world.foodSources[0]!;
-      enqueue(world, { type: 'placeBuilding', mold: 1, building: 'farm', cell: arm });
+      enqueue(world, { type: 'placeBuilding', mold: 1, building: 'storehouse', cell: arm });
       enqueue(world, { type: 'setTarget', mold: 1, cell: food.y * world.width + food.x });
       for (let t = 0; t < 600; t++) step(world);
       return { hash: stateHash(world), log: world.replay };
@@ -48,12 +58,13 @@ describe('farm economy (US1)', () => {
     expect(a.log.entries.some((e) => e.cmd.type === 'placeBuilding')).toBe(true);
 
     const replay = createRound({ runSeed: 21, roundNumber: 1 });
+    replay.components.get(replay.component[replay.molds[0]!.core]!)!.pool = 100;
     let next = 0;
     for (let t = 0; t < 600; t++) {
       while (next < a.log.entries.length && a.log.entries[next]!.tick === t) enqueue(replay, a.log.entries[next++]!.cmd);
       step(replay);
     }
     expect(stateHash(replay)).toBe(a.hash);
-    expect(readHud(replay, 1).build[0]!.count).toBe(1);
+    expect(readHud(replay, 1).build.find((o) => o.type === 'storehouse')!.count).toBe(1);
   });
 });

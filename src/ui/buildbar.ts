@@ -108,6 +108,11 @@ export class BuildBar {
     }
   }
 
+  /** nudge the player toward one button (null clears it) */
+  highlight(type: BuildingType | null): void {
+    for (const [t, btn] of this.buttons) btn.classList.toggle('hint-pulse', t === type);
+  }
+
   /** small tooltip that follows the cursor in placement mode; null hides it */
   showHint(text: string | null, x: number, y: number, ok: boolean): void {
     if (text === null) {

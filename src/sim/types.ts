@@ -136,6 +136,8 @@ export interface Building {
   target: number;
   /** farm only: output level, an integer 0..farm.maxLevel (default farm.defaultLevel); others 0 */
   level: number;
+  /** farm only: whether a working store house shared its piece at the last tick (for link events) */
+  linked: boolean;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
 }
@@ -242,6 +244,8 @@ export interface HudModel {
   buildingIncome: number;
   /** stored nutrients against the caps of the mold's pieces (003) */
   stock: { total: number; cap: number; full: boolean };
+  /** how many of the mold's farms are linked to a store house, and how many are not */
+  farms: { total: number; linked: number; unlinked: number };
   rivals: {
     id: MoldId;
     color: number;
@@ -258,7 +262,7 @@ export interface MoldView {
     id: MoldId;
     allocation: number;
     cellCount: number;
-    components: { id: number; pool: number; cellCount: number; orphaned: boolean }[];
+    components: { id: number; pool: number; cap: number; storeHouses: number; cellCount: number; orphaned: boolean }[];
     targets: HudTarget[];
     frontCells: CellIndex[];
     frontLoss: number;
@@ -267,6 +271,10 @@ export interface MoldView {
   height: number;
   terrain: Readonly<Uint8Array>;
   visibility(cell: CellIndex): 0 | 1 | 2;
+  /** fertile ground is terrain: known to every mold, like obstacles */
+  fertileAt(cell: CellIndex): boolean;
+  /** id of the mold's own piece holding this cell, or -1 */
+  pieceOf(cell: CellIndex): number;
   ownerAt(cell: CellIndex): MoldId | 0;
   biomassAt(cell: CellIndex): number | null;
   foodAt(cell: CellIndex): number;

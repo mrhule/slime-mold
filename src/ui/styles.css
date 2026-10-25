@@ -96,6 +96,22 @@ html, body {
   clip-path: polygon(0 12%, 6% 0, 14% 10%, 24% 0, 33% 10%, 44% 0, 55% 10%, 66% 0, 76% 10%, 87% 0, 94% 10%, 100% 0, 100% 90%, 94% 100%, 85% 90%, 74% 100%, 64% 90%, 53% 100%, 42% 90%, 31% 100%, 21% 90%, 11% 100%, 4% 90%, 0 100%);
 }
 .burst[hidden] { display: none; }
+.hud .warn {
+  margin: 6px 0 2px;
+  padding: 4px 8px;
+  background: #ffe9a8;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.hud .warn[hidden] { display: none; }
+.buildbar button.hint-pulse { animation: hint-pulse 0.9s ease-in-out infinite alternate; }
+@keyframes hint-pulse {
+  from { transform: translateY(0); }
+  to { transform: translateY(-5px); }
+}
 
 .hud .hint {
   margin-top: 8px;

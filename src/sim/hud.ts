@@ -1,4 +1,4 @@
-import { buildingIncome, capOf, countBuildings } from './buildings';
+import { buildingIncome, capOf, countBuildings, farmLinked } from './buildings';
 import { mapControl } from './round';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -23,6 +23,17 @@ export function stockOf(world: World, moldId: MoldId): { total: number; cap: num
     if (c.pool >= limit - 1e-6) full = true;
   }
   return { total, cap, full };
+}
+
+function farmCounts(world: World, moldId: MoldId): { total: number; linked: number; unlinked: number } {
+  let total = 0;
+  let linked = 0;
+  for (const b of world.buildings) {
+    if (b.destroyed || b.type !== 'farm' || b.moldId !== moldId) continue;
+    total++;
+    if (farmLinked(world, b)) linked++;
+  }
+  return { total, linked, unlinked: total - linked };
 }
 
 function buildOptions(world: World, moldId: MoldId): BuildOption[] {
@@ -58,6 +69,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     build: buildOptions(world, moldId),
     buildingIncome: buildingIncome(world, moldId),
     stock: stockOf(world, moldId),
+    farms: farmCounts(world, moldId),
     rivals: world.molds
       .filter((m) => m.id !== moldId)
       .map((m) => ({
