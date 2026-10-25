@@ -34,3 +34,13 @@ Run with `npm run dev` (add `?seed=7&nopause` to keep a fixed map). Tick each it
 - [ ] Level 0 reads "Parked" and the farm costs nothing; the status line also shows Unlinked and
       Throttled when they apply.
 - [ ] The panel is usable with the keyboard alone, also while paused.
+
+## US4: Store house boost
+
+- [ ] A boosting store house shows rings along its vein, strongest next to it and fading outward;
+      the rings read apart from the booster's filled glow.
+- [ ] Tips visibly speed up near the store house, and less so far down the vein.
+- [ ] A harvester on the vein absorbs food noticeably faster than without one.
+- [ ] With the stock low the boost stops (the rings disappear) and returns once stock recovers;
+      it does not flicker.
+- [ ] The store house's drain is understood from the nutrient readout while it boosts.

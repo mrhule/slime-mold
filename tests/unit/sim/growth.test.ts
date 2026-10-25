@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { defaultBalance } from '../../../src/config/balance';
 import { addTarget, findPath, planTarget, snapTarget } from '../../../src/sim/growth';
 import { applyCommand } from '../../../src/sim/commands';
 import { Terrain } from '../../../src/sim/types';
@@ -149,5 +150,41 @@ describe('targets', () => {
     const { world, mold } = createWorldWithMold();
     applyCommand(world, { type: 'cancelTarget', mold: mold.id, targetId: 999 });
     expect(world.events).toContainEqual({ type: 'commandRejected', mold: mold.id, reason: 'unknown-target' });
+  });
+});
+
+describe('store house boost on growth (003 FR-020, FR-023, S8)', () => {
+  /** one tick of a lone tip, with the supply multiplier set on every cell */
+  function tipAfterOneTick(supply: number) {
+    const { world, mold } = createWorldWithMold(80, 30, 10, 15, 100, { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0 });
+    world.supply.fill(supply);
+    applyCommand(world, { type: 'setTarget', mold: mold.id, cell: cellOf(world, 60, 15) });
+    const comp = world.components.get(world.component[mold.core] as number)!;
+    const before = comp.pool;
+    step(world);
+    const tip = mold.targets[0]!;
+    return { world, tip, spent: before - comp.pool };
+  }
+
+  it('turns each granted nutrient into more progress, and still pays the grant from the pool', () => {
+    const plain = tipAfterOneTick(1);
+    const boosted = tipAfterOneTick(1.5);
+    expect(plain.tip.progress).toBeGreaterThan(0);
+    expect(plain.tip.progress).toBeLessThan(1); // no cell finished yet, so the ratio is clean
+    expect(boosted.tip.progress).toBeCloseTo(plain.tip.progress * 1.5, 6);
+    expect(boosted.spent).toBeCloseTo(plain.spent, 9);
+  });
+
+  it('marks the piece as having used the boost, so its store house drains', () => {
+    const boosted = tipAfterOneTick(1.5);
+    expect(boosted.world.supplyUse.size).toBe(1);
+    const plain = tipAfterOneTick(1);
+    expect(plain.world.supplyUse.size).toBe(0);
+  });
+
+  it('does not touch combat strength or farm income', () => {
+    const { world } = tipAfterOneTick(1.5);
+    expect(world.boost.every((v) => v === 1)).toBe(true);
+    expect(world.molds[0]!.incomeTick).toBeGreaterThanOrEqual(0);
   });
 });

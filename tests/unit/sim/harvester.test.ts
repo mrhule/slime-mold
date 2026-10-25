@@ -148,3 +148,45 @@ describe('harvester effect (FR-015, FR-016)', () => {
     expect(world.buildings[0]!.destroyed).toBe(false); // still standing, just idle
   });
 });
+
+describe('store house boost on harvesting (003 FR-020, FR-023)', () => {
+  function perTick(supply: number, withHarvester = true) {
+    const { world, a, edge } = setup('sugarCube', { ...noIncome, buildings: { ...defaultBalance.buildings, harvester: { ...spec, upkeep: 0 } } });
+    engulfFood(world, a.id, cellOf(world, 20, 20));
+    if (!world.owner[cellOf(world, 20, 20)]) addCell(world, a.id, cellOf(world, 20, 20), edge);
+    engulfFood(world, a.id, cellOf(world, 20, 20));
+    world.components.get(world.component[edge]!)!.pool = 100;
+    if (withHarvester) placeBuilding(world, a.id, 'harvester', edge);
+    world.supply.fill(supply);
+    const comp = world.components.get(world.component[edge]!)!;
+    const before = comp.pool;
+    step(world);
+    return { gain: comp.pool - before, world };
+  }
+
+  it('a boosted harvester absorbs base x rateMult x supply per tick, and flags the piece', () => {
+    const plain = perTick(1);
+    const boosted = perTick(1.5);
+    expect(boosted.gain).toBeCloseTo(plain.gain * 1.5, 6);
+    expect(boosted.world.supplyUse.size).toBe(1);
+    expect(plain.world.supplyUse.size).toBe(0);
+  });
+
+  it('only harvester-owned food is sped up, and the item total is unchanged', () => {
+    const none = perTick(1.5, false);
+    const base = perTick(1, false);
+    expect(none.gain).toBeCloseTo(base.gain, 9); // no harvester: the supply multiplier is not used
+    const { world, a, src, edge } = setup('sugarCube', { ...noIncome, buildings: { ...defaultBalance.buildings, harvester: { ...spec, upkeep: 0 } } });
+    engulfFood(world, a.id, cellOf(world, 20, 20));
+    if (!world.owner[cellOf(world, 20, 20)]) addCell(world, a.id, cellOf(world, 20, 20), edge);
+    engulfFood(world, a.id, cellOf(world, 20, 20));
+    const comp = world.components.get(world.component[edge]!)!;
+    comp.pool = 100;
+    placeBuilding(world, a.id, 'harvester', edge);
+    world.supply.fill(1.5);
+    const before = comp.pool;
+    for (let t = 0; t < 3000 && !src!.depleted; t++) step(world);
+    expect(src!.depleted).toBe(true);
+    expect(comp.pool - before).toBeCloseTo(src!.total, 2);
+  });
+});

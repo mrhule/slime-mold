@@ -1,4 +1,4 @@
-import { clampPools, tickBuildings } from './buildings';
+import { clampPools, drainStoreHouses, recomputeSupply, tickBuildings } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
@@ -43,12 +43,15 @@ function settleNetIncome(world: World): void {
 export function step(world: World): void {
   world.events = [];
   applyQueuedCommands(world);
+  world.supplyUse.clear();
+  if (world.tick % world.balance.flowEvery === 0) recomputeSupply(world);
   tickDrops(world);
   tickIncome(world);
   tickUpkeep(world);
   scanFronts(world);
   if (world.tick % world.balance.flowEvery === 0) solveFlow(world);
   tickGrowth(world);
+  drainStoreHouses(world);
   tickCombat(world);
   decayOrphans(world);
   checkEliminations(world);

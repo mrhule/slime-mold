@@ -37,6 +37,7 @@ export function withStoreHouse(world: World, moldId: number, cell: number): void
     target: -1,
     level: 0,
     linked: false,
+    boosting: false,
     destroyed: false,
   });
   world.buildingAt[cell] = world.buildings.length - 1;

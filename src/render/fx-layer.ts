@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
-import { boosterCover } from '../sim/index';
-import { cellCenter, drawBoosterCover, drawBuilding } from './building-layer';
+import { boosterCover, storeCover } from '../sim/index';
+import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { CELL } from './units';
@@ -182,6 +182,7 @@ export class FxLayer {
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
       if (ghost.type === 'booster') drawBoosterCover(g, world.width, boosterCover(world, ghost.cell), world.balance.buildings.booster.bonus, color, 0.8);
+      if (ghost.type === 'storehouse') drawStoreCover(g, world.width, storeCover(world, ghost.cell), world.balance.buildings.storehouse.bonus, color, 0.8);
       drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color });
     }
     this.pings = this.pings.filter((p) => (p.age += dt) < PING_SECONDS);

@@ -137,18 +137,18 @@ description: "Task list for 003-store-house"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T040 [P] [US4] `tests/unit/sim/store-boost.test.ts`: `world.supply` is `1 + bonus × (1 − d/reach)` along the vein and 1 elsewhere (other pieces, other molds, off-vein); overlapping Store Houses stack and `supply` never exceeds `1 + stackCap`; a non-working Store House (unpaid piece or `pool < lowStock`) adds nothing; resumes at `lowStock × 1.25` (no flicker)
-- [ ] T041 [P] [US4] Extend `tests/unit/sim/growth.test.ts`: a tip with `supply[head] = 1.5` converts a grant into 1.5× the progress; the grant is still paid from the pool; combat strength and farm output are unaffected by the boost
-- [ ] T042 [P] [US4] Extend `tests/unit/sim/harvester.test.ts`: a boosted harvester absorbs `base × rateMult × supply[cell]` per tick and the item's total nutrients are unchanged; an unboosted item is unaffected
-- [ ] T043 [P] [US4] `tests/unit/sim/store-boost.test.ts` (drain section): each working Store House drains `storehouse.drain` per second from its piece only while some tip head or harvester-owned food cell in that piece has `supply > 1`; no drain when nothing is boosted; the pool never goes below 0
+- [X] T040 [P] [US4] `tests/unit/sim/store-boost.test.ts`: `world.supply` is `1 + bonus × (1 − d/reach)` along the vein and 1 elsewhere (other pieces, other molds, off-vein); overlapping Store Houses stack and `supply` never exceeds `1 + stackCap`; a non-working Store House (unpaid piece or `pool < lowStock`) adds nothing; resumes at `lowStock × 1.25` (no flicker)
+- [X] T041 [P] [US4] Extend `tests/unit/sim/growth.test.ts`: a tip with `supply[head] = 1.5` converts a grant into 1.5× the progress; the grant is still paid from the pool; combat strength and farm output are unaffected by the boost
+- [X] T042 [P] [US4] Extend `tests/unit/sim/harvester.test.ts`: a boosted harvester absorbs `base × rateMult × supply[cell]` per tick and the item's total nutrients are unchanged; an unboosted item is unaffected
+- [X] T043 [P] [US4] `tests/unit/sim/store-boost.test.ts` (drain section): each working Store House drains `storehouse.drain` per second from its piece only while some tip head or harvester-owned food cell in that piece has `supply > 1`; no drain when nothing is boosted; the pool never goes below 0
 
 ### Implementation for User Story 4
 
-- [ ] T044 [US4] In `src/sim/buildings.ts`: `storeCover(world, startCell)` via `veinCover`, `recomputeSupply(world)` (working Store Houses summed into `world.supply`, capped at `1 + stackCap`, `supplyActive`), called at flow cadence, on place, on destroy, and on pay-state change; the `lowStock` hysteresis (S3, S8)
-- [ ] T045 [US4] Multiply tip progress by `world.supply[head]` in `advanceTip` in `src/sim/growth.ts`; multiply harvester absorption by `world.supply[cell]` in `src/sim/food.ts` (S8)
-- [ ] T046 [US4] Add the drain to `tickBuildings`: per piece, `drain × (working Store Houses)` per second while a boosted consumer exists in it (S8)
-- [ ] T047 [P] [US4] Draw the boost glow along the covered vein in `src/render/building-layer.ts` (reuse `drawBoosterCover`, owner's color, only where the Store House is visible) and in the Store House placement ghost in `src/render/fx-layer.ts`
-- [ ] T048 [US4] Playtest checklist (US4 section): the glow reads as "boosted vein", tips visibly speed up near the Store House, the stock drain is understood from the HUD
+- [X] T044 [US4] In `src/sim/buildings.ts`: `storeCover(world, startCell)` via `veinCover`, `recomputeSupply(world)` (working Store Houses summed into `world.supply`, capped at `1 + stackCap`, `supplyActive`), called at flow cadence, on place, on destroy, and on pay-state change; the `lowStock` hysteresis (S3, S8)
+- [X] T045 [US4] Multiply tip progress by `world.supply[head]` in `advanceTip` in `src/sim/growth.ts`; multiply harvester absorption by `world.supply[cell]` in `src/sim/food.ts` (S8)
+- [X] T046 [US4] Add the drain to `tickBuildings`: per piece, `drain × (working Store Houses)` per second while a boosted consumer exists in it (S8)
+- [X] T047 [P] [US4] Draw the boost glow along the covered vein in `src/render/building-layer.ts` (reuse `drawBoosterCover`, owner's color, only where the Store House is visible) and in the Store House placement ghost in `src/render/fx-layer.ts`
+- [X] T048 [US4] Playtest checklist (US4 section): the glow reads as "boosted vein", tips visibly speed up near the Store House, the stock drain is understood from the HUD
 
 ---
 
@@ -223,5 +223,7 @@ description: "Task list for 003-store-house"
 - US2 also pulled forward a minimal rival AI (store house first, then farms on fertile ground) so rival rounds still decide; US5 refines it.
 
 - US3: `setFarmOutput`, `farmIncomeAt`/`farmUpkeepAt`/`pendingFarmLevel` and the farm panel (`src/ui/farm-panel.ts`) are in. Clicking elsewhere on the map deselects the farm and also sets a growth target, as an ordinary click does. Verified in headless Chrome: select, `]` to level 6, `[` down to 0 (parked).
+
+- US4: `recomputeSupply` runs at flow cadence (and on place/destroy) before food and growth; a store house boosts while its piece is paid and stock >= lowStock (back on at 1.25x). Tips multiply the progress of each granted nutrient by `supply[head]`; harvester-owned food absorbs `base x rateMult x supply[cell]`. A per-tick `supplyUse` set (not hashed) records pieces where a boosted tip or harvester did work, and `drainStoreHouses` (after growth) drains `drain`/s per boosting store house there. Rings (not the booster glow) mark the covered vein; a `boosting` flag per building is hashed.
 
 (more notes as tasks complete)

@@ -76,11 +76,14 @@ export function tickFood(world: World): void {
       const left = world.food[c] as number;
       const owner = world.owner[c] as number;
       if (left <= 0 || owner === 0) continue;
-      const amount = Math.min(left, harvested.has(owner * 65536 + src.id) ? baseRate * mult : baseRate);
+      const harvesting = harvested.has(owner * 65536 + src.id);
+      const boost = harvesting ? (world.supply[c] as number) : 1; // store house on this vein (S8)
+      const amount = Math.min(left, harvesting ? baseRate * mult * boost : baseRate);
       world.food[c] = left - amount;
       src.remaining -= amount;
       const comp = world.components.get(world.component[c] as number) as Component;
       comp.pool += amount;
+      if (boost > 1) world.supplyUse.add(comp.id);
       const mold = moldOf(world, owner);
       mold.stats.nutrientsGathered += amount;
       mold.incomeTick += amount;

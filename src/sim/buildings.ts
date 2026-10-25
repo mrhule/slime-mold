@@ -81,13 +81,17 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     target: type === 'harvester' ? (harvestTarget(world, cell) as FoodSource).id : -1,
     level: type === 'farm' ? world.balance.buildings.farm.defaultLevel : 0,
     linked: false,
+    boosting: false,
     destroyed: false,
   };
   world.buildings.push(building);
   world.buildingAt[cell] = building.id;
   world.events.push({ type: 'buildingPlaced', id: building.id, building: type, mold: moldId, cell });
   if (type === 'booster') recomputeBoost(world);
-  if (type === 'storehouse') clampPools(world); // records the higher cap
+  if (type === 'storehouse') {
+    clampPools(world); // records the higher cap
+    recomputeSupply(world);
+  }
   return { ok: true };
 }
 
@@ -306,4 +310,46 @@ export function placePreview(
   }
   if (type === 'farm') return { result, unlinked: workingStoreHouses(world, comp) === 0 };
   return { result };
+}
+
+/**
+ * Rebuild the growth and harvest multiplier from the store houses that are boosting (S7, S8): each
+ * adds its taper along its vein, capped at +stackCap in total. A store house boosts while its piece
+ * can pay upkeep and holds stock above lowStock; once off it needs 1.25x lowStock to come back on,
+ * so the boost does not flicker.
+ */
+export function recomputeSupply(world: World): void {
+  const spec = world.balance.buildings.storehouse;
+  let any = false;
+  for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed) any = true;
+  if (!any && !world.supplyActive) return;
+  world.supply.fill(1);
+  world.supplyActive = false;
+  for (const b of world.buildings) {
+    if (b.type !== 'storehouse') continue;
+    const comp = b.destroyed ? undefined : world.components.get(world.component[b.cell] as number);
+    if (!comp || comp.unpaid) b.boosting = false;
+    else b.boosting = comp.pool >= (b.boosting ? spec.lowStock : spec.lowStock * 1.25);
+    if (!b.boosting) continue;
+    world.supplyActive = true;
+    for (const { cell, bonus } of storeCover(world, b.cell)) {
+      world.supply[cell] = Math.min(1 + spec.stackCap, (world.supply[cell] as number) + bonus);
+    }
+  }
+}
+
+/**
+ * Store houses pay for the speed-up (S8): each boosting one drains `drain` per second from its
+ * piece, but only while a boosted tip or harvester in that piece actually did work this tick.
+ */
+export function drainStoreHouses(world: World): void {
+  if (world.supplyUse.size === 0) return;
+  const amount = world.balance.buildings.storehouse.drain * TICK_DT;
+  for (const b of world.buildings) {
+    if (b.destroyed || b.type !== 'storehouse' || !b.boosting) continue;
+    const compId = world.component[b.cell] as number;
+    if (!world.supplyUse.has(compId)) continue;
+    const comp = world.components.get(compId);
+    if (comp) comp.pool = Math.max(0, comp.pool - amount);
+  }
 }

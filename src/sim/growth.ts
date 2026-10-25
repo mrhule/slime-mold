@@ -223,7 +223,10 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
       const grant = Math.min(tip.rate * dt, comp.pool);
       if (grant > 1e-9) {
         comp.pool -= grant;
-        tip.progress += grant;
+        // a store house on this vein makes each delivered nutrient go further (S8)
+        const boost = world.supply[head] as number;
+        tip.progress += grant * boost;
+        if (boost > 1) world.supplyUse.add(comp.id);
       }
       // starved = the stock is (nearly) empty, so growth is limited to whatever income arrives
       if (comp.pool + grant < world.balance.cellBuildCost * 0.25) tip.starvedFor += dt;

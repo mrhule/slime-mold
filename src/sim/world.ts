@@ -90,6 +90,7 @@ export function createWorld(
     fertile: new Uint8Array(cells),
     supply,
     supplyActive: false,
+    supplyUse: new Set<number>(),
     drops: [],
     reachable: new Uint8Array(cells).fill(1),
     nextDropTick: Number.MAX_SAFE_INTEGER,

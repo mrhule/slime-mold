@@ -138,6 +138,8 @@ export interface Building {
   level: number;
   /** farm only: whether a working store house shared its piece at the last tick (for link events) */
   linked: boolean;
+  /** store house only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
+  boosting: boolean;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
 }
@@ -368,6 +370,8 @@ export interface World {
   supply: Float32Array;
   /** true while any working store house boosts some cell (lets rebuilding be skipped) */
   supplyActive: boolean;
+  /** ids of pieces where a boosted tip or harvester did work this tick (store houses drain only then); not hashed, rebuilt every tick */
+  supplyUse: Set<number>;
   drops: DropEvent[];
   /** walkable cells reachable from the starts; drops only fall where molds can get to them */
   reachable: Uint8Array;
