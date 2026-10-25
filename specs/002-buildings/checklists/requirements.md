@@ -1,0 +1,36 @@
+# Specification Quality Checklist: Buildings — Nutrient Farms, Booster Factories, Harvesters
+
+**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Created**: 2026-10-25
+**Feature**: [spec.md](../spec.md)
+
+## Content Quality
+
+- [x] No implementation details (languages, frameworks, APIs)
+- [x] Focused on user value and business needs
+- [x] Written for non-technical stakeholders
+- [x] All mandatory sections completed
+
+## Requirement Completeness
+
+- [ ] No [NEEDS CLARIFICATION] markers remain (1 open: FR-010, what "stronger" covers)
+- [x] Requirements are testable and unambiguous
+- [x] Success criteria are measurable
+- [x] Success criteria are technology-agnostic (no implementation details)
+- [x] All acceptance scenarios are defined
+- [x] Edge cases are identified
+- [x] Scope is clearly bounded
+- [x] Dependencies and assumptions identified
+
+## Feature Readiness
+
+- [x] All functional requirements have clear acceptance criteria
+- [x] User scenarios cover primary flows
+- [x] Feature meets measurable outcomes defined in Success Criteria
+- [x] No implementation details leak into specification
+
+## Notes
+
+- Resolve FR-010, then run `/speckit-clarify` (optional) or `/speckit-plan`.
+- `.specify/feature.json` still points at `specs/001-core-game-loop`, so the Spec Kit commands
+  keep working on the core game. Point it at `specs/002-buildings` when planning this feature.
