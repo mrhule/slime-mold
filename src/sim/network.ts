@@ -1,4 +1,4 @@
-import { isFarmCell, recomputeBoost } from './buildings';
+import { clampPools, isFarmCell, recomputeBoost } from './buildings';
 import { DX, DY, dirBetween, edgeSlot, neighbor, popcount8 } from './grid';
 import { moldOf } from './world';
 import type { Building, CellIndex, Component, MoldId, World } from './types';
@@ -14,6 +14,8 @@ export function newComponent(world: World, moldId: MoldId): Component {
     orphaned: false,
     starveCell: -1,
     unpaid: false,
+    cap: world.balance.pool.baseCap,
+    full: false,
   };
   world.components.set(c.id, c);
   return c;
@@ -103,6 +105,7 @@ export function removeCell(world: World, cell: CellIndex): void {
     world.buildingAt[cell] = -1;
     world.events.push({ type: 'buildingDestroyed', id: building.id, building: building.type, mold: moldId, cell });
     if (building.type === 'booster') recomputeBoost(world); // its bonus ends at once
+    if (building.type === 'storehouse') clampPools(world); // its cap ends at once
   }
   world.owner[cell] = 0;
   world.biomass[cell] = 0;

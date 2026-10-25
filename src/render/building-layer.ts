@@ -20,6 +20,11 @@ const RIG = 0x4f9aa8;
 const RIG_SHADE = 0x2f6a77;
 const RIG_LIGHT = 0xa6dbe4;
 const STALE_GREY = 0x8a8a84;
+const BARN_WOOD = 0x9a6a3a;
+const BARN_ROOF = 0xa8432f;
+const BARN_DOOR = 0x5e3a1b;
+const TANK_SHADE = 0x8d8f80;
+const TANK_LIGHT = 0xd8d9c8;
 
 /** world-space center of a cell */
 export const cellCenter = (cell: number, width: number): [number, number] => [(cell % width) * CELL + CELL / 2, Math.floor(cell / width) * CELL + CELL / 2];
@@ -114,9 +119,35 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
   }
 }
 
+/**
+ * An inked store house: a squat barn with a red roof and a round steel tank beside it, so it
+ * reads as "storage" and differs from the farm's mushrooms, the booster's chimney and the
+ * harvester's tripod even in grayscale.
+ */
+export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
+  const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
+  const ink = style.ghost ?? INK;
+  const S = 1.3;
+  const w = style.ghost !== undefined ? 2.5 : 3;
+  const wood = style.stale ? STALE_GREY : BARN_WOOD;
+  const roof = style.stale ? STALE_GREY : BARN_ROOF;
+  g.ellipse(cx + 2 * S, cy + 6.5 * S, 11 * S, 3.6 * S).fill({ color: INK, alpha: 0.45 * alpha });
+  // round tank on the right: a dark band under a lit stripe
+  g.roundRect(cx + 3 * S, cy - 5 * S, 8 * S, 12 * S, 3.4 * S).fill({ color: TANK_SHADE, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+  g.roundRect(cx + 4.4 * S, cy - 3.6 * S, 3 * S, 8 * S, 1.4 * S).fill({ color: TANK_LIGHT, alpha });
+  // barn body and door
+  g.rect(cx - 10 * S, cy - 3 * S, 14 * S, 10 * S).fill({ color: wood, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+  g.rect(cx - 5.5 * S, cy + 1 * S, 5 * S, 6 * S).fill({ color: BARN_DOOR, alpha }).stroke({ width: 2, color: ink, alpha });
+  // roof
+  g.poly([cx - 12 * S, cy - 2.5 * S, cx - 3 * S, cy - 10 * S, cx + 6 * S, cy - 2.5 * S], true).fill({ color: roof, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+  // owner's flag on the roof peak
+  if (!style.stale) g.rect(cx - 3 * S, cy - 14 * S, 5 * S, 3 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
+}
+
 /** draw any building by type */
 export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: number, color: number, style: BuildingStyle = {}): void {
   if (type === 'farm') drawFarm(g, cx, cy, style.stale ? STALE_GREY : color, style.ghost);
+  else if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
   else if (type === 'booster') drawBooster(g, cx, cy, color, style);
   else drawHarvester(g, cx, cy, color, style);
 }

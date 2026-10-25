@@ -77,12 +77,14 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     cell,
     placedTick: world.tick,
     target: type === 'harvester' ? (harvestTarget(world, cell) as FoodSource).id : -1,
+    level: type === 'farm' ? world.balance.buildings.farm.defaultLevel : 0,
     destroyed: false,
   };
   world.buildings.push(building);
   world.buildingAt[cell] = building.id;
   world.events.push({ type: 'buildingPlaced', id: building.id, building: type, mold: moldId, cell });
   if (type === 'booster') recomputeBoost(world);
+  if (type === 'storehouse') clampPools(world); // records the higher cap
   return { ok: true };
 }
 
@@ -136,12 +138,11 @@ export function boosterWorking(world: Readonly<World>, b: Building): boolean {
 }
 
 /**
- * The cells a booster factory at `start` strengthens, and how much: the whole vein network it is
- * wired into, fading linearly with distance along the veins (not through the air), from the full
- * `bonus` at the factory to nothing at `reach` cells (FR-010, FR-012).
+ * The cells a building at `start` strengthens along the vein network it is wired into, and how
+ * much: fading linearly with distance along the veins (not through the air), from `bonus` at the
+ * building to nothing at `reach` cells. Shared by booster factories and store houses.
  */
-export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
-  const spec = world.balance.buildings.booster;
+export function veinCover(world: Readonly<World>, start: CellIndex, reach: number, bonus: number): { cell: CellIndex; bonus: number }[] {
   const w = world.width;
   const out: { cell: CellIndex; bonus: number }[] = [];
   const dist = new Map<CellIndex, number>([[start, 0]]);
@@ -149,8 +150,8 @@ export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: 
   for (let head = 0; head < queue.length; head++) {
     const c = queue[head] as CellIndex;
     const d = dist.get(c) as number;
-    out.push({ cell: c, bonus: spec.bonus * (1 - d / spec.reach) });
-    if (d + 1 >= spec.reach) continue;
+    out.push({ cell: c, bonus: bonus * (1 - d / reach) });
+    if (d + 1 >= reach) continue;
     const bits = world.edges[c] as number;
     for (let k = 0; k < 8; k++) {
       if (!(bits & (1 << k))) continue;
@@ -161,6 +162,12 @@ export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: 
     }
   }
   return out;
+}
+
+/** The cells a booster factory at `start` strengthens (FR-010, FR-012). */
+export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
+  const spec = world.balance.buildings.booster;
+  return veinCover(world, start, spec.reach, spec.bonus);
 }
 
 /**
@@ -182,4 +189,64 @@ export function recomputeBoost(world: World): void {
       world.boost[cell] = Math.min(1 + spec.stackCap, (world.boost[cell] as number) + bonus);
     }
   }
+}
+
+/** live store houses in a piece that count: they stand and the piece can pay its upkeep (S3) */
+export function workingStoreHouses(world: Readonly<World>, comp: Readonly<Component>): number {
+  if (comp.unpaid) return 0;
+  let n = 0;
+  for (const b of world.buildings) {
+    if (!b.destroyed && b.type === 'storehouse' && world.component[b.cell] === comp.id) n++;
+  }
+  return n;
+}
+
+/** the most nutrients a piece can hold: a base amount plus its working store houses (S2) */
+export function capOf(world: Readonly<World>, comp: Readonly<Component>): number {
+  const spec = world.balance.buildings.storehouse;
+  return world.balance.pool.baseCap + spec.capacity * Math.min(workingStoreHouses(world, comp), spec.perPiece);
+}
+
+/**
+ * Cut every pool to its cap (S2): the one place nutrients above a cap are discarded, so no gain
+ * path can forget it. Reports a piece first reaching its cap, and stock lost to a falling cap.
+ */
+export function clampPools(world: World): void {
+  for (const comp of world.components.values()) {
+    const cap = capOf(world, comp);
+    if (comp.pool > cap) {
+      if (cap < comp.cap - 1e-9) world.events.push({ type: 'capLost', componentId: comp.id, amount: comp.pool - cap });
+      comp.pool = cap;
+    }
+    const full = comp.pool >= cap - 1e-6;
+    if (full && !comp.full) world.events.push({ type: 'storeFull', componentId: comp.id });
+    comp.full = full;
+    comp.cap = cap;
+  }
+}
+
+/** The cells a store house at `start` boosts for growth and harvest, with their bonus (FR-020). */
+export function storeCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
+  const spec = world.balance.buildings.storehouse;
+  return veinCover(world, start, spec.reach, spec.bonus);
+}
+
+/** What the placement ghost shows: the verdict plus, for valid spots, what it would do (003). */
+export function placePreview(
+  world: Readonly<World>,
+  moldId: MoldId,
+  type: BuildingType,
+  cell: CellIndex,
+): { result: PlaceResult; unlinked?: boolean; capBefore?: number; capAfter?: number } {
+  const result = canPlace(world, moldId, type, cell);
+  if (!result.ok) return { result };
+  const comp = world.components.get(world.component[cell] as number);
+  if (!comp) return { result };
+  if (type === 'storehouse') {
+    const spec = world.balance.buildings.storehouse;
+    const n = workingStoreHouses(world, comp);
+    return { result, capBefore: capOf(world, comp), capAfter: world.balance.pool.baseCap + spec.capacity * Math.min(n + 1, spec.perPiece) };
+  }
+  if (type === 'farm') return { result, unlinked: workingStoreHouses(world, comp) === 0 };
+  return { result };
 }

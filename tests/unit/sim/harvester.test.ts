@@ -11,7 +11,7 @@ import { assertInvariants } from '../../../src/sim/world';
 import { cellOf, createOpenWorld } from '../../helpers';
 
 const spec = defaultBalance.buildings.harvester;
-const noIncome = { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0 };
+const noIncome = { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0, pool: { baseCap: 1e6 } };
 
 /** a mold with a vein reaching toward a food item, no AI, no other income */
 function setup(foodType: 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | null, balance = noIncome) {

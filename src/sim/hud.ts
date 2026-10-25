@@ -1,4 +1,4 @@
-import { buildingIncome, countBuildings } from './buildings';
+import { buildingIncome, capOf, countBuildings } from './buildings';
 import { mapControl } from './round';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -8,6 +8,21 @@ export function storedNutrients(world: World, moldId: MoldId): number {
   let sum = 0;
   for (const c of world.components.values()) if (c.moldId === moldId) sum += c.pool;
   return sum;
+}
+
+/** stored nutrients against the caps of a mold's pieces, and whether any piece is full */
+export function stockOf(world: World, moldId: MoldId): { total: number; cap: number; full: boolean } {
+  let total = 0;
+  let cap = 0;
+  let full = false;
+  for (const c of world.components.values()) {
+    if (c.moldId !== moldId) continue;
+    const limit = capOf(world, c);
+    total += c.pool;
+    cap += limit;
+    if (c.pool >= limit - 1e-6) full = true;
+  }
+  return { total, cap, full };
 }
 
 function buildOptions(world: World, moldId: MoldId): BuildOption[] {
@@ -42,6 +57,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     targets: mold.targets.map((t) => ({ id: t.id, cell: t.cell, state: t.state })),
     build: buildOptions(world, moldId),
     buildingIncome: buildingIncome(world, moldId),
+    stock: stockOf(world, moldId),
     rivals: world.molds
       .filter((m) => m.id !== moldId)
       .map((m) => ({

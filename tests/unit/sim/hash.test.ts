@@ -27,3 +27,20 @@ describe('stateHash', () => {
     expect(stateHash(w1)).not.toBe(stateHash(w2));
   });
 });
+
+describe('stateHash with store houses (003)', () => {
+  it('differs when only a store house differs, and replays to the same hash', async () => {
+    const { addMold } = await import('../../../src/sim/molds');
+    const { placeBuilding } = await import('../../../src/sim/buildings');
+    const { step } = await import('../../../src/sim/step');
+    const make = (withStore: boolean) => {
+      const world = createOpenWorld(40, 30);
+      const mold = addMold(world, 'player', 20 * 40 + 10, 200);
+      if (withStore) placeBuilding(world, mold.id, 'storehouse', 20 * 40 + 11);
+      for (let i = 0; i < 30; i++) step(world);
+      return world;
+    };
+    expect(stateHash(make(true))).not.toBe(stateHash(make(false)));
+    expect(stateHash(make(true))).toBe(stateHash(make(true)));
+  });
+});

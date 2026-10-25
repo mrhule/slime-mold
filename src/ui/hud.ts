@@ -39,7 +39,7 @@ export class Hud {
         <div class="panel-title">Slime Mold</div>
         <div class="row"><span class="label">Round</span><span class="value" data-hud="round">1</span></div>
         <div class="row"><span class="label">Time</span><span class="value" data-hud="time">0:00</span></div>
-        <div class="row" title="Nutrients stored across your whole mold"><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
+        <div class="row" title="Nutrients stored across your whole mold, against how much your pieces can hold. Build store houses to hold more."><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
         <div class="row" title="Income minus upkeep, per second"><span class="label">Income</span><span class="value" data-hud="income">+0.0/s</span></div>
         <div class="row" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
         <div class="meter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-goal"></div></div>
@@ -82,7 +82,8 @@ export class Hud {
   update(hud: HudModel, clock: HudClock): void {
     this.el.round!.textContent = String(hud.round);
     this.el.time!.textContent = fmtTime(hud.elapsedSeconds);
-    this.el.nutrients!.textContent = hud.storedNutrients.toFixed(1);
+    this.el.nutrients!.textContent = `${hud.stock.total.toFixed(1)} / ${Math.round(hud.stock.cap)}${hud.stock.full ? ' FULL' : ''}`;
+    this.el.nutrients!.classList.toggle('neg', hud.stock.full);
     const sign = hud.netIncome >= 0 ? '+' : '';
     this.el.income!.textContent = `${sign}${hud.netIncome.toFixed(1)}/s`;
     this.el.income!.classList.toggle('neg', hud.netIncome < 0);

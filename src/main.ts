@@ -4,7 +4,7 @@ import { FixedStepLoop } from './game/loop';
 import { Run } from './game/run';
 import { createStorage } from './game/storage';
 import { GameRenderer } from './render/renderer';
-import { canPlace, createRound, enqueue, pendingAllocation, readHud, roundOutcome, step } from './sim';
+import { createRound, enqueue, pendingAllocation, placePreview, readHud, roundOutcome, step } from './sim';
 import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
@@ -122,9 +122,11 @@ async function main(): Promise<void> {
     let ghost: { cell: number; ok: boolean; type: BuildingType } | null = null;
     const pointer = input.pointerPosition;
     if (input.placing && input.hoverCell !== null && pointer) {
-      const result = canPlace(run.world, PLAYER, input.placing, input.hoverCell);
+      const preview = placePreview(run.world, PLAYER, input.placing, input.hoverCell);
+      const result = preview.result;
       ghost = { cell: input.hoverCell, ok: result.ok, type: input.placing };
-      buildBar.showHint(result.ok ? 'Click to build' : reasonText(result.reason), pointer.x, pointer.y, result.ok);
+      const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : preview.unlinked ? ' (no store house on this vein: it will not pay)' : '';
+      buildBar.showHint(result.ok ? `Click to build${note}` : reasonText(result.reason), pointer.x, pointer.y, result.ok);
     } else {
       buildBar.showHint(null, 0, 0, true);
     }
@@ -140,6 +142,7 @@ async function main(): Promise<void> {
         hud.reject(e.reason);
         if (e.cell !== undefined) renderer.fx.addRejectPing(e.cell, run.world.width);
       }
+      if (e.type === 'capLost') hud.toast('Stock lost!', 2.5);
       if (e.type === 'dropWarning') hud.toast(`${FOOD_NAMES[e.foodType] ?? 'Food'} incoming!`, 2.5);
       if (e.type === 'dropLanded') {
         const src = run.world.foodSources[e.foodSourceId];

@@ -59,6 +59,7 @@ export function createWorld(
   const buildingAt = new Int16Array(cells);
   buildingAt.fill(-1);
   const boost = new Float32Array(cells).fill(1);
+  const supply = new Float32Array(cells).fill(1);
   return {
     width,
     height,
@@ -86,6 +87,9 @@ export function createWorld(
     buildingAt,
     boost,
     boostActive: false,
+    fertile: new Uint8Array(cells),
+    supply,
+    supplyActive: false,
     drops: [],
     reachable: new Uint8Array(cells).fill(1),
     nextDropTick: Number.MAX_SAFE_INTEGER,
@@ -163,6 +167,7 @@ export function assertInvariants(world: World): void {
       continue;
     }
     if (world.owner[b.cell] !== b.moldId) fail(`building ${b.id} stands on a cell its owner does not hold`);
+    if (b.type === 'farm' && (!Number.isInteger(b.level) || b.level < 0 || b.level > world.balance.buildings.farm.maxLevel)) fail(`farm ${b.id} level ${b.level}`);
     if (world.buildingAt[b.cell] !== b.id) fail(`building ${b.id} is not indexed on its cell`);
     if (seenCells.has(b.cell)) fail(`two buildings share cell ${b.cell}`);
     seenCells.add(b.cell);
@@ -175,6 +180,9 @@ export function assertInvariants(world: World): void {
     if ((counts.get(m.id) ?? 0) !== m.cellCount) {
       fail(`mold ${m.id} cellCount ${m.cellCount} != ${counts.get(m.id) ?? 0}`);
     }
+  }
+  for (let i = 0; i < world.fertile.length; i++) {
+    if (world.fertile[i] && (world.terrain[i] === Terrain.Obstacle || world.terrain[i] === Terrain.Wall)) fail(`cell ${i} is fertile on impassable terrain`);
   }
   let inComponents = 0;
   for (const c of world.components.values()) {

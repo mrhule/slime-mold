@@ -57,7 +57,7 @@ describe('farm income and upkeep', () => {
     const hud = readHud(world, mold.id);
     expect(hud.buildingIncome).toBeCloseTo(farm.income);
     expect(hud.netIncome).toBeCloseTo(farm.income - farm.upkeep, 1);
-    expect(hud.build.map((o) => o.type)).toEqual(['farm', 'booster', 'harvester']);
+    expect(hud.build.map((o) => o.type)).toEqual(['farm', 'storehouse', 'booster', 'harvester']);
     expect(hud.build[0]).toEqual({ type: 'farm', cost: farm.cost, upkeep: farm.upkeep, income: farm.income, count: 1, limit: farm.limit, affordable: true });
   });
 
@@ -90,7 +90,7 @@ describe('farm as a source of supply', () => {
   });
 
   it('keeps feeding the cut-off piece after the split', () => {
-    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 500, isolated({ upkeep: 0 }));
+    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200, isolated({ upkeep: 0 }));
     const cells = extendEast(world, mold.id, 10);
     placeBuilding(world, mold.id, 'farm', cells[9]!);
     removeCellAndSplit(world, cells[4]!);
@@ -118,7 +118,7 @@ describe('destroying a farm', () => {
   });
 
   it('a destroyed farm stops paying and stops counting toward the limit', () => {
-    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 500, isolated({ upkeep: 0 }));
+    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200, isolated({ upkeep: 0 }));
     const cells = extendEast(world, mold.id, 4);
     placeBuilding(world, mold.id, 'farm', cells[3]!);
     removeCell(world, cells[3]!);

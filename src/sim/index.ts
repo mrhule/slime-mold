@@ -10,7 +10,7 @@ import { deriveSeed } from './rng';
 import { createWorld } from './world';
 import type { DifficultyProfile, World } from './types';
 
-export { boosterCover, canPlace } from './buildings';
+export { boosterCover, canPlace, capOf, placePreview, storeCover, veinCover, workingStoreHouses } from './buildings';
 export { enqueue, pendingAllocation } from './commands';
 export { stateHash } from './hash';
 export { readHud } from './hud';

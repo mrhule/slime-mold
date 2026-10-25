@@ -35,8 +35,44 @@ export interface HarvesterSpec extends BuildingSpec {
 }
 
 export interface FarmSpec extends BuildingSpec {
-  /** nutrients per second into its piece */
+  /** nutrients per second into its piece at output 1.0 (level 4), once linked to a store house */
   income: number;
+  /** output level a new farm starts at */
+  defaultLevel: number;
+  /** output (as a multiple of normal) per level: level 4 = 1.0 at 0.25 */
+  levelStep: number;
+  /** highest level; levels are integers 0..maxLevel */
+  maxLevel: number;
+}
+
+export interface StoreHouseSpec extends BuildingSpec {
+  /** extra cap its piece gets from each working store house */
+  capacity: number;
+  /** how many working store houses in one piece add capacity */
+  perPiece: number;
+  /** how far along the veins the growth/harvest boost reaches, in cells (linear taper) */
+  reach: number;
+  /** extra speed right at the store house, as a fraction (0.5 = +50%) */
+  bonus: number;
+  /** most extra speed overlapping store houses can add together */
+  stackCap: number;
+  /** nutrients per second drained from its piece while something in it is boosted */
+  drain: number;
+  /** below this stock the boost stops; it resumes at 1.25x this */
+  lowStock: number;
+}
+
+export interface FertileConfig {
+  /** fertile patches placed near each start */
+  nearPatches: number;
+  /** path distance from a start within which near patches sit */
+  nearRadius: number;
+  patchMin: number;
+  patchMax: number;
+  /** contested patches away from every start (plus one per two rivals) */
+  contested: number;
+  /** fewest fertile cells every start must have within fairRadius */
+  minNear: number;
 }
 
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
@@ -115,7 +151,12 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { farm: FarmSpec; booster: BoosterSpec; harvester: HarvesterSpec };
+  buildings: { farm: FarmSpec; booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
+
+  /** nutrient storage per connected piece of vein (003) */
+  pool: { baseCap: number };
+  /** fertile ground generation (003) */
+  fertile: FertileConfig;
 
   /** coefficients for difficultyFor(round), R14 */
   difficulty: {
@@ -204,10 +245,14 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5 },
+    farm: { cost: 30, upkeep: 0.15, limit: 6, income: 1.5, defaultLevel: 4, levelStep: 0.25, maxLevel: 6 },
+    storehouse: { cost: 40, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
+
+  pool: { baseCap: 300 },
+  fertile: { nearPatches: 2, nearRadius: 18, patchMin: 2, patchMax: 4, contested: 1, minNear: 24 },
 
   difficulty: {
     baseW: 160,

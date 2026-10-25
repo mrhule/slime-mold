@@ -28,7 +28,7 @@ description: "Task list for 003-store-house"
 
 **Purpose**: Confirm the starting point
 
-- [ ] T001 Confirm branch `003-store-house`, `.specify/feature.json` pointing at `specs/003-store-house`, and a green baseline (`npm run typecheck`, `npm test`); note the test count in `specs/003-store-house/tasks.md` under Implementation notes
+- [X] T001 Confirm branch `003-store-house`, `.specify/feature.json` pointing at `specs/003-store-house`, and a green baseline (`npm run typecheck`, `npm test`); note the test count in `specs/003-store-house/tasks.md` under Implementation notes
 
 ---
 
@@ -38,12 +38,12 @@ description: "Task list for 003-store-house"
 
 **⚠️ CRITICAL**: No story work can begin until this phase is complete
 
-- [ ] T002 Add to `src/config/balance.ts`: `pool: { baseCap: 120 }`; `buildings.storehouse: { cost: 40, upkeep: 0.2, limit: 4, capacity: 180, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 }`; `buildings.farm` gains `defaultLevel: 4, levelStep: 0.25, maxLevel: 6`; `fertile: { nearPatches: 2, nearRadius: 18, patchMin: 2, patchMax: 4, contested: 1, minNear: 24 }`; extend `BalanceConfig`, `StoreHouseSpec`, and `FarmSpec` types accordingly
-- [ ] T003 Extend `src/sim/types.ts`: `BuildingType` adds `'storehouse'` with `BUILDING_CODE.storehouse = 4` and `BUILDING_OF_CODE[4]`; `Building.level` (integer 0–6, farms only, default `farm.defaultLevel`); `World.fertile: Uint8Array`, `World.supply: Float32Array`, `World.supplyActive: boolean`; `Command` adds `{ type: 'setFarmOutput'; mold; building; level }`; `PlaceReason` adds `'not-fertile'`; `SimEvent` adds `farmLinkChanged`, `storeFull`, `capLost` (data-model.md)
-- [ ] T004 Add `fertile` (`Uint8Array`, zeros), `supply` (`Float32Array`, filled with 1) and `supplyActive: false` to `createWorld` in `src/sim/world.ts`; extend `assertInvariants`: "fertile cells are never Obstacle or Wall; every farm's level is an integer 0–6; every farm stands on a fertile cell; after `clampPools` no pool exceeds its cap by more than 1e-6"
-- [ ] T005 [P] Hash `fertile`, each building's `level`, and `supply` in `src/sim/hash.ts`
-- [ ] T006 Generalize `boosterCover` in `src/sim/buildings.ts` into `veinCover(world, start, reach, bonus)` (BFS over `world.edges`, linear taper `bonus × (1 − d/reach)`); keep `boosterCover` as a thin wrapper and export both from `src/sim/index.ts`; the existing `tests/unit/sim/booster.test.ts` must still pass unchanged
-- [ ] T007 [P] Extend `tests/helpers.ts`: `createOpenWorld(..., { fertile })` option that marks every open cell fertile, and a `withStoreHouse(world, moldId, cell)` helper that places a Store House bypassing cost, so later tests stay short
+- [X] T002 Add to `src/config/balance.ts`: `pool: { baseCap: 120 }`; `buildings.storehouse: { cost: 40, upkeep: 0.2, limit: 4, capacity: 180, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 }`; `buildings.farm` gains `defaultLevel: 4, levelStep: 0.25, maxLevel: 6`; `fertile: { nearPatches: 2, nearRadius: 18, patchMin: 2, patchMax: 4, contested: 1, minNear: 24 }`; extend `BalanceConfig`, `StoreHouseSpec`, and `FarmSpec` types accordingly
+- [X] T003 Extend `src/sim/types.ts`: `BuildingType` adds `'storehouse'` with `BUILDING_CODE.storehouse = 4` and `BUILDING_OF_CODE[4]`; `Building.level` (integer 0–6, farms only, default `farm.defaultLevel`); `World.fertile: Uint8Array`, `World.supply: Float32Array`, `World.supplyActive: boolean`; `Command` adds `{ type: 'setFarmOutput'; mold; building; level }`; `PlaceReason` adds `'not-fertile'`; `SimEvent` adds `farmLinkChanged`, `storeFull`, `capLost` (data-model.md)
+- [X] T004 Add `fertile` (`Uint8Array`, zeros), `supply` (`Float32Array`, filled with 1) and `supplyActive: false` to `createWorld` in `src/sim/world.ts`; extend `assertInvariants`: "fertile cells are never Obstacle or Wall; every farm's level is an integer 0–6; every farm stands on a fertile cell; after `clampPools` no pool exceeds its cap by more than 1e-6"
+- [X] T005 [P] Hash `fertile`, each building's `level`, and `supply` in `src/sim/hash.ts`
+- [X] T006 Generalize `boosterCover` in `src/sim/buildings.ts` into `veinCover(world, start, reach, bonus)` (BFS over `world.edges`, linear taper `bonus × (1 − d/reach)`); keep `boosterCover` as a thin wrapper and export both from `src/sim/index.ts`; the existing `tests/unit/sim/booster.test.ts` must still pass unchanged
+- [X] T007 [P] Extend `tests/helpers.ts`: `createOpenWorld(..., { fertile })` option that marks every open cell fertile, and a `withStoreHouse(world, moldId, cell)` helper that places a Store House bypassing cost, so later tests stay short
 - [ ] T008 [P] Export `capOf`, `farmLinked`, `farmOutput`, `storeCover`, `placePreview` stubs from `src/sim/index.ts` (filled in by their stories) so render and UI code can be written against the contract in contracts/sim-api.md
 
 **Checkpoint**: The world can hold fertile ground, levels and a supply layer, and `veinCover` is shared
@@ -60,19 +60,19 @@ description: "Task list for 003-store-house"
 
 > Write these first and confirm they fail before implementing
 
-- [ ] T009 [P] [US1] `tests/unit/sim/store-house.test.ts`: cap is `pool.baseCap + capacity × min(workingStoreHouses, perPiece)` (S2/S3); placing one raises the cap and costs `storehouse.cost`; a third and fourth in one piece stop adding capacity past `perPiece`; a Store House in an `unpaid` piece adds nothing; destroying it drops the cap and cuts stock above the new cap, emitting `capLost`; a cut-off piece keeps its own stock and cap; income that would push a pool above its cap is discarded; merging two pieces clamps the sum to the merged cap
-- [ ] T010 [P] [US1] Extend `tests/unit/sim/commands.test.ts`: `placeBuilding` with `storehouse` follows the 002 rules (not-your-cell, occupied, on-food, limit-reached, cant-afford) and is refused with no cost on failure
-- [ ] T011 [P] [US1] Extend `tests/unit/sim/hash.test.ts`: two worlds differing only in a Store House differ in hash; the same commands replay to the same hash
+- [X] T009 [P] [US1] `tests/unit/sim/store-house.test.ts`: cap is `pool.baseCap + capacity × min(workingStoreHouses, perPiece)` (S2/S3); placing one raises the cap and costs `storehouse.cost`; a third and fourth in one piece stop adding capacity past `perPiece`; a Store House in an `unpaid` piece adds nothing; destroying it drops the cap and cuts stock above the new cap, emitting `capLost`; a cut-off piece keeps its own stock and cap; income that would push a pool above its cap is discarded; merging two pieces clamps the sum to the merged cap
+- [X] T010 [P] [US1] Extend `tests/unit/sim/commands.test.ts`: `placeBuilding` with `storehouse` follows the 002 rules (not-your-cell, occupied, on-food, limit-reached, cant-afford) and is refused with no cost on failure
+- [X] T011 [P] [US1] Extend `tests/unit/sim/hash.test.ts`: two worlds differing only in a Store House differ in hash; the same commands replay to the same hash
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] In `src/sim/buildings.ts`: add `workingStoreHouses(world, comp)`, `capOf(world, comp)` (formula in data-model.md), `canPlace`/`placeBuilding` support for `storehouse` (no extra rule), and `clampPools(world)` that cuts every pool to its cap, emitting `storeFull` once on reaching it and `capLost` when a cap fall removes stock
-- [ ] T013 [US1] Call `clampPools` at the end of `step` in `src/sim/step.ts` (after `decayOrphans`, before `settleNetIncome`) and right after a building is destroyed in `src/sim/network.ts` (S2)
-- [ ] T014 [US1] Extend `src/sim/hud.ts` with `stock { total, cap, full }` and the `storehouse` build option; extend `HudModel` in `src/sim/types.ts`
-- [ ] T015 [P] [US1] Draw the Store House in `src/render/building-layer.ts` (`drawStoreHouse`: squat inked barn with a round tank, readable in grayscale, distinct from farm, booster and harvester) and add it to `drawBuilding`
-- [ ] T016 [US1] Add the Store House button (icon, name "Store House", tooltip, hotkey `T`) to `src/ui/buildbar.ts` and handle `t` in `src/ui/input.ts`
-- [ ] T017 [US1] Show `stock / cap` with a **FULL** tag in `src/ui/hud.ts`; add a "Stock lost" toast on `capLost` in `src/ui/messages.ts`; show the piece's cap before and after in the placement ghost via `placePreview` (`src/sim/buildings.ts`, `src/render/fx-layer.ts`)
-- [ ] T018 [US1] Playtest checklist `specs/003-store-house/checklists/playtest.md` (US1 section): the cap text is understood without explanation, FULL is noticed, `T` places a Store House, losing one costs stock visibly
+- [X] T012 [US1] In `src/sim/buildings.ts`: add `workingStoreHouses(world, comp)`, `capOf(world, comp)` (formula in data-model.md), `canPlace`/`placeBuilding` support for `storehouse` (no extra rule), and `clampPools(world)` that cuts every pool to its cap, emitting `storeFull` once on reaching it and `capLost` when a cap fall removes stock
+- [X] T013 [US1] Call `clampPools` at the end of `step` in `src/sim/step.ts` (after `decayOrphans`, before `settleNetIncome`) and right after a building is destroyed in `src/sim/network.ts` (S2)
+- [X] T014 [US1] Extend `src/sim/hud.ts` with `stock { total, cap, full }` and the `storehouse` build option; extend `HudModel` in `src/sim/types.ts`
+- [X] T015 [P] [US1] Draw the Store House in `src/render/building-layer.ts` (`drawStoreHouse`: squat inked barn with a round tank, readable in grayscale, distinct from farm, booster and harvester) and add it to `drawBuilding`
+- [X] T016 [US1] Add the Store House button (icon, name "Store House", tooltip, hotkey `T`) to `src/ui/buildbar.ts` and handle `t` in `src/ui/input.ts`
+- [X] T017 [US1] Show `stock / cap` with a **FULL** tag in `src/ui/hud.ts`; add a "Stock lost" toast on `capLost` in `src/ui/messages.ts`; show the piece's cap before and after in the placement ghost via `placePreview` (`src/sim/buildings.ts`, `src/render/fx-layer.ts`)
+- [X] T018 [US1] Playtest checklist `specs/003-store-house/checklists/playtest.md` (US1 section): the cap text is understood without explanation, FULL is noticed, `T` places a Store House, losing one costs stock visibly
 
 **Checkpoint**: Stock has a cap and a Store House raises it. Farms still pay without one until US2.
 
@@ -210,4 +210,9 @@ description: "Task list for 003-store-house"
 
 ## Implementation notes
 
-(filled in as tasks complete)
+- T001 baseline: 221 tests passing before this feature.
+- T002/T012 balance: a base cap of 120 stalled the combat and rival-round tests (the spend budget uses the pool), so the first numbers are `pool.baseCap 300` and store house `capacity 300` (perPiece 3). The balance pass (T055) retunes them; research S12 still lists the earlier 120/180.
+- T004: the "no pool above its cap" invariant is checked in tests, not in `assertInvariants` (many existing tests set pools by hand); the "farm stands on fertile ground" invariant arrives with T024.
+- Build bar order is farm, store house, booster, harvester.
+
+(more notes as tasks complete)

@@ -1,4 +1,4 @@
-import { tickBuildings } from './buildings';
+import { clampPools, tickBuildings } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
@@ -52,6 +52,7 @@ export function step(world: World): void {
   tickCombat(world);
   decayOrphans(world);
   checkEliminations(world);
+  clampPools(world);
   if (world.tick % world.balance.fogEvery === 0) updateVision(world);
   if (world.tick % 10 === 0) evaluateOutcome(world);
   tickAi(world);

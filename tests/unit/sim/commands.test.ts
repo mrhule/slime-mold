@@ -62,3 +62,37 @@ describe('commands', () => {
     expect(stateHash(b)).toBe(stateHash(a));
   });
 });
+
+describe('placeBuilding for a store house (003 US1)', () => {
+  function own() {
+    const { world, mold } = createWorldWithMold(60, 40, 10, 20, 200);
+    const cell = world.width * 20 + 11; // an arm of the core
+    return { world, mold, cell };
+  }
+
+  it('follows the same rules as other buildings, with no cost when refused', () => {
+    const { world, mold, cell } = own();
+    const comp = world.components.get(world.component[cell] as number)!;
+    const before = comp.pool;
+    applyCommand(world, { type: 'placeBuilding', mold: mold.id, building: 'storehouse', cell: world.width * 5 + 5 });
+    expect(world.events).toContainEqual({ type: 'commandRejected', mold: mold.id, reason: 'not-your-cell', cell: world.width * 5 + 5 });
+    expect(comp.pool).toBe(before);
+    applyCommand(world, { type: 'placeBuilding', mold: mold.id, building: 'storehouse', cell });
+    expect(world.buildings).toHaveLength(1);
+    expect(comp.pool).toBeCloseTo(before - world.balance.buildings.storehouse.cost);
+    world.events = [];
+    applyCommand(world, { type: 'placeBuilding', mold: mold.id, building: 'storehouse', cell });
+    expect(world.events).toContainEqual({ type: 'commandRejected', mold: mold.id, reason: 'occupied', cell });
+    expect(world.buildings).toHaveLength(1);
+  });
+
+  it('is refused when it cannot be afforded', () => {
+    const { world, mold, cell } = own();
+    const comp = world.components.get(world.component[cell] as number)!;
+    comp.pool = 10;
+    applyCommand(world, { type: 'placeBuilding', mold: mold.id, building: 'storehouse', cell });
+    expect(world.events).toContainEqual({ type: 'commandRejected', mold: mold.id, reason: 'cant-afford', cell });
+    expect(world.buildings).toHaveLength(0);
+    expect(comp.pool).toBe(10);
+  });
+});

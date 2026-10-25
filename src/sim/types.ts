@@ -13,11 +13,11 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice';
 
-export type BuildingType = 'farm' | 'booster' | 'harvester';
+export type BuildingType = 'farm' | 'booster' | 'harvester' | 'storehouse';
 
 /** what `Mold.memBuilding` stores for each building type (0 = none) */
-export const BUILDING_CODE: Record<BuildingType, number> = { farm: 1, booster: 2, harvester: 3 };
-export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'farm', 'booster', 'harvester'];
+export const BUILDING_CODE: Record<BuildingType, number> = { farm: 1, booster: 2, harvester: 3, storehouse: 4 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'farm', 'booster', 'harvester', 'storehouse'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -105,6 +105,10 @@ export interface Component {
   starveCell: CellIndex;
   /** true while the piece could not pay this tick's upkeep (booster factories stop working) */
   unpaid: boolean;
+  /** the cap the pool was last clamped to (lets a falling cap be noticed) */
+  cap: number;
+  /** true while the pool sits at its cap (an edge for the storeFull event) */
+  full: boolean;
 }
 
 export interface FoodSource {
@@ -130,6 +134,8 @@ export interface Building {
   placedTick: number;
   /** harvester only: the food source it speeds up, otherwise -1 */
   target: number;
+  /** farm only: output level, an integer 0..farm.maxLevel (default farm.defaultLevel); others 0 */
+  level: number;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
 }
@@ -148,7 +154,8 @@ export type Command =
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
   | { type: 'setAllocation'; mold: MoldId; value: number }
-  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex };
+  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex }
+  | { type: 'setFarmOutput'; mold: MoldId; building: number; level: number };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -161,7 +168,8 @@ export type PlaceReason =
   | 'cant-afford'
   | 'no-food-nearby'
   | 'food-too-small'
-  | 'already-harvested';
+  | 'already-harvested'
+  | 'not-fertile';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -174,6 +182,9 @@ export type SimEvent =
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
+  | { type: 'farmLinkChanged'; building: number; linked: boolean }
+  | { type: 'storeFull'; componentId: number }
+  | { type: 'capLost'; componentId: number; amount: number }
   | { type: 'commandRejected'; mold: MoldId; reason: string; cell?: CellIndex };
 
 export interface DifficultyProfile {
@@ -229,6 +240,8 @@ export interface HudModel {
   build: BuildOption[];
   /** nutrients per second from working farms, before upkeep */
   buildingIncome: number;
+  /** stored nutrients against the caps of the mold's pieces (003) */
+  stock: { total: number; cap: number; full: boolean };
   rivals: {
     id: MoldId;
     color: number;
@@ -341,6 +354,12 @@ export interface World {
   boost: Float32Array;
   /** true while any working booster factory is boosting some cells (lets recomputing be skipped) */
   boostActive: boolean;
+  /** 1 where ground is fertile (farms only), else 0; set by map generation */
+  fertile: Uint8Array;
+  /** growth and harvest speed multiplier from working store houses (1 = none) */
+  supply: Float32Array;
+  /** true while any working store house boosts some cell (lets rebuilding be skipped) */
+  supplyActive: boolean;
   drops: DropEvent[];
   /** walkable cells reachable from the starts; drops only fall where molds can get to them */
   reachable: Uint8Array;

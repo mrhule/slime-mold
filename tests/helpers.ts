@@ -6,7 +6,13 @@ import { Terrain } from '../src/sim/types';
 import type { Mold, World } from '../src/sim/types';
 
 /** An all-open world with a wall border and no molds. */
-export function createOpenWorld(width = 60, height = 40, balance: BalanceConfig = defaultBalance, seed = 1): World {
+export function createOpenWorld(
+  width = 60,
+  height = 40,
+  balance: BalanceConfig = defaultBalance,
+  seed = 1,
+  opts: { fertile?: boolean } = {},
+): World {
   const world = createWorld(width, height, balance, seed);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -14,7 +20,25 @@ export function createOpenWorld(width = 60, height = 40, balance: BalanceConfig 
     }
   }
   world.reachableCells = (width - 2) * (height - 2);
+  if (opts.fertile) {
+    for (let i = 0; i < world.terrain.length; i++) if (world.terrain[i] === Terrain.Open) world.fertile[i] = 1;
+  }
   return world;
+}
+
+/** Put a store house on an owned cell without paying (tests of farms and caps stay short). */
+export function withStoreHouse(world: World, moldId: number, cell: number): void {
+  world.buildings.push({
+    id: world.buildings.length,
+    type: 'storehouse',
+    moldId,
+    cell,
+    placedTick: world.tick,
+    target: -1,
+    level: 0,
+    destroyed: false,
+  });
+  world.buildingAt[cell] = world.buildings.length - 1;
 }
 
 /** Open world with one player mold whose core is at (cx, cy). */

@@ -40,6 +40,8 @@ export function stateHash(world: World): number {
   h.array(world.component);
   h.array(world.food);
   h.array(world.buildingAt);
+  h.array(world.fertile);
+  h.array(world.supply);
   for (const m of world.molds) {
     h.num(m.id);
     h.num(m.allocation);
@@ -66,6 +68,7 @@ export function stateHash(world: World): number {
     h.num(b.moldId);
     h.num(b.cell);
     h.num(b.target);
+    h.num(b.level);
     h.num(b.destroyed ? 1 : 0);
   }
   h.num(world.nextDropTick);

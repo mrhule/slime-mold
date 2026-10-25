@@ -1,17 +1,19 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { farm: 'Nutrient Farm', booster: 'Booster Factory', harvester: 'Harvester' };
-const SHORT: Record<BuildingType, string> = { farm: 'Farm', booster: 'Booster', harvester: 'Harvest' };
+const NAMES: Record<BuildingType, string> = { farm: 'Nutrient Farm', storehouse: 'Store House', booster: 'Booster Factory', harvester: 'Harvester' };
+const SHORT: Record<BuildingType, string> = { farm: 'Farm', storehouse: 'Store', booster: 'Booster', harvester: 'Harvest' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
-  farm: 'Slow, steady nutrient income.',
+  farm: 'Slow, steady nutrient income. Only on fertile ground, and only pays with a store house on its vein.',
+  storehouse: 'Raises how many nutrients its vein can hold, and farms on the vein pay into it.',
   booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'farm', b: 'booster', m: 'harvester' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'farm', t: 'storehouse', b: 'booster', m: 'harvester' };
 
 const ICONS: Record<BuildingType, string> = {
+  storehouse: '',
   booster: '',
   harvester: '',
   farm: `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
@@ -51,6 +53,17 @@ const HARVESTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hid
     </g>
   </svg>`;
 
+const STOREHOUSE_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="32" rx="15" ry="3.4" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
+      <rect x="23" y="12" width="11" height="18" rx="4" fill="#b8b9a8"/>
+      <rect x="6" y="15" width="18" height="15" fill="#9a6a3a"/>
+      <polygon points="4,16 15,5 26,16" fill="#a8432f"/>
+      <rect x="11.5" y="21" width="7" height="9" fill="#5e3a1b"/>
+    </g>
+  </svg>`;
+
+ICONS.storehouse = STOREHOUSE_ICON;
 ICONS.booster = BOOSTER_ICON;
 ICONS.harvester = HARVESTER_ICON;
 
