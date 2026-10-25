@@ -45,7 +45,7 @@ describe('import boundaries (Constitution I, II)', () => {
 
   it('src/sim/ai only sees the view, commands, and rng', () => {
     const aiFiles = simFiles.filter((f) => relative(root, f).replace(/\\/g, '/').startsWith('src/sim/ai/'));
-    const allowed = /^\.\.\/(types|rng|view)$|^\.\/[\w-]+$/;
+    const allowed = /^\.\.\/(types|rng|view|grid)$|^\.\/[\w-]+$/;
     for (const f of aiFiles) {
       for (const imp of importsOf(strip(readFileSync(f, 'utf8')))) {
         expect(imp, `${relative(root, f)} imports ${imp}`).toMatch(allowed);

@@ -74,29 +74,40 @@ function solveComponent(world: World, comp: Component, dtF: number): void {
     income += r;
   }
 
-  // tip demand
+  // tips (growth sinks) and front cells (battle sinks) of this piece
   const tips: GrowthTarget[] = [];
   for (const tip of mold.targets) {
     const hd = tip.path[tip.pos] as number;
     if (world.component[hd] === comp.id && sc.stamp[hd] === stamp) tips.push(tip);
   }
-  if (tips.length > 0) {
-    const budget = Math.min(b.spendRateCap, income + comp.pool / b.demandHorizon);
-    // front sinks arrive with the rivals story: until then growth gets the whole budget
-    const growthShare = 1;
+  const fronts: number[] = [];
+  for (const cell of mold.frontCells) if (world.component[cell] === comp.id && sc.stamp[cell] === stamp) fronts.push(cell);
+  for (let i = 0; i < comp.cells.length; i++) world.pressure[comp.cells[i] as number] = 0;
+
+  // the allocation splits one budget between growth and fighting; whichever side has nothing to
+  // feed hands its share to the other, so nothing is wasted while idle (R4)
+  const budget = Math.min(b.spendRateCap, income + comp.pool / b.demandHorizon);
+  const tipShare = fronts.length === 0 ? 1 : tips.length === 0 ? 0 : 1 - mold.allocation;
+  const frontShare = tips.length === 0 ? (fronts.length === 0 ? 0 : 1) : fronts.length === 0 ? 0 : mold.allocation;
+
+  const tipDemand = new Map<number, number>();
+  if (tips.length > 0 && tipShare > 0) {
     let wsum = 0;
     for (const t of tips) wsum += 1 / (1 + octile(w, t.path[t.pos] as number, t.cell));
     for (const t of tips) {
-      const wt = 1 / (1 + octile(w, t.path[t.pos] as number, t.cell));
-      const d = (budget * growthShare * wt) / wsum;
-      subDem[t.path[t.pos] as number] = (subDem[t.path[t.pos] as number] as number) + d;
+      const hd = t.path[t.pos] as number;
+      const d = (budget * tipShare * (1 / (1 + octile(w, hd, t.cell)))) / wsum;
+      tipDemand.set(hd, (tipDemand.get(hd) ?? 0) + d);
     }
   }
-  const demandAt = new Map<number, number>();
-  for (const t of tips) {
-    const hd = t.path[t.pos] as number;
-    demandAt.set(hd, subDem[hd] as number);
+  const frontDemand = new Map<number, number>();
+  if (fronts.length > 0 && frontShare > 0) {
+    let wsum = 0;
+    for (const c of fronts) wsum += world.enemyAdj[c] as number;
+    for (const c of fronts) frontDemand.set(c, (budget * frontShare * (world.enemyAdj[c] as number)) / wsum);
   }
+  for (const [cell, d] of tipDemand) subDem[cell] = (subDem[cell] as number) + d;
+  for (const [cell, d] of frontDemand) subDem[cell] = (subDem[cell] as number) + d;
 
   // accumulate subtree sums toward the root
   for (let i = visited - 1; i > 0; i--) {
@@ -121,8 +132,9 @@ function solveComponent(world: World, comp: Component, dtF: number): void {
   for (const t of tips) {
     const hd = t.path[t.pos] as number;
     // tips sharing a head cell split that cell's demand evenly
-    t.rate = (demandAt.get(hd) as number) * (scale[hd] as number) / tips.filter((o) => o.path[o.pos] === hd).length;
+    t.rate = ((tipDemand.get(hd) ?? 0) * (scale[hd] as number)) / tips.filter((o) => o.path[o.pos] === hd).length;
   }
+  for (const [cell, d] of frontDemand) world.pressure[cell] = d * (scale[cell] as number);
   for (const t of mold.targets) {
     if (!tips.includes(t)) t.rate = 0;
   }

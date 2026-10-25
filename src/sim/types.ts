@@ -43,6 +43,14 @@ export interface MoldStats {
   peakSize: number;
 }
 
+/** a rival's private scratch; the AI reads the world only through its MoldView */
+export interface AiState {
+  /** 0..1, from the difficulty profile */
+  aggression: number;
+  /** last few decisions, for the debug overlay */
+  debug: string[];
+}
+
 export interface Mold {
   id: MoldId;
   kind: 'player' | 'rival';
@@ -60,6 +68,20 @@ export interface Mold {
   /** per-tick accumulators feeding netIncome */
   incomeTick: number;
   upkeepTick: number;
+  /** owned cells touching an enemy cell, rebuilt every tick */
+  frontCells: CellIndex[];
+  /** smoothed biomass per second lost on fronts, and the per-tick accumulator */
+  frontLoss: number;
+  lossTick: number;
+  /** fog of war (R7): 0 never seen, 1 remembered, 2 visible now */
+  vision: Uint8Array;
+  memOwner: Uint8Array;
+  memFood: Float32Array;
+  /** for the player: enemy cells currently in view (HUD rival list) */
+  seenCells: Uint32Array;
+  /** rivals only */
+  ai: AiState | null;
+  aiNext: number;
 }
 
 export interface Component {
@@ -149,6 +171,7 @@ export interface DifficultyProfile {
 }
 
 export type RoundOutcome = 'playing' | 'victory' | 'defeat';
+export type VictoryReason = 'eliminated-all' | 'map-control';
 
 export interface ReplayLog {
   runSeed: number;
@@ -218,6 +241,9 @@ export interface MoldView {
   visibleEnemyCells(): CellIndex[];
   knownFood(): { cell: CellIndex; amount: number; stale: boolean }[];
   dropWarnings(): { cell: CellIndex; type: FoodType; landsInTicks: number }[];
+  /** the own cell nearest to `cell`, or -1 if the mold has none */
+  nearestOwn(cell: CellIndex): CellIndex;
+  /** approximate cost to grow from one cell to another (distance plus terrain along the line) */
   pathCost(from: CellIndex, to: CellIndex): number;
   tick: number;
 }
@@ -231,6 +257,17 @@ export interface Scratch {
   subInc: Float32Array;
   subDem: Float32Array;
   scale: Float32Array;
+  // combat
+  damage: Float32Array;
+  damageBest: Float32Array;
+  damageFrom: Int32Array;
+  damageStamp: Int32Array;
+  damageStampN: number;
+  eff: Float32Array;
+  hit: number[];
+  // fog
+  fogTmp: Uint8Array;
+  prefix: Int32Array;
   // A*
   g: Float32Array;
   from: Int32Array;
@@ -261,6 +298,10 @@ export interface World {
   component: Int32Array;
   food: Float32Array;
   foodSourceId: Int16Array;
+  /** nutrients per second delivered to each front cell by the last flow solve */
+  pressure: Float32Array;
+  /** number of enemy cells next to each owned cell (valid for cells in a mold's frontCells) */
+  enemyAdj: Uint8Array;
 
   molds: Mold[];
   components: Map<number, Component>;
@@ -272,9 +313,13 @@ export interface World {
   drops: DropEvent[];
   nextTargetId: number;
   reachableCells: number;
+  outcome: RoundOutcome;
+  victoryReason: VictoryReason | null;
 
   rng: RngStreams;
   commandQueue: Command[];
+  /** commands issued by rival AIs: applied like any other, but not logged, because replaying regenerates them */
+  internalCommands: WeakSet<Command>;
   events: SimEvent[];
   replay: ReplayLog;
   scratch: Scratch;

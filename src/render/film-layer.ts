@@ -60,8 +60,16 @@ export class FilmLayer {
     const data = this.data;
     const colors = world.molds.map((m) => rgb(moldColor(m.color)));
     const patterns = world.molds.map((m) => moldPattern(m.pattern));
+    const player = world.molds[0];
+    const vision = player?.vision;
     for (let i = 0; i < world.owner.length; i++) {
-      const o = world.owner[i] as number;
+      let o = world.owner[i] as number;
+      let bio = world.biomass[i] as number;
+      if (vision && vision[i] !== 2) {
+        // out of sight: show the last-known owner (dimmed), or nothing if it was never seen
+        o = vision[i] === 1 ? (player.memOwner[i] as number) : 0;
+        bio = 0.5;
+      }
       const j = i * 4;
       if (o === 0) {
         data[j] = 0;
@@ -74,7 +82,7 @@ export class FilmLayer {
       data[j] = c[0];
       data[j + 1] = c[1];
       data[j + 2] = (c[2] & 0xf8) | (patterns[o - 1] as number);
-      data[j + 3] = Math.max(1, Math.round((world.biomass[i] as number) * 255));
+      data[j + 3] = Math.max(1, Math.round(bio * 255));
     }
     this.source.update();
   }

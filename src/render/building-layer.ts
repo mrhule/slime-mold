@@ -52,13 +52,15 @@ export class BuildingLayer {
   }
 
   update(world: Readonly<World>): void {
+    const vision = world.molds[0]?.vision;
+    const shown = (b: World['buildings'][number]): boolean => !b.destroyed && (b.moldId === 1 || !vision || vision[b.cell] === 2);
     let key = '';
-    for (const b of world.buildings) key += b.destroyed ? 'x' : b.id + ',';
+    for (const b of world.buildings) key += shown(b) ? b.id + ',' : 'x';
     if (key === this.lastKey) return;
     this.lastKey = key;
     this.g.clear();
     for (const b of world.buildings) {
-      if (b.destroyed) continue;
+      if (!shown(b)) continue;
       const [x, y] = cellCenter(b.cell, world.width);
       const mold = world.molds[b.moldId - 1];
       drawFarm(this.g, x, y, moldColor(mold ? mold.color : 0));

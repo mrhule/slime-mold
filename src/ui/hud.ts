@@ -67,6 +67,8 @@ export class Hud {
     this.slider.addEventListener('pointerdown', () => (this.sliderActive = true));
     window.addEventListener('pointerup', () => (this.sliderActive = false));
     this.slider.addEventListener('input', () => this.actions.onAllocation(Number(this.slider.value)));
+    // give keyboard focus back to the game so hotkeys keep working after using the slider
+    this.slider.addEventListener('change', () => this.slider.blur());
     for (const b of this.speedButtons) {
       b.addEventListener('click', () => {
         const v = b.dataset.speed;

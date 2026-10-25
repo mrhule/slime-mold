@@ -82,9 +82,12 @@ async function main(): Promise<void> {
   const debug = dev ? new DebugOverlay(ui, params.has('debug')) : null;
 
   // the clock stops when the tab is hidden or loses focus (FR-027)
-  const autoPause = (): void => run.pause('focus');
-  document.addEventListener('visibilitychange', () => document.hidden && autoPause());
-  window.addEventListener('blur', autoPause);
+  // (`?nopause` turns this off in dev builds, for testing in a window that keeps losing focus)
+  if (!(dev && params.has('nopause'))) {
+    const autoPause = (): void => run.pause('focus');
+    document.addEventListener('visibilitychange', () => document.hidden && autoPause());
+    window.addEventListener('blur', autoPause);
+  }
 
   run.onChange(() => screens.update(run));
   screens.update(run);
@@ -141,6 +144,12 @@ async function main(): Promise<void> {
     }
     frameEvents.length = 0;
 
+    const extra = run.world.molds
+      .filter((m) => m.ai)
+      .map((m) => {
+        const pressure = m.frontCells.reduce((s, c) => s + (run.world.pressure[c] as number), 0);
+        return `R${m.id - 1} ${m.status === 'alive' ? '' : '(out) '}cells ${m.cellCount} alloc ${m.allocation.toFixed(2)} tips ${m.targets.length} fronts ${m.frontCells.length} press ${pressure.toFixed(1)} loss ${m.frontLoss.toFixed(2)} | ${m.ai?.debug.join('; ') ?? ''}`;
+      });
     debug?.update({
       fps,
       tickMs,
@@ -149,6 +158,7 @@ async function main(): Promise<void> {
       seed: run.runSeed,
       round: run.roundNumber,
       tick: run.world.tick,
+      extra,
     });
   });
 }

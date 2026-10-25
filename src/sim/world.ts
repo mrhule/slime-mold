@@ -13,6 +13,15 @@ function createScratch(cells: number): Scratch {
     subInc: new Float32Array(cells),
     subDem: new Float32Array(cells),
     scale: new Float32Array(cells),
+    damage: new Float32Array(cells),
+    damageBest: new Float32Array(cells),
+    damageFrom: new Int32Array(cells),
+    damageStamp: new Int32Array(cells),
+    damageStampN: 0,
+    eff: new Float32Array(cells),
+    hit: [],
+    fogTmp: new Uint8Array(cells),
+    prefix: new Int32Array(Math.max(cells, 1) + 1),
     g: new Float32Array(cells),
     from: new Int32Array(cells),
     closed: new Int32Array(cells),
@@ -65,6 +74,8 @@ export function createWorld(
     component,
     food: new Float32Array(cells),
     foodSourceId,
+    pressure: new Float32Array(cells),
+    enemyAdj: new Uint8Array(cells),
     molds: [],
     components: new Map(),
     nextComponentId: 0,
@@ -74,8 +85,11 @@ export function createWorld(
     drops: [],
     nextTargetId: 1,
     reachableCells: 0,
+    outcome: 'playing',
+    victoryReason: null,
     rng: new RngStreams(seed),
     commandQueue: [],
+    internalCommands: new WeakSet(),
     events: [],
     replay: { runSeed: seed, roundNumber, entries: [], finalHash: 0 },
     scratch: createScratch(cells),
@@ -86,6 +100,17 @@ export function moldOf(world: World, id: number): Mold {
   const m = world.molds[id - 1];
   if (!m) throw new Error(`unknown mold ${id}`);
   return m;
+}
+
+/**
+ * Molds in this tick's processing order. The starting mold rotates every tick, so no mold is
+ * always first to claim a contested cell (a fixed id order would hand mold 1 a permanent edge).
+ */
+export function moldsInOrder(world: Readonly<World>): Mold[] {
+  const n = world.molds.length;
+  if (n < 2) return world.molds;
+  const start = world.tick % n;
+  return world.molds.map((_, i) => world.molds[(start + i) % n] as Mold);
 }
 
 /** Throws if any structural invariant from data-model.md is violated. */

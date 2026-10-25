@@ -21,7 +21,7 @@ function nearestFood(world: World): FoodSource {
 describe('forage (US1)', () => {
   it('a mold reaches the nearest food, absorbs it, and ends richer', () => {
     for (const seed of [1, 7, 42, 2024]) {
-      const world = createRound({ runSeed: seed, roundNumber: 1 });
+      const world = createRound({ runSeed: seed, roundNumber: 1, rivals: 0 });
       expect(world.molds).toHaveLength(1);
       const food = nearestFood(world);
       const start = readHud(world, 1).storedNutrients;

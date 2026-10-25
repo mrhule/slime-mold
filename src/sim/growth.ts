@@ -1,7 +1,8 @@
 import { DX, DY, SQRT2, isDiagonal, octile } from './grid';
+import { heapPop, heapPush } from './heap';
 import { addCell, linkCells } from './network';
 import { engulfFood } from './food';
-import { moldOf } from './world';
+import { moldOf, moldsInOrder } from './world';
 import { TICK_DT, Terrain } from './types';
 import type { CellIndex, Component, GrowthTarget, Mold, MoldId, World } from './types';
 
@@ -48,47 +49,6 @@ function terrainStep(world: World, moldId: MoldId, cell: CellIndex): number {
   if (o === moldId) return tc.own;
   const base = world.terrain[cell] === Terrain.Rough ? tc.rough : tc.open;
   return o !== 0 ? Math.max(base, tc.enemy) : base;
-}
-
-// binary min-heap on (f, node) using the scratch arrays
-function heapPush(f: number[], n: number[], fv: number, nv: number): void {
-  let i = f.length;
-  f.push(fv);
-  n.push(nv);
-  while (i > 0) {
-    const p = (i - 1) >> 1;
-    const pf = f[p] as number;
-    if (pf < fv || (pf === fv && (n[p] as number) <= nv)) break;
-    f[i] = pf;
-    n[i] = n[p] as number;
-    i = p;
-  }
-  f[i] = fv;
-  n[i] = nv;
-}
-
-function heapPop(f: number[], n: number[]): number {
-  const top = n[0] as number;
-  const lf = f.pop() as number;
-  const ln = n.pop() as number;
-  const size = f.length;
-  if (size > 0) {
-    let i = 0;
-    for (;;) {
-      let c = 2 * i + 1;
-      if (c >= size) break;
-      const r = c + 1;
-      if (r < size && ((f[r] as number) < (f[c] as number) || (f[r] === f[c] && (n[r] as number) < (n[c] as number)))) c = r;
-      const cf = f[c] as number;
-      if (lf < cf || (lf === cf && ln <= (n[c] as number))) break;
-      f[i] = cf;
-      n[i] = n[c] as number;
-      i = c;
-    }
-    f[i] = lf;
-    n[i] = ln;
-  }
-  return top;
 }
 
 /**
@@ -212,7 +172,7 @@ const stepCostOf = (world: World, cell: CellIndex): number =>
 /** Spend delivered nutrients on extending each mold's tips (called every tick). */
 export function tickGrowth(world: World): void {
   const dt = TICK_DT;
-  for (const mold of world.molds) {
+  for (const mold of moldsInOrder(world)) {
     if (mold.status !== 'alive') continue;
     for (const tip of [...mold.targets]) advanceTip(world, mold, tip, dt);
   }
@@ -226,7 +186,11 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
     if (!repath(world, mold, tip)) return;
     head = tip.path[tip.pos] as number;
   }
-  if (tip.state === 'blocked' && world.tick % 20 === 0 && !repath(world, mold, tip)) return;
+  if (tip.state === 'blocked' && world.tick % 20 === 0) {
+    // look for a way around; a new path starts from wherever is nearest now, so the head moves with it
+    if (!repath(world, mold, tip)) return;
+    head = tip.path[tip.pos] as number;
+  }
   if (tip.state === 'blocked') tip.state = 'growing';
 
   let builtThisTick = 0;

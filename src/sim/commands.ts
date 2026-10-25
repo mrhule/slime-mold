@@ -11,6 +11,12 @@ function reject(world: World, mold: MoldId, reason: string, cell?: number): void
   world.events.push(cell === undefined ? { type: 'commandRejected', mold, reason } : { type: 'commandRejected', mold, reason, cell });
 }
 
+/** Queue a command issued by the sim itself (a rival AI). It runs like any other but is not part of the replay log. */
+export function enqueueInternal(world: World, cmd: Command): void {
+  world.internalCommands.add(cmd);
+  world.commandQueue.push(cmd);
+}
+
 /** the allocation a mold will have once its queued orders run (what the slider should show while paused) */
 export function pendingAllocation(world: Readonly<World>, moldId: MoldId): number {
   let value = world.molds[moldId - 1]?.allocation ?? 0;
@@ -60,7 +66,7 @@ export function applyQueuedCommands(world: World): void {
   if (queue.length === 0) return;
   world.commandQueue = [];
   for (const cmd of queue) {
-    world.replay.entries.push({ tick: world.tick, cmd });
+    if (!world.internalCommands.has(cmd)) world.replay.entries.push({ tick: world.tick, cmd });
     applyCommand(world, cmd);
   }
 }

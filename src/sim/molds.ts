@@ -7,7 +7,14 @@ import type { CellIndex, Mold, World } from './types';
  * Create a mold with its core and four orthogonal neighbors, and give its piece the
  * starting nutrients.
  */
-export function addMold(world: World, kind: Mold['kind'], core: CellIndex, startNutrients: number): Mold {
+export function addMold(
+  world: World,
+  kind: Mold['kind'],
+  core: CellIndex,
+  startNutrients: number,
+  aggression = 0,
+): Mold {
+  const cells = world.width * world.height;
   const id = world.molds.length + 1;
   const mold: Mold = {
     id,
@@ -23,6 +30,15 @@ export function addMold(world: World, kind: Mold['kind'], core: CellIndex, start
     netIncome: 0,
     incomeTick: 0,
     upkeepTick: 0,
+    frontCells: [],
+    frontLoss: 0,
+    lossTick: 0,
+    vision: new Uint8Array(cells),
+    memOwner: new Uint8Array(cells),
+    memFood: new Float32Array(cells),
+    seenCells: new Uint32Array(8),
+    ai: kind === 'rival' ? { aggression, debug: [] } : null,
+    aiNext: 0,
   };
   world.molds.push(mold);
   addCell(world, id, core, -1);

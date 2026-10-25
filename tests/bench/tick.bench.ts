@@ -4,8 +4,10 @@
  * stories; the scenario grows with them. Exits non-zero if the budget is missed.
  */
 import { defaultBalance } from '../../src/config/balance';
-import { createRound, enqueue, step } from '../../src/sim';
-import type { World } from '../../src/sim';
+import { think } from '../../src/sim/ai/rival-ai';
+import { Rng } from '../../src/sim/rng';
+import { createRound, enqueue, step, viewFor } from '../../src/sim';
+import type { AiState, World } from '../../src/sim';
 import { neighbor } from '../../src/sim/grid';
 import { addCell } from '../../src/sim/network';
 
@@ -47,12 +49,47 @@ function foragingWorld(round: number): World {
   return world;
 }
 
+/** A full round with every mold AI-driven (the player too), warmed up so fronts, fog and AI all run. */
+function rivalWorld(round: number): { world: World; drive: (tick: number) => void } {
+  const world = createRound({ runSeed: 5, roundNumber: round });
+  const state: AiState = { aggression: 0.6, debug: [] };
+  const rng = new Rng(99);
+  const interval = Math.round(world.difficulty.aiThinkInterval / 0.05);
+  const drive = (tick: number): void => {
+    if (tick % interval === 0 && world.molds[0]!.status === 'alive') {
+      for (const cmd of think(viewFor(world, 1), state, rng, 3)) enqueue(world, cmd);
+    }
+  };
+  for (let t = 0; t < 3600; t++) {
+    drive(t);
+    step(world);
+  }
+  return { world, drive };
+}
+
+interface Scenario {
+  label: (world: World) => string;
+  build: () => { world: World; drive?: (tick: number) => void };
+}
+
+const scenarios: Scenario[] = [
+  ...[1, 10].map((round): Scenario => ({
+    label: (w) => `growth only, round ${round} (${w.width}x${w.height}, ${w.molds[0]!.cellCount} cells, 4000-cell network)`,
+    build: () => ({ world: foragingWorld(round) }),
+  })),
+  ...[1, 10].map((round): Scenario => ({
+    label: (w) => `AI vs AI, round ${round} (${w.width}x${w.height}, ${w.molds.length} molds, ${w.molds.reduce((s, m) => s + m.cellCount, 0)} cells, ${w.molds.reduce((s, m) => s + m.frontCells.length, 0)} front cells)`,
+    build: () => rivalWorld(round),
+  })),
+];
+
 let failed = false;
-for (const round of [1, 10]) {
-  const world = foragingWorld(round);
+for (const scenario of scenarios) {
+  const { world, drive } = scenario.build();
   const ticks = 600;
   const times: number[] = [];
   for (let i = 0; i < ticks; i++) {
+    drive?.(world.tick);
     const t0 = performance.now();
     step(world);
     times.push(performance.now() - t0);
@@ -60,7 +97,7 @@ for (const round of [1, 10]) {
   times.sort((a, b) => a - b);
   const mean = times.reduce((s, t) => s + t, 0) / times.length;
   const p99 = times[Math.floor(times.length * 0.99)]!;
-  const label = `round ${round} (${world.width}x${world.height}, ${world.molds[0]!.cellCount} cells, ${world.molds[0]!.targets.length} tips)`;
+  const label = scenario.label(world);
   console.log(`${label}: mean ${mean.toFixed(3)} ms, p99 ${p99.toFixed(3)} ms, max ${times[times.length - 1]!.toFixed(3)} ms`);
   if (mean > BUDGET_MS) failed = true;
 }

@@ -44,7 +44,13 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     buildingIncome: buildingIncome(world, moldId),
     rivals: world.molds
       .filter((m) => m.id !== moldId)
-      .map((m) => ({ id: m.id, color: m.color, pattern: m.pattern, status: m.status, visibleCells: null })),
+      .map((m) => ({
+        id: m.id,
+        color: m.color,
+        pattern: m.pattern,
+        status: m.status,
+        visibleCells: (mold.seenCells[m.id] as number) > 0 ? (mold.seenCells[m.id] as number) : null,
+      })),
     elapsedSeconds: world.tick * TICK_DT,
   };
 }

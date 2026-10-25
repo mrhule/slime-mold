@@ -54,6 +54,8 @@ export interface BalanceConfig {
 
   // combat (R6)
   attackEff: number;
+  /** pressure every front cell exerts even with no nutrients delivered, so contact always grinds */
+  basePressure: number;
   consumeRefund: number;
   biomassRegen: number;
 
@@ -137,6 +139,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   targetSnapRadius: 6,
 
   attackEff: 0.12,
+  basePressure: 0.4,
   consumeRefund: 0.4,
   biomassRegen: 0.2,
 

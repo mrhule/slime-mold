@@ -70,8 +70,11 @@ export class VeinLayer {
   private rebuild(world: Readonly<World>, moldId: number, colorIndex: number): void {
     const w = world.width;
     const h = world.height;
+    // rivals' veins are drawn only where the player can currently see them
+    const vision = moldId === 1 ? null : (world.molds[0]?.vision ?? null);
+    const visible = (c: number): boolean => vision === null || vision[c] === 2;
     const cells: number[] = [];
-    for (const comp of world.components.values()) if (comp.moldId === moldId) for (const c of comp.cells) cells.push(c);
+    for (const comp of world.components.values()) if (comp.moldId === moldId) for (const c of comp.cells) if (visible(c)) cells.push(c);
     const entry = this.moldMesh(moldId, colorIndex);
     if (cells.length === 0) {
       if (entry.mesh) entry.mesh.visible = false;
@@ -87,6 +90,7 @@ export class VeinLayer {
       for (let k = 0; k < 4; k++) {
         if (!(bits & (1 << k))) continue;
         const v = neighbor(w, h, c, k);
+        if (!visible(v)) continue;
         const slot = c * 4 + k;
         const half = Math.min(3.6, 0.8 + 0.8 * Math.sqrt(world.conductivity[slot] as number));
         edgeList.push({ a: c, b: v, half, flow: world.edgeFlow[slot] as number });

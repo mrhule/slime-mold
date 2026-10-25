@@ -1,5 +1,9 @@
 import { tickBuildings } from './buildings';
+import { tickAi } from './ai-driver';
+import { checkEliminations, scanFronts, tickCombat } from './combat';
 import { applyQueuedCommands } from './commands';
+import { updateVision } from './fog';
+import { evaluateOutcome } from './round';
 import { solveFlow } from './flow';
 import { tickFood } from './food';
 import { tickGrowth } from './growth';
@@ -40,9 +44,15 @@ export function step(world: World): void {
   applyQueuedCommands(world);
   tickIncome(world);
   tickUpkeep(world);
+  scanFronts(world);
   if (world.tick % world.balance.flowEvery === 0) solveFlow(world);
   tickGrowth(world);
+  tickCombat(world);
   decayOrphans(world);
+  checkEliminations(world);
+  if (world.tick % world.balance.fogEvery === 0) updateVision(world);
+  if (world.tick % 10 === 0) evaluateOutcome(world);
+  tickAi(world);
   settleNetIncome(world);
   world.tick++;
 }

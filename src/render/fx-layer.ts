@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { hash2 } from '../sim/noise';
 import { cellCenter, drawFarm } from './building-layer';
 import type { Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -36,6 +37,39 @@ export class FxLayer {
     this.pings.push({ x: (cell % width) * CELL + CELL / 2, y: Math.floor(cell / width) * CELL + CELL / 2, age: 0 });
   }
 
+  /**
+   * Angular comic starbursts on every visible battle front, bigger where more nutrients are
+   * being thrown at it (FR-032). The points re-seed 8 times a second so they flicker like ink.
+   */
+  private drawBursts(g: Graphics, world: Readonly<World>, timeSeconds: number): void {
+    const vision = world.molds[0]?.vision;
+    const base = world.balance.basePressure;
+    const bursts: { cell: number; power: number }[] = [];
+    for (const mold of world.molds) {
+      for (const cell of mold.frontCells) {
+        if (vision && vision[cell] !== 2) continue;
+        const power = (world.pressure[cell] as number) + base;
+        if (power > 0.5) bursts.push({ cell, power });
+      }
+    }
+    if (bursts.length === 0) return;
+    bursts.sort((a, b) => b.power - a.power || a.cell - b.cell);
+    const frame = Math.floor(timeSeconds * 8);
+    for (const { cell, power } of bursts.slice(0, 36)) {
+      const [x, y] = FxLayer.markerPosition(cell, world.width);
+      const outer = 5 + Math.min(11, power * 1.8);
+      const points = 8;
+      const pts: number[] = [];
+      for (let s = 0; s < points * 2; s++) {
+        const ang = (s / (points * 2)) * Math.PI * 2 + (hash2(cell, frame, 5) - 0.5) * 0.5;
+        const r = s % 2 === 0 ? outer * (0.85 + hash2(cell, s + frame * 16, 6) * 0.3) : outer * 0.45;
+        pts.push(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+      }
+      g.poly(pts, true).fill(0xffd23a).stroke({ width: 2.5, color: INK, join: 'miter' });
+      g.circle(x, y, outer * 0.28).fill(0xe0432a);
+    }
+  }
+
   /** world position of a target marker, for hit-testing right-clicks */
   static markerPosition(cell: number, width: number): [number, number] {
     return [(cell % width) * CELL + CELL / 2, Math.floor(cell / width) * CELL + CELL / 2];
@@ -67,6 +101,7 @@ export class FxLayer {
         g.circle(x, y, 2).fill(INK);
       }
     }
+    this.drawBursts(g, world, timeSeconds);
     if (ghost && player) {
       const [gx, gy] = cellCenter(ghost.cell, world.width);
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;

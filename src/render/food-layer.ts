@@ -16,18 +16,46 @@ export class FoodLayer {
 
   update(world: Readonly<World>): void {
     // redraw only when some amount changed visibly
+    const vision = world.molds[0]?.vision;
+    const memFood = world.molds[0]?.memFood;
+    const known = (f: FoodSource): number | null => {
+      if (!vision || !memFood) return f.remaining;
+      let amount = 0;
+      let seen = false;
+      for (let y = f.y; y < f.y + f.h; y++) {
+        for (let x = f.x; x < f.x + f.w; x++) {
+          const c = y * world.width + x;
+          const v = vision[c] as number;
+          if (v > 0) seen = true;
+          amount += v === 2 ? (world.food[c] as number) : v === 1 ? (memFood[c] as number) : 0;
+        }
+      }
+      return seen ? amount : null;
+    };
+    const amounts = new Map<number, number>();
     let key = '';
-    for (const f of world.foodSources) key += f.depleted ? 'x' : Math.round(Math.sqrt(f.remaining / f.total) * 12) + ',';
+    for (const f of world.foodSources) {
+      const a = f.depleted ? null : known(f);
+      if (a === null || a <= 0) {
+        key += 'x';
+        continue;
+      }
+      amounts.set(f.id, a);
+      key += Math.round(Math.sqrt(a / f.total) * 12) + ',';
+    }
     if (key === this.lastKey) return;
     this.lastKey = key;
     const g = this.g;
     g.clear();
-    for (const f of world.foodSources) if (!f.depleted) this.draw(g, f);
+    for (const f of world.foodSources) {
+      const a = amounts.get(f.id);
+      if (a !== undefined) this.draw(g, f, a);
+    }
   }
 
-  private draw(g: Graphics, f: FoodSource): void {
+  private draw(g: Graphics, f: FoodSource, remaining: number): void {
     const pal = FOOD[f.type];
-    const amount = Math.sqrt(Math.max(0, f.remaining) / f.total);
+    const amount = Math.sqrt(Math.max(0, remaining) / f.total);
     const scale = 0.55 + 0.45 * amount;
     const cx = (f.x + f.w / 2) * CELL;
     const cy = (f.y + f.h / 2) * CELL;

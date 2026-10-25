@@ -58,3 +58,25 @@ Build: Phase 4 (T043–T052), seed 777. Window was small (about 700×440), which
 - A mis-click on the HUD panel does not set a growth target (the panel sits above the map), which is correct but easy to do when the panel is large.
 - Not yet checked by eye: the `?debug` overlay (dev only).
 - The defeat screen cannot be reached yet; rivals arrive in the next phase.
+
+## US2 — Rival Molds and Battle Fronts (2026-10-25)
+
+Build: Phase 5 (T053–T074; T059 half done). Seed 777, round 1 (one rival), small window. The pane was often throttled to a few frames per second, so timing was checked in the simulation rather than by the clock.
+
+| # | Scenario | Result |
+|---|---|---|
+| 5 | Front and slider (US2-1/2) | **Pass, mostly headless.** In the browser a second rival placed 16 cells from the player formed a front: angular comic starbursts appeared where the yellow and blue veins touched. The slider's effect is tested headless in `front-allocation.test.ts`: the side sending more nutrients to the front wins it from either side of the map; flipping a losing mold to full Fight (with nutrients to send) swings the front back. |
+| 6 | Cut a supply line (US2-3) | **Headless only.** A piece with no core and no food withers (biomass `orphanDecay`/s, about 4 s) and a kill that cuts a mold in two splits the piece and its pool (`network.test.ts`, `combat.test.ts`). Not exercised by hand. |
+| 7 | Fog (US2-6) | **Pass.** Everything outside the player's 10-cell vision is covered in ink scribble with the terrain still readable through it, with a hand-inked boundary; the rival list shows "Rival 1 ?" until some of its cells are in view, then "13 seen". Remembered-versus-live behavior is covered by `fog.test.ts` and `view.test.ts`; the stale halftone look was not captured by hand. |
+
+### Findings and fixes
+
+- **Real bug:** a growth tip that was blocked and then found a new path kept its old head cell and tried to link to a non-adjacent cell (a crash). It only shows once fronts block tips. Fixed.
+- **Fairness bug:** when two front cells killed each other in the same tick, whichever mold was processed first could claim its own dead cell and "win" every mutual kill. Deaths are now resolved in two phases (remove all dead cells, then only surviving attackers refund and advance), and the processing order of molds rotates each tick.
+- Mirrored duels are not exactly equal (path tie-breaking favors lower cell indices), so the test checks that the slider decides the front in both orientations rather than exact symmetry. Starts are random on real maps, so no mold gets a systematic edge.
+- **Balance: rounds do not get decided yet.** In AI-versus-AI games (both sides run by the same AI) both molds grow to about 500 and 230 cells in the first minutes and then sit at the upkeep ceiling with an empty pool, so fights are only base pressure and nothing is won. All 3 sample rounds timed out at 10 game minutes. This is the economy (income versus upkeep versus food) and will be tuned together with food drops in the balance pass (T093). Until then `T059`'s "decided within 20 minutes" test is not written.
+- The AI does not build farms (buildings are feature 002), so its only income is food and the core.
+
+### Performance (T073)
+
+Sim tick, mean over 600 ticks: round 1 AI-vs-AI (2 molds) 0.10 ms; round 10 AI-vs-AI (6 molds, 1372 cells) 0.66 ms (p99 3.4 ms); growth-only with a 4000-cell network 0.7 to 1.2 ms. All far inside the 6 ms budget. Frame rate was not trustworthy in this pane.
