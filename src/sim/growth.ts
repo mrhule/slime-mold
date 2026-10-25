@@ -1,4 +1,4 @@
-import { DX, DY, SQRT2, isDiagonal, octile } from './grid';
+import { DX, DY, SQRT2, dirBetween, isDiagonal, octile } from './grid';
 import { heapPop, heapPush } from './heap';
 import { addCell, linkCells } from './network';
 import { engulfFood } from './food';
@@ -234,8 +234,76 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
     builtThisTick++;
     addCell(world, mold.id, next, head);
     engulfFood(world, mold.id, next);
+    growSpurs(world, mold, tip, head, next);
     tip.pos++;
     head = next;
   }
   tip.state = tip.starvedFor >= 1 ? 'starved' : 'growing';
+}
+
+/** a spur only sprouts while its piece holds this many cells' worth of nutrients */
+const SPUR_CUSHION = 30;
+
+function pay(world: World, from: CellIndex, cell: CellIndex): void {
+  const comp = world.components.get(world.component[from] as number) as Component;
+  comp.pool = Math.max(0, comp.pool - stepCostOf(world, cell));
+}
+
+/** can a spur cell go here: open, unowned, and no corner cutting through obstacles */
+function spurOk(world: World, from: CellIndex, k: number): CellIndex {
+  const { width: w, height: h } = world;
+  const x = (from % w) + (DX[k] as number);
+  const y = Math.floor(from / w) + (DY[k] as number);
+  if (x < 0 || y < 0 || x >= w || y >= h) return -1;
+  const c = y * w + x;
+  if (!isOpen(world, c) || world.owner[c] !== 0) return -1;
+  if (isDiagonal(k) && (!isOpen(world, Math.floor(from / w) * w + x) || !isOpen(world, y * w + (from % w)))) return -1;
+  return c;
+}
+
+/**
+ * Side spurs: as a tip lays down vein, short thin branches now and then sprout sideways so the
+ * mold spreads a little instead of drawing single lines. They are paid from the piece's stock
+ * (and only sprout while it holds a cushion), so they never slow the tip, and they use the
+ * mold's own RNG stream, so rivals get the very same behavior.
+ */
+function growSpurs(world: World, mold: Mold, tip: GrowthTarget, from: CellIndex, to: CellIndex): void {
+  const bal = world.balance;
+  if (bal.spurChance <= 0) return;
+  const comp = world.components.get(world.component[to] as number) as Component;
+  if (comp.pool < stepCostOf(world, to) * SPUR_CUSHION) return;
+  const rng = world.rng.get(`spur:${mold.id}`);
+  const spurs = (tip.spurs ??= []);
+  for (let i = spurs.length - 1; i >= 0; i--) {
+    const s = spurs[i] as { head: CellIndex; dir: number; left: number };
+    const head0 = s.head;
+    if (world.owner[head0] !== mold.id) {
+      spurs.splice(i, 1); // the spur's end was lost in a fight
+      continue;
+    }
+    if (!rng.chance(0.6)) continue;
+    const k = rng.chance(0.65) ? s.dir : (s.dir + (rng.chance(0.5) ? 1 : 7)) & 7;
+    const c = spurOk(world, s.head, k);
+    if (c < 0) {
+      spurs.splice(i, 1);
+      continue;
+    }
+    addCell(world, mold.id, c, s.head);
+    engulfFood(world, mold.id, c);
+    pay(world, head0, c);
+    s.head = c;
+    s.dir = k;
+    if (--s.left <= 0) spurs.splice(i, 1);
+  }
+  if (spurs.length >= 3 || !rng.chance(bal.spurChance)) return;
+  const heading = dirBetween(world.width, from, to);
+  if (heading < 0) return;
+  const k = (heading + (rng.chance(0.5) ? 1 : -1) * (rng.chance(0.7) ? 2 : 1) + 8) & 7;
+  const c = spurOk(world, to, k);
+  if (c < 0) return;
+  addCell(world, mold.id, c, to);
+  engulfFood(world, mold.id, c);
+  pay(world, to, c);
+  spurs.push({ head: c, dir: k, left: rng.int(bal.spurMaxLen) });
+  if (spurs[spurs.length - 1]!.left <= 0) spurs.pop();
 }

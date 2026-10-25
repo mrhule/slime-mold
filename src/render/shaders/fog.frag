@@ -48,18 +48,22 @@ void main(void) {
   float unseen = 1.0 - smoothstep(0.5 - fw * 0.5, 0.5 + fw * 0.5, seen);
   float memory = (1.0 - smoothstep(0.5 - fw * 0.5, 0.5 + fw * 0.5, vis)) * (1.0 - unseen);
 
-  // never seen: dense ink scribble. The terrain still shows through the gaps (FR-028).
-  vec2 s = p * 1.7;
-  float h1 = step(0.52, fract((s.x + s.y) * 1.1 + vnoise(p * 0.7) * 0.9));
-  float h2 = step(0.58, fract((s.x - s.y) * 1.1 + vnoise(p * 0.5 + 9.0) * 0.9));
+  // never seen: a dark wash with bold, widely spaced ink hatching (anti-aliased lines, no dither).
+  // The terrain still shows through (FR-028).
+  vec2 s = p * 0.55;
+  float x1 = (s.x + s.y) + vnoise(p * 0.35) * 0.4;
+  float x2 = (s.x - s.y) * 0.7 + vnoise(p * 0.3 + 9.0) * 0.4;
+  float aa1 = fwidth(x1) * 1.2;
+  float aa2 = fwidth(x2) * 1.2;
+  float h1 = smoothstep(0.38 - aa1, 0.38 + aa1, abs(fract(x1) - 0.5));
+  float h2 = smoothstep(0.45 - aa2, 0.45 + aa2, abs(fract(x2) - 0.5)) * 0.45;
   float hatch = max(h1, h2);
   vec3 scribbleColor = mix(vec3(0.07, 0.065, 0.06), uInk, hatch);
-  float scribbleAlpha = 0.34 + 0.6 * hatch;
+  float scribbleAlpha = 0.5 + 0.45 * hatch;
 
-  // remembered: flat gray halftone dots, so stale information reads as old
-  float dots = 1.0 - step(0.27, length(fract(p * 1.15) - 0.5));
-  vec3 memoryColor = mix(vec3(0.55, 0.55, 0.5), uInk, 0.75);
-  float memoryAlpha = 0.1 + 0.5 * dots;
+  // remembered: one flat gray wash, so stale information reads as old
+  vec3 memoryColor = mix(vec3(0.5, 0.5, 0.46), uInk, 0.7);
+  float memoryAlpha = 0.34;
 
   vec3 col = mix(memoryColor, scribbleColor, unseen);
   float alpha = unseen * scribbleAlpha + memory * memoryAlpha;

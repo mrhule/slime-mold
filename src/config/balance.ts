@@ -68,6 +68,10 @@ export interface BalanceConfig {
   // growth (R5)
   terrainCost: { open: number; rough: number; enemy: number; own: number };
   maxTargets: number;
+  /** chance per built vein cell that a short side spur sprouts from it (a bit of spreading) */
+  spurChance: number;
+  /** longest side spur, in cells */
+  spurMaxLen: number;
   targetSnapRadius: number;
 
   // combat (R6)
@@ -158,6 +162,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   terrainCost: { open: 1, rough: 2.5, enemy: 1.5, own: 0.2 },
   maxTargets: 3,
+  spurChance: 0.3,
+  spurMaxLen: 7,
   targetSnapRadius: 6,
 
   attackEff: 0.12,

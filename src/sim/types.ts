@@ -38,6 +38,8 @@ export interface GrowthTarget {
   starvedFor: number;
   /** nutrients/s the flow solve currently routes to this tip */
   rate: number;
+  /** short side branches still growing off this tip's path */
+  spurs?: { head: CellIndex; dir: number; left: number }[];
 }
 
 export interface MoldStats {

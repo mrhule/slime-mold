@@ -7,13 +7,23 @@ import { INK, MAP, rgb } from './palette';
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
 
-/** deterministic per-cell wobble in [-1, 1] */
-const wob = (cell: number, salt: number): number => hash2(cell, salt, 7) * 2 - 1;
+type Rgb = [number, number, number];
+
+const smooth = (a: number, b: number, x: number): number => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/** blur radius in pixels: rounds the grid's square steps into smooth blobs */
+const BLUR = 4;
+/** where the blurred occupancy counts as "inside" */
+const EDGE = 0.4;
 
 /**
- * Bakes the whole map into one texture: a grimy scratched surface with flat grunge bands,
- * inked rough patches, cel-shaded glass obstacles with hatched drop shadows, and a dark dish
- * wall (FR-032). One texel per world unit.
+ * Bakes the whole map into one texture: a grimy surface in smooth flat grunge bands, inked
+ * rough patches, cel-shaded glass obstacles with hatched drop shadows, and a dark dish wall
+ * (FR-032). Shapes come from a blurred, wobbled occupancy field rather than the grid squares, so
+ * edges read as hand-inked curves instead of stair-steps. One texel per world unit.
  */
 export function bakeTerrain(world: Readonly<World>): Sprite {
   const w = world.width;
@@ -25,37 +35,12 @@ export function bakeTerrain(world: Readonly<World>): Sprite {
   canvas.height = ph;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  paintSurface(ctx, pw, ph);
+  const img = ctx.createImageData(pw, ph);
+  const rough = occupancy(world, Terrain.Rough, pw, ph);
+  const glass = occupancy(world, Terrain.Obstacle, pw, ph);
+  paintGround(img, rough, glass, pw, ph);
+  ctx.putImageData(img, 0, 0);
 
-  // rough patches: darker flat tone with ink hatching
-  ctx.lineCap = 'round';
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (world.terrain[i] !== Terrain.Rough) continue;
-      ctx.fillStyle = css(MAP.rough);
-      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-    }
-  }
-  ctx.strokeStyle = css(MAP.roughHatch);
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (world.terrain[i] !== Terrain.Rough) continue;
-      const ox = x * CELL;
-      const oy = y * CELL;
-      for (let k = 0; k < 3; k++) {
-        const off = (k + 0.5) * (CELL / 3);
-        ctx.moveTo(ox + off + wob(i, k) * 0.8, oy + CELL);
-        ctx.lineTo(ox + off + CELL * 0.45 + wob(i, k + 9) * 0.8, oy + CELL * 0.1);
-      }
-    }
-  }
-  ctx.stroke();
-
-  paintObstacles(world, ctx);
   paintWall(world, ctx);
   paintScratches(world, ctx, pw, ph);
 
@@ -65,131 +50,157 @@ export function bakeTerrain(world: Readonly<World>): Sprite {
   return sprite;
 }
 
-function paintSurface(ctx: CanvasRenderingContext2D, pw: number, ph: number): void {
-  // flat 3-band grunge from low-frequency noise, written block by block
-  const block = 4;
-  const bw = Math.ceil(pw / block);
-  const bh = Math.ceil(ph / block);
-  const img = ctx.createImageData(pw, ph);
-  const bands = [rgb(MAP.dark), rgb(MAP.mid), rgb(MAP.base)];
-  for (let by = 0; by < bh; by++) {
-    for (let bx = 0; bx < bw; bx++) {
-      const n = 0.6 * valueNoise(bx / 38, by / 38, 11) + 0.4 * valueNoise(bx / 9, by / 9, 23);
-      const grain = hash2(bx, by, 5);
-      const v = n + (grain - 0.5) * 0.12;
-      const [r, g, b] = bands[v < 0.4 ? 0 : v < 0.6 ? 1 : 2] as [number, number, number];
-      for (let yy = 0; yy < block; yy++) {
-        const py = by * block + yy;
-        if (py >= ph) break;
-        for (let xx = 0; xx < block; xx++) {
-          const px = bx * block + xx;
-          if (px >= pw) break;
-          const o = (py * pw + px) * 4;
-          img.data[o] = r;
-          img.data[o + 1] = g;
-          img.data[o + 2] = b;
-          img.data[o + 3] = 255;
-        }
-      }
+/** 1 where a cell of this terrain sits, blurred into a soft field the size of the texture */
+function occupancy(world: Readonly<World>, kind: number, pw: number, ph: number): Float32Array {
+  const w = world.width;
+  const field = new Float32Array(pw * ph);
+  for (let cy = 0; cy < world.height; cy++) {
+    for (let cx = 0; cx < w; cx++) {
+      if (world.terrain[cy * w + cx] !== kind) continue;
+      for (let y = cy * CELL; y < (cy + 1) * CELL; y++) field.fill(1, y * pw + cx * CELL, y * pw + (cx + 1) * CELL);
     }
   }
-  ctx.putImageData(img, 0, 0);
+  const tmp = new Float32Array(pw * ph);
+  boxBlur(field, tmp, pw, ph, BLUR);
+  boxBlur(field, tmp, pw, ph, BLUR);
+  return field;
 }
 
-function paintObstacles(world: Readonly<World>, ctx: CanvasRenderingContext2D): void {
-  const w = world.width;
-  const h = world.height;
-  const isObs = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && world.terrain[y * w + x] === Terrain.Obstacle;
-
-  // hatched drop shadow first
-  ctx.fillStyle = 'rgba(15, 13, 11, 0.55)';
+/** in-place separable box blur (running sums); `tmp` is scratch of the same size */
+function boxBlur(a: Float32Array, tmp: Float32Array, w: number, h: number, r: number): void {
+  const inv = 1 / (2 * r + 1);
   for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let sum = 0;
+    for (let x = 0; x <= r && x < w; x++) sum += a[row + x] as number;
     for (let x = 0; x < w; x++) {
-      if (isObs(x, y)) ctx.fillRect(x * CELL + 3, y * CELL + 4, CELL, CELL);
+      tmp[row + x] = sum * inv;
+      const add = x + r + 1;
+      const sub = x - r;
+      if (add < w) sum += a[row + add] as number;
+      if (sub >= 0) sum -= a[row + sub] as number;
     }
   }
-  ctx.strokeStyle = css(INK);
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!isObs(x, y) || isObs(x, y + 1)) continue;
-      // below a bottom edge: short diagonal hatches in the shadow
-      for (let k = 0; k < 4; k++) {
-        const hx = x * CELL + k * 2.2 + 1;
-        ctx.moveTo(hx, y * CELL + CELL + 0.5);
-        ctx.lineTo(hx + 3, y * CELL + CELL + 4.5);
-      }
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let y = 0; y <= r && y < h; y++) sum += tmp[y * w + x] as number;
+    for (let y = 0; y < h; y++) {
+      a[y * w + x] = sum * inv;
+      const add = y + r + 1;
+      const sub = y - r;
+      if (add < h) sum += tmp[add * w + x] as number;
+      if (sub >= 0) sum -= tmp[sub * w + x] as number;
     }
   }
-  ctx.stroke();
+}
 
-  // glass body in flat bands
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!isObs(x, y)) continue;
-      const i = y * w + x;
-      // flat bands in chunky 2x2-cell patches, not a per-cell checkerboard
-      const band = hash2(x >> 1, y >> 1, 21);
-      ctx.fillStyle = css(band > 0.72 ? MAP.glassDark : MAP.glass);
-      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-      if (!isObs(x - 1, y) || !isObs(x, y - 1)) {
-        ctx.fillStyle = css(MAP.glassLight);
-        ctx.fillRect(x * CELL + 1.5, y * CELL + 1.5, CELL * 0.45, 2 + (i % 3));
-      }
-    }
-  }
+function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, pw: number, ph: number): void {
+  const data = img.data;
+  const bands: Rgb[] = [rgb(MAP.dark), rgb(MAP.mid), rgb(MAP.base)];
+  const roughC = rgb(MAP.rough);
+  const roughInk = rgb(MAP.roughHatch);
+  const glassC = rgb(MAP.glass);
+  const glassDarkC = rgb(MAP.glassDark);
+  const glassLightC = rgb(MAP.glassLight);
+  const ink = rgb(INK);
 
-  // wobbly ink outline along every edge facing open ground
-  ctx.strokeStyle = css(INK);
-  ctx.lineWidth = 3;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  const edge = (x1: number, y1: number, x2: number, y2: number, seed: number): void => {
-    const mx = (x1 + x2) / 2 + wob(seed, 1) * 1.1;
-    const my = (y1 + y2) / 2 + wob(seed, 2) * 1.1;
-    ctx.moveTo(x1 + wob(seed, 3) * 0.6, y1 + wob(seed, 4) * 0.6);
-    ctx.quadraticCurveTo(mx, my, x2 + wob(seed, 5) * 0.6, y2 + wob(seed, 6) * 0.6);
+  const at = (f: Float32Array, x: number, y: number): number => {
+    const xx = x < 0 ? 0 : x >= pw ? pw - 1 : x;
+    const yy = y < 0 ? 0 : y >= ph ? ph - 1 : y;
+    return f[yy * pw + xx] as number;
   };
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!isObs(x, y)) continue;
-      const i = y * w + x;
-      const x0 = x * CELL;
-      const y0 = y * CELL;
-      if (!isObs(x, y - 1)) edge(x0, y0, x0 + CELL, y0, i * 4);
-      if (!isObs(x, y + 1)) edge(x0, y0 + CELL, x0 + CELL, y0 + CELL, i * 4 + 1);
-      if (!isObs(x - 1, y)) edge(x0, y0, x0, y0 + CELL, i * 4 + 2);
-      if (!isObs(x + 1, y)) edge(x0 + CELL, y0, x0 + CELL, y0 + CELL, i * 4 + 3);
+
+  for (let y = 0; y < ph; y++) {
+    for (let x = 0; x < pw; x++) {
+      const i = y * pw + x;
+      // flat 3-band grunge from low-frequency noise, band edges anti-aliased
+      const n = 0.6 * valueNoise(x / 152, y / 152, 11) + 0.4 * valueNoise(x / 36, y / 36, 23);
+      const lo = smooth(0.39, 0.41, n);
+      const hi = smooth(0.59, 0.61, n);
+      let r = bands[0]![0] + (bands[1]![0] - bands[0]![0]) * lo + (bands[2]![0] - bands[1]![0]) * hi;
+      let g = bands[0]![1] + (bands[1]![1] - bands[0]![1]) * lo + (bands[2]![1] - bands[1]![1]) * hi;
+      let b = bands[0]![2] + (bands[1]![2] - bands[0]![2]) * lo + (bands[2]![2] - bands[1]![2]) * hi;
+
+      const mixIn = (c: Rgb, a: number): void => {
+        r += (c[0] - r) * a;
+        g += (c[1] - g) * a;
+        b += (c[2] - b) * a;
+      };
+
+      // hand-inked wobble so no edge is a straight run of grid squares
+      const wobble = (valueNoise(x / 13, y / 13, 41) - 0.5) * 0.2;
+
+      // rough patches: darker flat tone, diagonal ink hatching inside
+      const rv = (rough[i] as number) + wobble;
+      if (rv > EDGE - 0.05) {
+        const inside = smooth(EDGE - 0.02, EDGE + 0.02, rv);
+        mixIn(roughC, inside);
+        const phase = (((x * 0.8 + y) % 7) + 7) % 7;
+        const line = 1 - smooth(0.5, 1.3, Math.abs(phase - 3.5) * 0.6 + 0.0);
+        mixIn(roughInk, inside * smooth(EDGE + 0.1, EDGE + 0.2, rv) * line * 0.7);
+        const rim = smooth(EDGE - 0.02, EDGE + 0.02, rv) * (1 - smooth(EDGE + 0.06, EDGE + 0.1, rv));
+        mixIn(roughInk, rim * 0.45);
+      }
+
+      // glass obstacles: hatched drop shadow, flat cel bands, a lit rim, a heavy ink outline
+      const gv = (glass[i] as number) + wobble;
+      const sv = at(glass, x - 3, y - 4) + wobble;
+      if (sv > EDGE && gv < EDGE) {
+        const shade = smooth(EDGE, EDGE + 0.03, sv);
+        mixIn(ink, shade * 0.4);
+        const hatch = (((x + y) % 6) + 6) % 6;
+        mixIn(ink, shade * (1 - smooth(1.0, 2.0, hatch)) * 0.55);
+      }
+      if (gv > EDGE - 0.04) {
+        const inside = smooth(EDGE - 0.02, EDGE + 0.02, gv);
+        const dark = smooth(0.71, 0.73, valueNoise(x / 22, y / 22, 21));
+        const body: Rgb = [
+          glassC[0] + (glassDarkC[0] - glassC[0]) * dark,
+          glassC[1] + (glassDarkC[1] - glassC[1]) * dark,
+          glassC[2] + (glassDarkC[2] - glassC[2]) * dark,
+        ];
+        mixIn(body, inside);
+        // lit strip along edges facing up-left: inside, but the point up-left of here is not
+        const litv = at(glass, x - 4, y - 4) + wobble;
+        const lit = smooth(EDGE + 0.04, EDGE + 0.07, gv) * (1 - smooth(EDGE - 0.04, EDGE, litv)) * (1 - smooth(EDGE + 0.2, EDGE + 0.26, gv));
+        mixIn(glassLightC, lit * inside);
+        // heavy ink outline just inside the edge
+        const outline = smooth(EDGE - 0.02, EDGE + 0.02, gv) * (1 - smooth(EDGE + 0.16, EDGE + 0.2, gv));
+        mixIn(ink, outline);
+      }
+
+      const o = i * 4;
+      data[o] = r;
+      data[o + 1] = g;
+      data[o + 2] = b;
+      data[o + 3] = 255;
     }
   }
-  ctx.stroke();
 }
 
 function paintWall(world: Readonly<World>, ctx: CanvasRenderingContext2D): void {
   const w = world.width;
   const h = world.height;
+  ctx.fillStyle = css(MAP.wall);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (world.terrain[y * w + x] !== Terrain.Wall) continue;
-      ctx.fillStyle = css(MAP.wall);
-      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-      if ((x + y) % 2 === 0) {
-        ctx.fillStyle = css(MAP.wallLight);
-        ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, 2);
-      }
+      if (world.terrain[y * w + x] === Terrain.Wall) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
     }
   }
-  // inked inner edge of the dish
+  // inked inner edge of the dish, softly rounded
   ctx.strokeStyle = css(INK);
   ctx.lineWidth = 4;
-  ctx.strokeRect(CELL, CELL, w * CELL - 2 * CELL, h * CELL - 2 * CELL);
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.roundRect(CELL, CELL, w * CELL - 2 * CELL, h * CELL - 2 * CELL, CELL * 1.5);
+  ctx.stroke();
 }
 
 function paintScratches(world: Readonly<World>, ctx: CanvasRenderingContext2D, pw: number, ph: number): void {
   ctx.strokeStyle = css(MAP.scratch);
   ctx.globalAlpha = 0.5;
   ctx.lineWidth = 1;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   const count = Math.floor((pw * ph) / 9000);
   for (let n = 0; n < count; n++) {
