@@ -1,13 +1,13 @@
 in vec2 aPosition;
 in vec2 aUV;
-in vec2 aStyle;
+in vec3 aStyle;
 
 uniform mat3 uProjectionMatrix;
 uniform mat3 uWorldTransformMatrix;
 uniform mat3 uTransformMatrix;
 
 out vec2 vUV;
-out vec2 vStyle;
+out vec3 vStyle;
 
 void main(void) {
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;

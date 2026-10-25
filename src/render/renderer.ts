@@ -72,7 +72,7 @@ export class GameRenderer {
     this.camera.apply(this.world);
     this.film.update(sim, this.timeSeconds);
     this.food.update(sim);
-    this.veins.update(sim, this.timeSeconds);
+    this.veins.update(sim, this.timeSeconds, this.quality);
     this.buildings.update(sim);
     this.fog.update(sim, this.timeSeconds);
     this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost);

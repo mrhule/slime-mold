@@ -22,6 +22,7 @@ const RIG_LIGHT = 0xa6dbe4;
 const STALE_GREY = 0x8a8a84;
 const UNLINKED = 0xf2a01e;
 const BARN_WOOD = 0x9a6a3a;
+const BARN_LIGHT = 0xc58a4e;
 const BARN_ROOF = 0xa8432f;
 const BARN_DOOR = 0x5e3a1b;
 const TANK_SHADE = 0x8d8f80;
@@ -58,6 +59,7 @@ export function drawFarm(g: Graphics, cx: number, cy: number, capColor: number, 
   for (const [dx, dy, r] of caps) {
     g.roundRect(cx + (dx - 1.1) * S, cy + dy * S, 2.2 * S, 7 * S, 1).fill({ color: SPOT, alpha }).stroke({ width: 1.6, color: ink, alpha });
     g.ellipse(cx + dx * S, cy + dy * S, r * S, r * 0.75 * S).fill({ color: capColor, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+    g.ellipse(cx + (dx + r * 0.38) * S, cy + (dy + r * 0.3) * S, r * 0.5 * S, r * 0.34 * S).fill({ color: INK, alpha: 0.26 * alpha });
     g.circle(cx + (dx - r * 0.3) * S, cy + (dy - r * 0.2) * S, Math.max(0.9, r * 0.22 * S)).fill({ color: SPOT, alpha });
   }
 
@@ -82,6 +84,8 @@ export function drawBooster(g: Graphics, cx: number, cy: number, flag: number, s
   g.roundRect(cx - 9 * S, cy - 4 * S, 18 * S, 11 * S, 1.5).fill({ color: BOOST_SHADE, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
   g.rect(cx - 7.5 * S, cy - 2.5 * S, 15 * S, 5 * S).fill({ color: body, alpha });
   g.rect(cx - 7.5 * S, cy - 2.5 * S, 15 * S, 1.6 * S).fill({ color: BOOST_LIGHT, alpha });
+  g.rect(cx - 7.5 * S, cy - 2.5 * S, 1.8 * S, 5 * S).fill({ color: BOOST_LIGHT, alpha });
+  g.rect(cx + 5.7 * S, cy - 2.5 * S, 1.8 * S, 5 * S).fill({ color: BOOST_SHADE, alpha });
   // lightning bolt
   const bolt = [cx - 1 * S, cy - 2 * S, cx - 4 * S, cy + 2.5 * S, cx - 0.5 * S, cy + 2.2 * S, cx - 2.5 * S, cy + 6 * S, cx + 3.5 * S, cy + 0.5 * S, cx + 0.3 * S, cy + 0.8 * S, cx + 2 * S, cy - 2 * S];
   g.poly(bolt, true).fill({ color: style.stale ? STALE_GREY : BOLT, alpha }).stroke({ width: 1.8, color: ink, alpha, join: 'miter' });
@@ -111,6 +115,7 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
   g.moveTo(cx, cy - 9 * S).lineTo(cx, cy - 1 * S).stroke({ width: 1.8, color: ink, alpha });
   g.poly([cx - 4 * S, cy - 1 * S, cx + 4 * S, cy - 1 * S, cx + 3 * S, cy + 4 * S, cx - 3 * S, cy + 4 * S], true).fill({ color: col, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
   g.rect(cx - 3.2 * S, cy - 0.6 * S, 6.4 * S, 1.4 * S).fill({ color: RIG_LIGHT, alpha });
+  g.poly([cx + 1.6 * S, cy - 0.4 * S, cx + 3.6 * S, cy - 0.4 * S, cx + 2.8 * S, cy + 3.9 * S, cx + 1.4 * S, cy + 3.9 * S], true).fill({ color: RIG_SHADE, alpha: 0.75 * alpha });
   // pulley wheel in the owner's color at the top
   g.circle(cx, cy - 9 * S, 2.4 * S).fill({ color: style.stale ? STALE_GREY : flag, alpha }).stroke({ width: 2, color: ink, alpha });
   if (style.idle) {
@@ -139,8 +144,12 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
   // barn body and door
   g.rect(cx - 10 * S, cy - 3 * S, 14 * S, 10 * S).fill({ color: wood, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
   g.rect(cx - 5.5 * S, cy + 1 * S, 5 * S, 6 * S).fill({ color: BARN_DOOR, alpha }).stroke({ width: 2, color: ink, alpha });
+  g.rect(cx - 9.2 * S, cy - 2.4 * S, 1.8 * S, 9 * S).fill({ color: BARN_LIGHT, alpha: 0.8 * alpha });
+  g.rect(cx + 2.4 * S, cy - 2.4 * S, 1.2 * S, 9 * S).fill({ color: INK, alpha: 0.22 * alpha });
   // roof
   g.poly([cx - 12 * S, cy - 2.5 * S, cx - 3 * S, cy - 10 * S, cx + 6 * S, cy - 2.5 * S], true).fill({ color: roof, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+  g.poly([cx - 3 * S, cy - 10 * S, cx + 6 * S, cy - 2.5 * S, cx - 3 * S, cy - 2.5 * S], true).fill({ color: INK, alpha: 0.2 * alpha });
+  g.roundRect(cx + 8.6 * S, cy - 4 * S, 1.8 * S, 10 * S, 0.9 * S).fill({ color: INK, alpha: 0.2 * alpha });
   // owner's flag on the roof peak
   if (!style.stale) g.rect(cx - 3 * S, cy - 14 * S, 5 * S, 3 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
 }

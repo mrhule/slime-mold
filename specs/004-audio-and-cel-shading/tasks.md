@@ -94,15 +94,15 @@ Nothing in `src/sim/` changes in this feature.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T027 [P] [US2] Test the light helpers in `tests/unit/render/style.test.ts`: `litSide` is `1` for normals facing up-left and `-1` facing down-right; flipping an edge's direction keeps the lit side in the same world position; `jointU` is symmetric and zero perpendicular to the light; the `light` vector has length 1
+- [X] T027 [P] [US2] Test the light helpers in `tests/unit/render/style.test.ts`: `litSide` is `1` for normals facing up-left and `-1` facing down-right; flipping an edge's direction keeps the lit side in the same world position; `jointU` is symmetric and zero perpendicular to the light; the `light` vector has length 1
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Update `src/render/vein-layer.ts`: when building edge quads, compute the normal `(nx, ny)` and multiply the cross-axis coordinate `u` of all four vertices by `litSide(nx, ny)` so the lit side is always the `u < 0` side; for round joints set `u = jointU(ux, uy)` instead of `ux`; no shader change is needed (A8)
-- [ ] T029 [P] [US2] Update `src/render/building-layer.ts`: give the farm, booster, harvester and store house a highlight on the upper-left and a darker lower-right band in flat steps, consistent with `style.light`; keep each shape recognizable by silhouette and keep stale (remembered) buildings in the muted grey with no new detail
-- [ ] T030 [P] [US2] Update `src/render/food-layer.ts`: the same lit and shadow bands on each food type's cells, keeping the food-type shapes and the size cue
-- [ ] T031 [US2] Check the glass obstacles in `src/render/terrain-layer.ts` already match the light (lit rim up-left, shadow down-right); adjust only if they disagree with `style.light`
-- [ ] T032 [US2] Playtest checklist (US2 section): every object is lit from the upper left; mold ink patterns still read on lit and shadow sides; shading never hides a pattern in grayscale; zoomed all the way in and out the bands do not shimmer
+- [X] T028 [US2] Update `src/render/vein-layer.ts`: when building edge quads, compute the normal `(nx, ny)` and multiply the cross-axis coordinate `u` of all four vertices by `litSide(nx, ny)` so the lit side is always the `u < 0` side; for round joints set `u = jointU(ux, uy)` instead of `ux`; no shader change is needed (A8)
+- [X] T029 [P] [US2] Update `src/render/building-layer.ts`: give the farm, booster, harvester and store house a highlight on the upper-left and a darker lower-right band in flat steps, consistent with `style.light`; keep each shape recognizable by silhouette and keep stale (remembered) buildings in the muted grey with no new detail
+- [X] T030 [P] [US2] Update `src/render/food-layer.ts`: the same lit and shadow bands on each food type's cells, keeping the food-type shapes and the size cue
+- [X] T031 [US2] Check the glass obstacles in `src/render/terrain-layer.ts` already match the light (lit rim up-left, shadow down-right); adjust only if they disagree with `style.light`
+- [X] T032 [US2] Playtest checklist (US2 section): every object is lit from the upper left; mold ink patterns still read on lit and shadow sides; shading never hides a pattern in grayscale; zoomed all the way in and out the bands do not shimmer
 
 **Checkpoint**: US1 and US2 work independently; the look has one light
 
@@ -116,15 +116,15 @@ Nothing in `src/sim/` changes in this feature.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T033 [P] [US3] Test banding in `tests/unit/render/bands.test.ts`: `bandOf(conductivity, previous)` returns thin, medium, thick at the thresholds in `style.ts`; a value hovering between `down` and `up` keeps the previous band (hysteresis); a value sweeping up then down changes bands at different thresholds
+- [X] T033 [P] [US3] Test banding in `tests/unit/render/bands.test.ts`: `bandOf(conductivity, previous)` returns thin, medium, thick at the thresholds in `style.ts`; a value hovering between `down` and `up` keeps the previous band (hysteresis); a value sweeping up then down changes bands at different thresholds
 - [ ] T034 [P] [US3] Test pulses in `tests/unit/render/pulse.test.ts`: `pulseCount(|flow|)` is `0` below `minFlow`, `1` for light flow, `2` for heavy flow, monotonic, and `0` for `NaN` or negative zero
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Add `bandOf(conductivity, previous)` and `pulseCount(flow)` to `src/render/style.ts` with the thresholds from the style table (A10, A11)
-- [ ] T036 [US3] Update `src/render/vein-layer.ts`: replace the continuous `half` with `style.veinBands.halfWidth[band]`; keep a `Uint8Array(width * height * 4)` of previous bands allocated once per round in the constructor (no per-rebuild allocation); round joints use the widest incident band
-- [ ] T037 [US3] Update `src/render/shaders/vein.frag` and the style attribute: replace the marching ink dashes with hard-edged cream pulses that move in the flow direction, count from `pulseCount` (passed per edge in the existing `flow` attribute as a band), phase offset hashed per edge, none where `|flow|` is under `minFlow`; honour `style.quality[level].pulses` by setting a `uPulses` uniform to `0` on Low
-- [ ] T038 [US3] Playtest checklist (US3 section): the three widths read as thin line, tube and trunk; a busy trunk throbs and an idle branch is still; pulses shift toward fronts when the slider goes to Fight; rival veins in view pulse and ones in fog do not appear
+- [X] T035 [US3] Add `bandOf(conductivity, previous)` and `pulseCount(flow)` to `src/render/style.ts` with the thresholds from the style table (A10, A11)
+- [X] T036 [US3] Update `src/render/vein-layer.ts`: replace the continuous `half` with `style.veinBands.halfWidth[band]`; keep a `Uint8Array(width * height * 4)` of previous bands allocated once per round in the constructor (no per-rebuild allocation); round joints use the widest incident band
+- [X] T037 [US3] Update `src/render/shaders/vein.frag` and the style attribute: replace the marching ink dashes with hard-edged cream pulses that move in the flow direction, count from `pulseCount` (passed per edge in the existing `flow` attribute as a band), phase offset hashed per edge, none where `|flow|` is under `minFlow`; honour `style.quality[level].pulses` by setting a `uPulses` uniform to `0` on Low
+- [X] T038 [US3] Playtest checklist (US3 section): the three widths read as thin line, tube and trunk; a busy trunk throbs and an idle branch is still; pulses shift toward fronts when the slider goes to Fight; rival veins in view pulse and ones in fog do not appear
 
 **Checkpoint**: MVP complete (US1–US3): sound, one light, banded veins and pulses
 
@@ -231,4 +231,12 @@ Nothing in `src/sim/` changes in this feature.
 
 ## Implementation notes
 
-*(to be filled in as tasks are completed)*
+- T001 baseline: typecheck clean, 41 test files / 276 tests passing. After the MVP (T001-T038): 52 files / 340 tests.
+- T005/T012: `src/audio/settings.ts` keeps its own small guarded localStorage getter instead of importing `src/game/storage.ts`, because the boundary rule lets audio import only sim types and other audio files. `storage.ts` still gained `safeLocalStorage`/`readJson`/`writeJson` (used by the best-round store and passed to `loadSettings` from `main.ts`).
+- T014: the director snapshot also carries `playerId`, `nowMs` (for the one-second front window) and `outcome` (to tell a win from a loss); `rebase()` forgets counters when a new world replaces the old one.
+- T013/T022: the limiter takes optional rules and a voice cap in its constructor so the voice cap is testable; cue rules and durations live in `src/audio/cues.ts`.
+- T036/T037: the vein vertex format gained a third style float (pulse phase hashed per edge); the flow attribute now carries a signed pulse count (0, 1 or 2) instead of raw flow. `uPulses` is 0 on Low quality (set by `GameRenderer.setQuality`).
+- T029/T030: building and food shading were extended in the existing draw code (lit strips upper left, shade strips lower right); glass obstacles already matched the light (T031, no change).
+- Sound was not heard by the implementer: the synth recipes and music need an ear check (checklist US1).
+
+(more notes as tasks complete)

@@ -83,8 +83,9 @@ export class FoodLayer {
     // hard offset shadow, then outlined body, shade band, highlight
     g.poly(blob(hw, hh, 2.5, 3, round), true).fill({ color: INK, alpha: 0.5 });
     g.poly(blob(hw, hh, 0, 0, round), true).fill(pal.base).stroke({ width: 3, color: INK, join: 'round' });
-    g.poly(blob(hw * 0.82, hh * 0.38, 0, hh * 0.55, round), true).fill(pal.shade);
-    g.poly(blob(hw * 0.45, hh * 0.2, -hw * 0.2, -hh * 0.45, 0.8), true).fill(pal.light);
+    g.poly(blob(hw * 0.8, hh * 0.4, hw * 0.2, hh * 0.52, round), true).fill(pal.shade);
+    g.poly(blob(hw * 0.28, hh * 0.46, hw * 0.74, hh * 0.1, round), true).fill(pal.shade);
+    g.poly(blob(hw * 0.45, hh * 0.2, -hw * 0.3, -hh * 0.45, 0.8), true).fill(pal.light);
     g.poly(blob(hw, hh, 0, 0, round), true).stroke({ width: 3, color: INK, join: 'round' });
 
     if (f.type === 'fruitSlice') {

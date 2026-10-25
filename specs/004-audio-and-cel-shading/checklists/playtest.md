@@ -13,3 +13,18 @@ Run with `npm run dev` (add `?seed=7&nopause` for a fixed map). Tick each item w
 - [ ] Space and Esc stop the sound and resume it; switching tabs and back resumes cleanly.
 - [ ] The music is pleasant on loop for ten minutes and not tiring; it never drowns the effects.
 - [ ] A fight you cannot see (in fog) makes no sound.
+
+## US2: One light and hard-stepped shading
+
+- [ ] Veins, buildings, food and glass obstacles are all lit on the upper left and shaded toward the
+      lower right.
+- [ ] Mold ink patterns still read on the lit and shadow sides, also in grayscale.
+- [ ] Zoomed all the way in and out the bands do not shimmer or pop.
+
+## US3: Banded veins and flow pulses
+
+- [ ] The three widths read as thin line, tube and trunk, and a vein never flickers between widths.
+- [ ] A busy trunk shows cream pulses moving toward the tip; an idle branch is still.
+- [ ] Pulses shift toward the fronts when the slider goes to Fight.
+- [ ] Rival veins in view pulse; rival veins in fog are not drawn and show nothing.
+- [ ] On Low quality (once the setting exists) pulses are off and nothing else breaks.

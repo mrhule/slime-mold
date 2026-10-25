@@ -3,16 +3,18 @@ import { hash2 } from '../sim/noise';
 import { neighbor } from '../sim/grid';
 import type { World } from '../sim/types';
 import { INK_RGB, moldColor, moldPattern, rgbUnit } from './palette';
+import { bandOf, jointU, litSide, pulseCount, style } from './style';
+import type { QualityLevel } from './style';
 import { CELL } from './units';
 import vertex from './shaders/vein.vert?raw';
 import fragment from './shaders/vein.frag?raw';
 
-const FLOATS = 6; // x, y, u, v, flow, kind
+const FLOATS = 7; // x, y, u, v, signed pulse count, kind, pulse phase
 const OUTLINE_PAD = 1.7;
 
 interface MoldMesh {
   mesh: Mesh<Geometry, Shader> | null;
-  uniforms: { uTime: number };
+  uniforms: { uTime: number; uPulses: number };
   shader: Shader;
 }
 
@@ -26,12 +28,15 @@ export class VeinLayer {
   private readonly molds = new Map<number, MoldMesh>();
   private lastBuild = -1;
   private halfWidth: Float32Array;
+  /** the width band each edge slot had at the last rebuild, for hysteresis (A10); allocated once per round */
+  private readonly bands: Uint8Array;
   private jitterX: Float32Array;
   private jitterY: Float32Array;
 
   constructor(world: Readonly<World>) {
     const n = world.width * world.height;
     this.halfWidth = new Float32Array(n);
+    this.bands = new Uint8Array(n * 4);
     this.jitterX = new Float32Array(n);
     this.jitterY = new Float32Array(n);
     for (let i = 0; i < n; i++) {
@@ -40,8 +45,11 @@ export class VeinLayer {
     }
   }
 
-  update(world: Readonly<World>, timeSeconds: number): void {
-    for (const m of this.molds.values()) m.uniforms.uTime = timeSeconds;
+  update(world: Readonly<World>, timeSeconds: number, quality: QualityLevel = 'high'): void {
+    for (const m of this.molds.values()) {
+      m.uniforms.uTime = timeSeconds;
+      m.uniforms.uPulses = style.quality[quality].pulses ? 1 : 0;
+    }
     const buildIndex = Math.floor(world.tick / world.balance.flowEvery);
     if (buildIndex === this.lastBuild) return;
     this.lastBuild = buildIndex;
@@ -59,10 +67,12 @@ export class VeinLayer {
             uInk: { value: INK_RGB, type: 'vec3<f32>' },
             uTime: { value: 0, type: 'f32' },
             uPattern: { value: moldPattern(colorIndex), type: 'f32' },
+            uPulses: { value: 1, type: 'f32' },
+            uPulseSpeed: { value: style.pulse.speed, type: 'f32' },
           },
         },
       });
-      m = { mesh: null, shader, uniforms: shader.resources.veinUniforms.uniforms as { uTime: number } };
+      m = { mesh: null, shader, uniforms: shader.resources.veinUniforms.uniforms as { uTime: number; uPulses: number } };
       this.molds.set(moldId, m);
     }
     return m;
@@ -85,7 +95,7 @@ export class VeinLayer {
     // node radii: the widest incident edge
     const hw = this.halfWidth;
     for (const c of cells) hw[c] = 0;
-    const edgeList: { a: number; b: number; half: number; flow: number }[] = [];
+    const edgeList: { a: number; b: number; half: number; flow: number; phase: number }[] = [];
     for (const c of cells) {
       const bits = world.edges[c] as number;
       for (let k = 0; k < 4; k++) {
@@ -93,8 +103,13 @@ export class VeinLayer {
         const v = neighbor(w, h, c, k);
         if (!visible(v)) continue;
         const slot = c * 4 + k;
-        const half = Math.min(3.6, 0.8 + 0.8 * Math.sqrt(world.conductivity[slot] as number));
-        edgeList.push({ a: c, b: v, half, flow: world.edgeFlow[slot] as number });
+        // three hard width bands from conductivity, with hysteresis so a value at a threshold does not flicker
+        const band = bandOf(world.conductivity[slot] as number, this.bands[slot] as 0 | 1 | 2);
+        this.bands[slot] = band;
+        const half = style.veinBands.halfWidth[band] as number;
+        const flow = world.edgeFlow[slot] as number;
+        // the flow attribute carries the pulse count, signed by direction
+        edgeList.push({ a: c, b: v, half, flow: Math.sign(flow) * pulseCount(Math.abs(flow)), phase: hash2(c, v, world.seed) });
         if (half > (hw[c] as number)) hw[c] = half;
         if (half > (hw[v] as number)) hw[v] = half;
       }
@@ -109,13 +124,14 @@ export class VeinLayer {
     let vcount = 0;
     const cx = (c: number): number => (c % w) * CELL + CELL / 2 + (this.jitterX[c] as number);
     const cy = (c: number): number => Math.floor(c / w) * CELL + CELL / 2 + (this.jitterY[c] as number);
-    const push = (x: number, y: number, u: number, v: number, flow: number, kind: number): void => {
+    const push = (x: number, y: number, u: number, v: number, flow: number, kind: number, phase = 0): void => {
       verts[vo++] = x;
       verts[vo++] = y;
       verts[vo++] = u;
       verts[vo++] = v;
       verts[vo++] = flow;
       verts[vo++] = kind;
+      verts[vo++] = phase;
       vcount++;
     };
 
@@ -132,11 +148,13 @@ export class VeinLayer {
         const nx = (-dy / len) * (e.half + pad);
         const ny = (dx / len) * (e.half + pad);
         const lenCells = len / CELL;
+        // the lit stripe sits on the u < 0 side, so flip u on edges whose +normal faces away from the light (A8)
+        const s = litSide(-dy / len, dx / len);
         const base = vcount;
-        push(x1 + nx, y1 + ny, -1, 0, e.flow, kind);
-        push(x1 - nx, y1 - ny, 1, 0, e.flow, kind);
-        push(x2 + nx, y2 + ny, -1, lenCells, e.flow, kind);
-        push(x2 - nx, y2 - ny, 1, lenCells, e.flow, kind);
+        push(x1 + nx, y1 + ny, -s, 0, e.flow, kind, e.phase);
+        push(x1 - nx, y1 - ny, s, 0, e.flow, kind, e.phase);
+        push(x2 + nx, y2 + ny, -s, lenCells, e.flow, kind, e.phase);
+        push(x2 - nx, y2 - ny, s, lenCells, e.flow, kind, e.phase);
         idx[io++] = base;
         idx[io++] = base + 1;
         idx[io++] = base + 2;
@@ -155,7 +173,7 @@ export class VeinLayer {
           const ang = (s / 8) * Math.PI * 2;
           const ux = Math.cos(ang);
           const uy = Math.sin(ang);
-          push(x + ux * r, y + uy * r, ux, 0, 0, kind);
+          push(x + ux * r, y + uy * r, jointU(ux, uy), 0, 0, kind);
         }
         for (let s = 0; s < 8; s++) {
           idx[io++] = base;
@@ -171,7 +189,7 @@ export class VeinLayer {
       attributes: {
         aPosition: { buffer, format: 'float32x2', stride, offset: 0 },
         aUV: { buffer, format: 'float32x2', stride, offset: 8 },
-        aStyle: { buffer, format: 'float32x2', stride, offset: 16 },
+        aStyle: { buffer, format: 'float32x3', stride, offset: 16 },
       },
       indexBuffer: idx,
     });

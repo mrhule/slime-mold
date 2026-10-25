@@ -37,3 +37,24 @@ export function litSide(nx: number, ny: number): 1 | -1 {
 export function jointU(dx: number, dy: number): number {
   return -(dx * style.light.x + dy * style.light.y);
 }
+
+/**
+ * The width band of a vein edge from its conductivity (A10): 0 thin, 1 medium, 2 thick. The up and
+ * down thresholds differ, so a value hovering at a threshold keeps its previous band instead of
+ * flickering; `previous` is that band from the last rebuild.
+ */
+export function bandOf(conductivity: number, previous: 0 | 1 | 2): 0 | 1 | 2 {
+  const { up, down } = style.veinBands;
+  if (previous === 0) return conductivity >= up[1] ? 2 : conductivity >= up[0] ? 1 : 0;
+  if (previous === 1) return conductivity >= up[1] ? 2 : conductivity < down[0] ? 0 : 1;
+  return conductivity < down[0] ? 0 : conductivity < down[1] ? 1 : 2;
+}
+
+/**
+ * How many pulses travel along each cell of an edge carrying `flow` (use |flow|): none under
+ * minFlow, one for light flow, two from heavyFlow up (A11). Bad input (NaN, negative) gives none.
+ */
+export function pulseCount(flow: number): 0 | 1 | 2 {
+  if (!(flow >= style.pulse.minFlow)) return 0;
+  return flow >= style.pulse.heavyFlow ? 2 : 1;
+}
