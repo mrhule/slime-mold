@@ -117,7 +117,7 @@ Nothing in `src/sim/` changes in this feature.
 ### Tests for User Story 3 ⚠️
 
 - [X] T033 [P] [US3] Test banding in `tests/unit/render/bands.test.ts`: `bandOf(conductivity, previous)` returns thin, medium, thick at the thresholds in `style.ts`; a value hovering between `down` and `up` keeps the previous band (hysteresis); a value sweeping up then down changes bands at different thresholds
-- [ ] T034 [P] [US3] Test pulses in `tests/unit/render/pulse.test.ts`: `pulseCount(|flow|)` is `0` below `minFlow`, `1` for light flow, `2` for heavy flow, monotonic, and `0` for `NaN` or negative zero
+- [X] T034 [P] [US3] Test pulses in `tests/unit/render/pulse.test.ts`: `pulseCount(|flow|)` is `0` below `minFlow`, `1` for light flow, `2` for heavy flow, monotonic, and `0` for `NaN` or negative zero
 
 ### Implementation for User Story 3
 
