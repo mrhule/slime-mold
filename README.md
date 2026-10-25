@@ -35,6 +35,9 @@ Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatchi
   house also speeds up tips and **Harvesters** (`M`, beside big food) along its vein, fading with
   distance, at a small drain on the stock. **Booster Factories** (`B`) make the whole vein they sit
   on stronger in fights.
+- **Join up.** Pieces of your mold that grow within a cell of touching link up on their own (with a
+  one-cell bridge if needed), so a mold spreading in several directions stays one network and shares
+  its nutrients. Near an enemy this never happens, so cutting a rival's vein still works.
 - **Fight.** Where two molds touch, a battle front forms. The **Growth / Fight** slider (or
   `Q` / `E`) decides how much of your nutrients go to growing and how much to the fronts. Cut a
   rival's vein and everything beyond the cut withers.

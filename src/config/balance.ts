@@ -137,6 +137,10 @@ export interface BalanceConfig {
   obstacleThreshold: number;
   roughThreshold: number;
   foodSpacing: number;
+  /** pieces of one mold within this many cells (2 = one free cell apart) join up on their own */
+  connectGap: number;
+  /** ticks between those checks */
+  connectEvery: number;
   /** one food item per this many cells at foodDensity 1 */
   foodAreaPerItem: number;
   starterFood: number;
@@ -229,6 +233,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   obstacleThreshold: 0.7,
   roughThreshold: 0.6,
   foodSpacing: 12,
+  connectGap: 2,
+  connectEvery: 10,
   foodAreaPerItem: 900,
   starterFood: 3,
 

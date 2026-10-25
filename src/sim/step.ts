@@ -8,6 +8,7 @@ import { evaluateOutcome } from './round';
 import { solveFlow } from './flow';
 import { tickFood } from './food';
 import { tickGrowth } from './growth';
+import { connectPieces } from './connect';
 import { decayOrphans } from './network';
 import { tickUpkeep } from './upkeep';
 import { TICK_DT } from './types';
@@ -51,6 +52,7 @@ export function step(world: World): void {
   scanFronts(world);
   if (world.tick % world.balance.flowEvery === 0) solveFlow(world);
   tickGrowth(world);
+  if ((world.tick + 1) % world.balance.connectEvery === 0) connectPieces(world);
   drainStoreHouses(world);
   tickCombat(world);
   decayOrphans(world);
