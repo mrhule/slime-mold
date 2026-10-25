@@ -36,7 +36,7 @@ describe('forage (US1)', () => {
       expect(food.depleted || food.remaining < food.total, `seed ${seed} absorbed`).toBe(true);
       expect(readHud(world, 1).storedNutrients, `seed ${seed} richer`).toBeGreaterThan(start);
     }
-  });
+  }, 30_000); // four seeds with invariant checks every tick: slow when the whole suite runs in parallel
 
   it('is deterministic: same seed and commands give the same state hash', () => {
     const run = (): number => {

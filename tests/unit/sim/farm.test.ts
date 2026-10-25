@@ -16,6 +16,7 @@ const farm = defaultBalance.buildings.farm;
 function isolated(farmOverrides: Partial<typeof farm> = {}): BalanceConfig {
   return {
     ...defaultBalance,
+    connectEvery: 1e9, // these tests cut a piece off on purpose; it must stay cut
     coreIncome: 0,
     upkeepPerCell: 0,
     buildings: { ...defaultBalance.buildings, farm: { ...farm, ...farmOverrides }, storehouse: { ...defaultBalance.buildings.storehouse, upkeep: 0 } },
