@@ -1,0 +1,128 @@
+# Implementation Plan: Store House, Fertile Ground, and Farm Output
+
+**Branch**: `003-store-house` | **Date**: 2026-10-25 | **Spec**: [spec.md](spec.md)
+
+**Input**: Feature specification from `/specs/003-store-house/spec.md`
+
+## Summary
+
+Stock gets a ceiling and a place to live. Technically: every connected piece (`Component`)
+already has a `pool`; this feature adds a **cap** computed from a base amount plus the Store
+Houses standing in the piece, enforced once per tick after all gains. A Store House is a fourth
+building type that reuses the 002 seams (`placeBuilding`/`canPlace`, one record per building, a
+per-cell lookup). Farms change in three ways: they can stand only on **fertile ground** (a new
+per-cell overlay laid down by map generation, not a new movement terrain), they pay only while a
+Store House is in their piece, and each has an **output level** (a new `setFarmOutput` command)
+with a concave income curve. The Store House's growth and harvest boost is a second tapered
+"cover" over the vein graph, computed the same way as the Booster's, that multiplies how much
+progress a delivered nutrient buys for tips and how fast harvesters absorb, at a steady stock
+drain. Rivals use all of it through `MoldView`. See [research.md](research.md) for each decision.
+
+## Technical Context
+
+**Language/Version**: TypeScript 7.0 (strict), as in 001 and 002
+
+**Primary Dependencies**: PixiJS 8.22, Vite 8.3, Vitest 5.0 (no new dependencies)
+
+**Storage**: none new (the best-round save from 001 is untouched)
+
+**Testing**: Vitest headless for caps, linked and throttled farms, the output curve, the boost
+and its drain, fertile-ground generation and fairness, placement reasons, determinism and replay;
+manual playtest checklist for the farm dial, fertile ground readability, and the boost glow
+
+**Target Platform**: modern desktop browsers, as in 001
+
+**Project Type**: single-page browser game (extends the 001/002 project)
+
+**Performance Goals**: tick cost stays inside the 6 ms budget with every building at its limit;
+the boost cover is rebuilt on a fixed cadence (every flow solve) and on place/destroy, not every
+tick; the terrain bake with the fertile overlay stays under about 1 s on the largest map
+
+**Constraints**: deterministic (no `Math.random`, no `pow`/`exp`/trig/`hypot` in `src/sim`, so the
+output curve is a polynomial); the sim stays free of DOM and Pixi imports; the AI sees only
+`MoldView`; all numbers in `balance.ts`
+
+**Scale/Scope**: up to 3 Store Houses counted per piece, 6 farms and 4 Store Houses per mold in
+this slice; maps up to 320×240 cells with up to 5 rivals
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+| Principle | How this plan complies | Status |
+|---|---|---|
+| I. Simulation is the source of truth | Caps, links, the output level, the boost and the fertile layer all live in `World`; the UI reads `Readonly<World>` and a read-only `canPlace`; the dial is a command | ✅ |
+| II. Same rules for every mold | One `placeBuilding` and one `setFarmOutput` for all molds; `canPlace` encodes fertile ground and linking for the AI too; fertile ground is public terrain, no hidden information | ✅ |
+| III. Seeded & reproducible | Fertile patches draw from the map-generation stream; the new command is queued, applied at a tick boundary and logged; `stateHash` covers fertile ground, dials and the boost | ✅ |
+| IV. Test the rules, playtest the fun | Headless tests for each rule in the data model; playtest scenarios in [quickstart.md](quickstart.md); all numbers in `balance.ts` | ✅ |
+| V. Smooth at scale | Cap clamp is O(pieces) per tick; boost cover rebuilt at flow cadence over at most a few hundred cells per Store House; the fertile layer is one `Uint8Array` | ✅ |
+| VI. Playable increments, simplest thing first | Linear taper and one shared cover routine instead of new systems; discrete output levels instead of a free slider; no new resource; this slice adds one building, one layer and one command | ✅ |
+| Technical constraints, art direction | No new dependencies; Store House, fertile ground and the dial follow the comic style and are recognizable by shape and pattern, not color alone | ✅ |
+
+**Post-design re-check (after Phase 1)**: ✅ Still passing. One justified addition is recorded in
+Complexity Tracking.
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/003-store-house/
+├── spec.md
+├── plan.md              # This file
+├── research.md          # Decisions S1–S12
+├── data-model.md        # Terrain layer, Building changes, caps, boost cover, balance, HUD
+├── quickstart.md        # Run and validation guide
+├── contracts/
+│   ├── commands.md      # setFarmOutput, placeBuilding additions, rejection reasons
+│   ├── sim-api.md       # capOf, linkedStore, boost cover, MoldView and HudModel additions
+│   └── controls.md      # build bar, farm selection and dial, hotkeys, warnings
+├── checklists/
+│   └── requirements.md
+└── tasks.md             # Generated by /speckit-tasks
+```
+
+### Source Code (repository root)
+
+```text
+src/
+├── config/balance.ts            # + pool.baseCap, storeHouse spec, farm output curve, fertile gen
+├── sim/
+│   ├── types.ts                 # + 'storehouse' type/code, Building.level, World.fertile,
+│   │                            #   Command setFarmOutput, PlaceReason additions, HUD fields
+│   ├── world.ts                 # + fertile layer, store boost array
+│   ├── buildings.ts             # + store house rules, linked-farm test, cap, cover routine,
+│   │                            #   farm output curve, store boost recompute and drain
+│   ├── commands.ts              # + setFarmOutput
+│   ├── flow.ts                  # farm source rate = linked output (0 when unlinked)
+│   ├── growth.ts                # tip progress multiplier from the store boost
+│   ├── food.ts                  # harvest rate multiplier from the store boost
+│   ├── mapgen.ts                # + fertile patches (starts and contested) and fairness check
+│   ├── step.ts                  # + cap clamp after gains
+│   ├── hud.ts, view.ts          # + cap/linked info; MoldView.fertileAt, capOf, farmsLinked
+│   ├── hash.ts                  # + fertile, levels
+│   └── ai/rival-ai.ts           # + store house and farm-on-fertile planning, output level
+├── render/
+│   ├── terrain-layer.ts         # + fertile overlay (inked tufts on a flat green wash)
+│   └── building-layer.ts, fx-layer.ts  # + store house art, unlinked marker, boost glow
+└── ui/
+    ├── buildbar.ts, input.ts    # + store house, farm selection, dial hotkeys
+    ├── hud.ts                   # + stock/cap, full flag, unlinked warning, dial panel
+    └── messages.ts              # + new rejection texts
+
+tests/
+├── unit/sim/                    # store-house.test.ts, fertile.test.ts, farm-output.test.ts,
+│                                #   store-boost.test.ts; farm.test.ts and buildings.test.ts updated
+└── integration/                 # farm-economy.test.ts updated; store-house-round.test.ts
+```
+
+**Structure Decision**: extend the existing single project in place. New sim logic goes into
+`buildings.ts` (it already owns placement, upkeep and the booster cover) rather than a new
+module, except map generation, which stays in `mapgen.ts`.
+
+## Complexity Tracking
+
+| Addition | Why Needed | Simpler Alternative Rejected Because |
+|---|---|---|
+| A per-cell `fertile` overlay in `World` | Farms must be restricted to visible ground, and the map must be generated fair for it | Reusing a `Terrain` value would force every movement and combat terrain check to treat fertile ground as open or rough; an overlay leaves them untouched |
+| Discrete output levels (0–6 in steps of 0.25) instead of a continuous slider | Keeps the command and the hash integer-valued and the UI a few clicks | A float slider adds rounding noise to replays and gives no gameplay the steps do not |
