@@ -46,3 +46,9 @@ Build: all three added. Seed 777; buildings placed through the dev console in a 
 - The farm balance (cost 30, income 1.5/s, upkeep 0.15/s) was changed by hand before this work and is kept; the research notes document it.
 - Booster and harvester numbers (cost 40 and 25, radius 6, +50% each up to +100%, harvest x2, minimum food 9 cells) are first guesses and have not been tuned by hand playtesting.
 - Not checked by hand: the placement ghost and tooltip for boosters and harvesters, and a real fight with boosters on both sides.
+
+## Polish (T034–T036, 2026-10-25)
+
+- **Farm balance (T034):** with the AI stand-in, 0 farms wins 60% of rounds 1 and 2, 2 farms 80–90%, and 4 or 6 farms about 90%. Farms matter a great deal, but the gain flattens after two, so the limit of six does not make them dominant. Payback is about 22 s (cost 30, net +1.35/s). Not tuned by hand.
+- **Readability (T035):** the three buildings have clearly different silhouettes (round planter with caps, boxy machine with chimney, tripod with bucket), they read in grayscale, and the build bar buttons are native buttons, so they can be reached and activated with the keyboard (`F`, `B`, `M` or Tab and Enter). Outline weight at 0.5x zoom was not re-checked for the new buildings.
+- **Fresh clone (T036):** install, typecheck, build and all 221 tests pass; the benchmark shows 0.7 ms per tick at round 10 (6 molds, 1714 cells).

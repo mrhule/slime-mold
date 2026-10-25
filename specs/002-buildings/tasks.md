@@ -118,9 +118,9 @@ detailed further when started, and US2 and US4 wait for the combat and rival sto
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T034 Balance pass for farm numbers with the batch sim from 001 (payback time, SC-002; limit and upkeep so farms do not dominate)
-- [ ] T035 [P] Check the build bar and buildings for readability and keyboard use (shape recognition without color, outline at 0.5x and 3x zoom)
-- [ ] T036 Run the full quickstart validation from a fresh clone
+- [X] T034 Balance pass for farm numbers with the batch sim from 001 (payback time, SC-002; limit and upkeep so farms do not dominate)
+- [X] T035 [P] Check the build bar and buildings for readability and keyboard use (shape recognition without color, outline at 0.5x and 3x zoom)
+- [X] T036 Run the full quickstart validation from a fresh clone
 
 ---
 
