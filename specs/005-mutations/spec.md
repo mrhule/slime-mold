@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-25
 
-**Status**: Draft (to be built after 004-sound-and-juice)
+**Status**: Draft (to be built after 004-audio-and-cel-shading)
 
 **Input**: User description: "Mutations between rounds: after each round, pick one of three
 perks, such as thicker veins, faster growth, or cheaper buildings." A deliberately small
