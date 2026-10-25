@@ -365,4 +365,5 @@ html, body {
 }
 @media (max-width: 900px) {
   .buildbar { left: auto; right: 14px; transform: rotate(0.6deg); }
+  .toast { bottom: 96px; }
 }

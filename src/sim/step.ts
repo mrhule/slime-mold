@@ -1,5 +1,6 @@
 import { tickBuildings } from './buildings';
 import { tickAi } from './ai-driver';
+import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
 import { applyQueuedCommands } from './commands';
 import { updateVision } from './fog';
@@ -42,6 +43,7 @@ function settleNetIncome(world: World): void {
 export function step(world: World): void {
   world.events = [];
   applyQueuedCommands(world);
+  tickDrops(world);
   tickIncome(world);
   tickUpkeep(world);
   scanFronts(world);

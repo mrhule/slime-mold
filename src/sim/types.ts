@@ -311,6 +311,10 @@ export interface World {
   /** building id on each cell, or -1 */
   buildingAt: Int16Array;
   drops: DropEvent[];
+  /** walkable cells reachable from the starts; drops only fall where molds can get to them */
+  reachable: Uint8Array;
+  /** tick at which the next drop will be announced */
+  nextDropTick: number;
   nextTargetId: number;
   reachableCells: number;
   outcome: RoundOutcome;

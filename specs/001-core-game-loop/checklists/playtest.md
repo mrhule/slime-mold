@@ -80,3 +80,17 @@ Build: Phase 5 (T053–T074; T059 half done). Seed 777, round 1 (one rival), sma
 ### Performance (T073)
 
 Sim tick, mean over 600 ticks: round 1 AI-vs-AI (2 molds) 0.10 ms; round 10 AI-vs-AI (6 molds, 1372 cells) 0.66 ms (p99 3.4 ms); growth-only with a 4000-cell network 0.7 to 1.2 ms. All far inside the 6 ms budget. Frame rate was not trustworthy in this pane.
+
+## US3 — Food Drops (2026-10-25)
+
+Build: Phase 6 (T075–T080), seed 777.
+
+| # | Scenario | Result |
+|---|---|---|
+| 8 | Food drop race (US3) | **Pass for the warning and landing; the race itself is headless.** At about 0:30 a yellow comic burst with a countdown ("!3") appeared on the map and the toast "Sugar cube incoming!" showed, both visible from anywhere (not fogged). After 5 s a sugar cube landed (dust ring) and stayed on the map as remembered food (halftone-covered, because it was outside the player's vision). Contested food is split by coverage and landing on a mold feeds it at once: both tested in `drops.test.ts`. |
+
+### Findings
+
+- Drops land in places the player cannot see, so landed food is marked as remembered for every mold; otherwise it would be invisible in the fog after everyone had watched it land.
+- Drops are an important part of the economy: the average drop (about 250 nutrients every 35 s) is roughly 7 nutrients per second across the whole map, much more than the core's 0.5. How that income is shared will matter a lot for the balance pass.
+- With the toast and the build bar both near the bottom, they overlap in a narrow window; the toast moves up under 900 px of width.

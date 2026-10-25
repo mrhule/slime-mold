@@ -67,6 +67,13 @@ export function stateHash(world: World): number {
     h.num(b.cell);
     h.num(b.destroyed ? 1 : 0);
   }
+  h.num(world.nextDropTick);
+  for (const d of world.drops) {
+    h.num(d.id);
+    h.num(d.cell);
+    h.num(d.landTick);
+    h.num(d.state === 'landed' ? 2 : d.state === 'warning' ? 1 : 0);
+  }
   for (const f of world.foodSources) {
     h.num(f.remaining);
     h.num(f.depleted ? 1 : 0);

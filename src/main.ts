@@ -10,7 +10,7 @@ import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
 import { InputController } from './ui/input';
-import { reasonText } from './ui/messages';
+import { FOOD_NAMES, reasonText } from './ui/messages';
 import { Screens } from './ui/screens';
 
 const PLAYER = 1;
@@ -139,6 +139,11 @@ async function main(): Promise<void> {
       if (e.type === 'commandRejected' && e.mold === PLAYER) {
         hud.reject(e.reason);
         if (e.cell !== undefined) renderer.fx.addRejectPing(e.cell, run.world.width);
+      }
+      if (e.type === 'dropWarning') hud.toast(`${FOOD_NAMES[e.foodType] ?? 'Food'} incoming!`, 2.5);
+      if (e.type === 'dropLanded') {
+        const src = run.world.foodSources[e.foodSourceId];
+        if (src) renderer.fx.addLanding(src.y * run.world.width + src.x, run.world.width, (Math.max(src.w, src.h) * 8) / 2 + 6);
       }
       if (e.type === 'moldEliminated' && e.mold !== PLAYER) hud.toast(`Rival ${e.mold - 1} was eaten!`, 3);
     }

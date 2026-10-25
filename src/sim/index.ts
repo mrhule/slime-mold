@@ -1,6 +1,7 @@
 import { defaultBalance } from '../config/balance';
 import type { BalanceConfig } from '../config/balance';
 import { difficultyFor } from './difficulty';
+import { firstDropTick } from './drops';
 import { updateVision } from './fog';
 import { generateMap, validateMap } from './mapgen';
 import type { GeneratedMap } from './mapgen';
@@ -64,6 +65,7 @@ export function createRound(opts: CreateRoundOptions): World {
   });
   const jitter = world.rng.get('jitter');
   for (const m of world.molds) if (m.ai) m.aiNext = Math.floor(jitter.range(10, 30));
+  world.nextDropTick = firstDropTick(world, world.rng.get('drops'));
   updateVision(world);
   return world;
 }

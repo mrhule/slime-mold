@@ -13,4 +13,11 @@ export const REASONS: Record<string, string> = {
   'cant-afford': 'Not enough nutrients!',
 };
 
+export const FOOD_NAMES: Record<string, string> = {
+  oatFlake: 'Oat flake',
+  breadCrumb: 'Bread crumb',
+  sugarCube: 'Sugar cube',
+  fruitSlice: 'Fruit slice',
+};
+
 export const reasonText = (reason: string): string => REASONS[reason] ?? reason;

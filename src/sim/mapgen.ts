@@ -54,6 +54,7 @@ export function generateMap(world: World, rng: Rng, startCount: number): Generat
   let reachable = 0;
   for (let i = 0; i < reach.length; i++) if (reach[i]) reachable++;
   world.reachableCells = reachable;
+  world.reachable = reach;
 
   scatterFood(world, rng, starts, reach);
   balanceFood(world, rng, starts, reach);

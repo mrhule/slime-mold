@@ -83,6 +83,8 @@ export function createWorld(
     buildings: [],
     buildingAt,
     drops: [],
+    reachable: new Uint8Array(cells).fill(1),
+    nextDropTick: Number.MAX_SAFE_INTEGER,
     nextTargetId: 1,
     reachableCells: 0,
     outcome: 'playing',
