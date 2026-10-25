@@ -194,7 +194,7 @@ Nothing in `src/sim/` changes in this feature.
 - [X] T056 [P] Performance check at the largest map and rival count with every effect on High: record the frame rate from `?debug` in `specs/004-audio-and-cel-shading/checklists/playtest.md`; confirm Auto drops to Low on a throttled tab and that Low restores the frame rate (SC-005)
 - [X] T057 [P] Update `README.md`: sound and music, the mute button and Settings menu, quality levels, and the new look in the feature list; mention that audio starts after the first click
 - [ ] T058 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what is found (this is the manual half of Constitution IV)
-- [ ] T059 Fresh-clone validation: clone the repo, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts`; confirm the test count and that `src/sim/` has no diff in this feature (`git diff main -- src/sim` is empty apart from earlier features)
+- [X] T059 Fresh-clone validation: clone the repo, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts`; confirm the test count and that `src/sim/` has no diff in this feature (`git diff main -- src/sim` is empty apart from earlier features)
 
 ---
 
@@ -248,3 +248,5 @@ Nothing in `src/sim/` changes in this feature.
 (more notes as tasks complete)
 
 **US6 decision (T054)**: kept behind its toggle, default off, until a human has compared it in a busy scene (see playtest.md US6). Looked fine in a quick check; nothing else depends on it, so removal is `print-filter.ts`, `print.frag`, the renderer hooks and the toggle.
+
+**Fresh-clone validation (T059)**: a clean clone of the branch passes typecheck, build, 347 tests (the working tree has 359 because of another session's uncommitted track tests) and the tick bench. `git diff a7f3804~1 HEAD -- src/sim` is empty: this feature did not touch the sim. T058 (quickstart scenarios and the playtest checklists) is manual and left to a human, including an ear check of the sound.
