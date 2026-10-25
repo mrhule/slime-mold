@@ -1,4 +1,5 @@
 import { buildingIncome, countBuildings } from './buildings';
+import { mapControl } from './round';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { BuildOption, BuildingType, HudModel, MoldId, World } from './types';
@@ -36,7 +37,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     storedNutrients: storedNutrients(world, moldId),
     netIncome: mold.netIncome,
     allocation: mold.allocation,
-    mapControl: world.reachableCells > 0 ? mold.cellCount / world.reachableCells : 0,
+    mapControl: mapControl(world, moldId),
     growthStarved: mold.targets.some((t) => t.state === 'starved'),
     targets: mold.targets.map((t) => ({ id: t.id, cell: t.cell, state: t.state })),
     build: buildOptions(world, moldId),

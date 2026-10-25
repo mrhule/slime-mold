@@ -72,7 +72,7 @@ detailed further when started, and US2 and US4 wait for the combat and rival sto
 - [X] T015 [P] [US1] Building layer: inked farm (outlined round planter with three sprouting mushroom caps, flat two-band shading, hard shadow), redrawn only when the set of buildings changes, in `src/render/building-layer.ts`; add it to `src/render/renderer.ts` between veins and fx
 - [X] T016 [P] [US1] Placement ghost in `src/render/fx-layer.ts`: follows the hovered cell, green ink outline when valid, red when not
 - [X] T017 [P] [US1] Build bar in `src/ui/buildbar.ts` and `src/ui/styles.css`: comic buttons with a farm shape icon, name, cost, `count/limit`, grayed when unaffordable with a tooltip, hotkey hint; plus a small cursor tooltip showing the invalid reason in plain words
-- [X] T018 [US1] Placement mode in `src/ui/input.ts` per contracts/controls.md: hotkey `1` or a button click enters it, left-click sends `placeBuilding` (Shift keeps the mode), `Esc` or right-click cancels, and left-click does not set growth targets while in the mode
+- [X] T018 [US1] Placement mode in `src/ui/input.ts` per contracts/controls.md: hotkey `F` or a button click enters it, left-click sends `placeBuilding` (Shift keeps the mode), `Esc` or right-click cancels, and left-click does not set growth targets while in the mode
 - [X] T019 [US1] Wire the build bar, ghost, hovered-cell preview (via `canPlace`), building layer, and toasts for refused placements in `src/main.ts`
 - [X] T020 [US1] Playtest quickstart scenarios 1–8 and record the results in `specs/002-buildings/checklists/playtest.md` (US1 section)
 

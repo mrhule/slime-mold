@@ -122,6 +122,7 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 >   `checklists/playtest.md`.
 > - Added during the build: a lower `spendRateCap` (40 to 6); "starved" now means an empty stock
 >   with growth running on income.
+> - Phase 4 (US5, 2026-10-25): the farm hotkey moved from `1` to `F` because `1 2 3` are the speed keys. Manual pause shows a non-blocking banner (orders still work); focus loss shows a blocking "click to resume" overlay, and Space also resumes it. `T047`: `mapControl` is computed on read (it is a cheap division), not on a 10-tick cadence. `T083/T084/T089/T090/T091` were pulled forward because the run, storage and URL parameters belong to the same screens; the defeat path is unit-tested through `Run` and gets exercised in the game once rivals exist. URL parameters (`?seed`, `?round`, `?debug`) work in dev builds only.
 > - Changed after review (2026-10-25): veins no longer retract (FR-005 amended). Idle veins thin to
 >   `minConductivity`; unpaid upkeep starves the thinnest, outermost leaf cell one at a time
 >   (`src/sim/upkeep.ts`, FR-006). `retract*` and `coreSafeRadius` settings and `lowFlowTime` removed.

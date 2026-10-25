@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRound, enqueue, step } from '../../../src/sim';
-import { applyCommand } from '../../../src/sim/commands';
+import { applyCommand, pendingAllocation } from '../../../src/sim/commands';
 import { createWorldWithMold } from '../../helpers';
 
 describe('commands', () => {
@@ -20,6 +20,16 @@ describe('commands', () => {
     enqueue(world, { type: 'setAllocation', mold: mold.id, value: 0.5 });
     step(world);
     expect(world.replay.entries).toEqual([{ tick: 2, cmd: { type: 'setAllocation', mold: mold.id, value: 0.5 } }]);
+  });
+
+  it('pendingAllocation reflects queued orders, so repeated nudges add up', () => {
+    const { world, mold } = createWorldWithMold();
+    expect(pendingAllocation(world, mold.id)).toBeCloseTo(0.3);
+    enqueue(world, { type: 'setAllocation', mold: mold.id, value: 0.4 });
+    enqueue(world, { type: 'setAllocation', mold: mold.id, value: 0.53 });
+    expect(pendingAllocation(world, mold.id)).toBeCloseTo(0.55);
+    step(world);
+    expect(pendingAllocation(world, mold.id)).toBeCloseTo(0.55);
   });
 
   it('are rejected for unknown or eliminated molds', () => {

@@ -3,7 +3,7 @@ import type { BuildOption, BuildingType } from '../sim/types';
 const NAMES: Record<BuildingType, string> = { farm: 'Nutrient Farm' };
 const SHORT: Record<BuildingType, string> = { farm: 'Farm' };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { '1': 'farm' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'farm' };
 
 const ICONS: Record<BuildingType, string> = {
   farm: `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">

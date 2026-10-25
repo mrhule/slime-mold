@@ -1,0 +1,109 @@
+import type { Run } from '../game/run';
+import { MOLD_COLORS } from '../render/palette';
+
+export interface ScreenActions {
+  start(): void;
+  resume(): void;
+  closeMenu(): void;
+  restartRun(): void;
+  quitToTitle(): void;
+  nextRound(): void;
+  newRun(): void;
+}
+
+const fmtTime = (seconds: number): string => {
+  const s = Math.floor(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+/** Title, pause menu, round-end, and pause overlays (FR-029), all in the comic style. */
+export class Screens {
+  private readonly root: HTMLElement;
+  private lastKey = '';
+
+  constructor(parent: HTMLElement, private readonly actions: ScreenActions) {
+    parent.insertAdjacentHTML('beforeend', '<div class="screens"></div>');
+    this.root = parent.querySelector('.screens') as HTMLElement;
+    this.root.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
+      if (!btn) {
+        if ((e.target as HTMLElement).closest('.focus-overlay')) this.actions.resume();
+        return;
+      }
+      const act = btn.dataset.act as keyof ScreenActions;
+      this.actions[act]();
+    });
+  }
+
+  update(run: Run): void {
+    const outcomeKey = run.state === 'roundEnd' ? `${run.outcome}:${run.roundNumber}:${run.bestRound}` : '';
+    const key = `${run.state}:${run.pauseReason}:${outcomeKey}:${run.bestRound}`;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
+    this.root.innerHTML = this.render(run);
+  }
+
+  private render(run: Run): string {
+    if (run.state === 'title') return this.title(run);
+    if (run.state === 'roundEnd') return this.roundEnd(run);
+    if (run.state === 'paused') {
+      if (run.pauseReason === 'menu') return this.menu();
+      if (run.pauseReason === 'focus') return '<div class="screen focus-overlay"><div class="panel big"><h2>Paused</h2><p>Click to resume</p></div></div>';
+      return '<div class="banner">Paused — Space to resume. You can still give orders.</div>';
+    }
+    return '';
+  }
+
+  private title(run: Run): string {
+    const best = run.bestRound > 0 ? `<p class="best">Best round: <b>${run.bestRound}</b></p>` : '';
+    const dots = MOLD_COLORS.slice(0, 4)
+      .map((c) => `<span class="dot" style="background:#${c.toString(16).padStart(6, '0')}"></span>`)
+      .join('');
+    return `<div class="screen"><div class="panel big title">
+      <h1>Slime Mold</h1>
+      <div class="dots">${dots}</div>
+      <p>Grow your mold across the map. Eat, build, and beat the rival molds.</p>
+      ${best}
+      <button class="btn" data-act="start">Start</button>
+      <ul class="keys">
+        <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel</li>
+        <li><b>Q / E</b> or the slider: send nutrients to growth or to the fight</li>
+        <li><b>F</b> build a farm &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
+      </ul>
+    </div></div>`;
+  }
+
+  private menu(): string {
+    return `<div class="screen"><div class="panel big">
+      <h2>Paused</h2>
+      <button class="btn" data-act="closeMenu">Resume</button>
+      <button class="btn" data-act="restartRun">Restart run</button>
+      <button class="btn" data-act="quitToTitle">Quit to title</button>
+    </div></div>`;
+  }
+
+  private roundEnd(run: Run): string {
+    const w = run.world;
+    const player = w.molds[0];
+    const rivalsOut = w.molds.filter((m) => m.kind === 'rival' && m.status === 'eliminated').length;
+    const rivals = w.molds.filter((m) => m.kind === 'rival').length;
+    const win = run.outcome === 'victory';
+    const stats = player
+      ? `<li><span>Time</span><b>${fmtTime(w.tick * 0.05)}</b></li>
+         <li><span>Biggest size</span><b>${player.stats.peakSize} cells</b></li>
+         <li><span>Nutrients gathered</span><b>${Math.round(player.stats.nutrientsGathered)}</b></li>
+         <li><span>Rivals eliminated</span><b>${rivalsOut} / ${rivals}</b></li>
+         <li><span>Seed</span><b>${run.runSeed}</b></li>`
+      : '';
+    const buttons = win
+      ? `<button class="btn" data-act="nextRound">Next round</button><button class="btn" data-act="quitToTitle">Quit to title</button>`
+      : `<button class="btn" data-act="newRun">New run</button><button class="btn" data-act="quitToTitle">Quit to title</button>`;
+    return `<div class="screen"><div class="panel big ${win ? 'win' : 'lose'}">
+      <h2>${win ? 'You win!' : 'You were eaten!'}</h2>
+      <p>${win ? `Round ${run.roundNumber} cleared. Round ${run.roundNumber + 1} gets harder.` : `You reached round ${run.roundNumber}. The next run starts again at round 1.`}</p>
+      <ul class="stats">${stats}</ul>
+      <p class="best">Best round: <b>${run.bestRound}</b></p>
+      ${buttons}
+    </div></div>`;
+  }
+}

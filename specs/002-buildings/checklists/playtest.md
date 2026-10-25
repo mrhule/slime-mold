@@ -9,7 +9,7 @@ Build: Phases 1–2 and US1 (T001–T020).
 
 | # | Scenario | Result |
 |---|---|---|
-| 1 | Place a farm (US1-1, SC-001) | **Pass.** Pressing `1` (or clicking the build bar) enters placement mode. Hovering the mold's own cell shows a green ghost and "Click to build"; clicking places the farm. Stock went 35.1 to 5.5 (cost 30), and the income readout rose (about +0.9/s with the core's 0.5/s, the farm's 0.5/s, and 0.1/s upkeep). |
+| 1 | Place a farm (US1-1, SC-001) | **Pass.** Pressing `F` (or clicking the build bar) enters placement mode. Hovering the mold's own cell shows a green ghost and "Click to build"; clicking places the farm. Stock went 35.1 to 5.5 (cost 30), and the income readout rose (about +0.9/s with the core's 0.5/s, the farm's 0.5/s, and 0.1/s upkeep). |
 | 2 | Invalid spots (US1-2) | **Pass for open ground.** Hovering bare map shows a red ghost and "Build on your own mold!". Obstacle, food, and occupied-cell reasons are covered by the headless tests (`buildings.test.ts`), not re-checked by hand. |
 | 3 | Cannot afford (US1-3) | **Pass.** With 5 nutrients the ghost is red with "Not enough nutrients!". Clicking shows the same toast, places nothing, and the stock is unchanged. The build button is grayed when the mold cannot pay. |
 | 4 | Income and upkeep (US1-4) | **Pass by readout and tests.** Net income matched the numbers above. Payback (about 75 s) is checked by `farm-economy.test.ts`, not timed by hand. |

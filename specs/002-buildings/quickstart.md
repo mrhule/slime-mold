@@ -16,7 +16,7 @@ Same setup as [001 quickstart](../001-core-game-loop/quickstart.md): `npm instal
 
 ## Manual playtest scenarios (US1 farm)
 
-1. **Place a farm (US1-1, SC-001)**: With enough nutrients, press `1` (or click the build bar),
+1. **Place a farm (US1-1, SC-001)**: With enough nutrients, press `F` (or click the build bar),
    hover over your veins, and click. The farm appears, the cost drops from your stock, and the
    HUD income goes up.
 2. **Invalid spots (US1-2)**: In placement mode, hover empty ground, an obstacle, food, and an

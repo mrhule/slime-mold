@@ -1,6 +1,6 @@
 import type { GameRenderer } from '../render/renderer';
 import { FxLayer } from '../render/fx-layer';
-import { canPlace } from '../sim';
+import { canPlace, pendingAllocation } from '../sim';
 import { CELL } from '../render/units';
 import type { BuildingType, Command, World } from '../sim/types';
 import { BUILD_HOTKEYS } from './buildbar';
@@ -10,6 +10,15 @@ const KEY_PAN_SPEED = 700; // screen px per second
 const EDGE_PAN_SPEED = 520;
 const EDGE_PX = 8;
 const MARKER_HIT_PX = 16;
+
+export interface InputActions {
+  /** false on the title and round-end screens, where the map ignores input */
+  canAct(): boolean;
+  togglePause(): void;
+  setSpeed(speed: 1 | 2 | 3): void;
+  /** Esc outside placement mode: open or close the pause menu */
+  escape(): void;
+}
 
 /**
  * Mouse and keyboard to player commands (controls.md). Every sim-changing input becomes a
@@ -30,6 +39,7 @@ export class InputController {
     private readonly renderer: GameRenderer,
     private readonly getWorld: () => Readonly<World>,
     private readonly send: (cmd: Command) => void,
+    private readonly actions: InputActions,
   ) {
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointermove', this.onPointerMove);
@@ -61,6 +71,7 @@ export class InputController {
   }
 
   private readonly onPointerDown = (e: PointerEvent): void => {
+    if (!this.actions.canAct()) return;
     const [sx, sy] = this.screenPos(e);
     if (e.button === 1) {
       this.dragging = true;
@@ -126,14 +137,31 @@ export class InputController {
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.target as HTMLElement | null)?.tagName === 'INPUT' && e.key !== 'Escape') return;
     const k = e.key.toLowerCase();
+    if (k === 'escape') {
+      if (this.placing) this.placing = null;
+      else this.actions.escape();
+      return;
+    }
+    if (!this.actions.canAct()) return;
     const building = BUILD_HOTKEYS[k];
     if (building) {
       this.togglePlacing(building);
       return;
     }
-    if (k === 'escape') {
-      this.placing = null;
+    if (k === ' ') {
+      e.preventDefault();
+      this.actions.togglePause();
+      return;
+    }
+    if (k === '1' || k === '2' || k === '3') {
+      this.actions.setSpeed(Number(k) as 1 | 2 | 3);
+      return;
+    }
+    if (k === 'q' || k === 'e') {
+      const value = Math.min(1, Math.max(0, pendingAllocation(this.getWorld(), PLAYER) + (k === 'e' ? 0.1 : -0.1)));
+      this.send({ type: 'setAllocation', mold: PLAYER, value });
       return;
     }
     this.keys.add(k);

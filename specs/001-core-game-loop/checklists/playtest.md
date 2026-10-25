@@ -40,3 +40,21 @@ allocating a new geometry each rebuild, and skip molds whose topology and flow d
 
 Sim tick benchmark (`npm run bench`, 4000-cell network): mean 0.13 ms, p99 2.0 ms, far inside
 the 6 ms budget.
+
+## US5 — Time Control and HUD (2026-10-25)
+
+Build: Phase 4 (T043–T052), seed 777. Window was small (about 700×440), which also exercised the compact layout.
+
+| # | Scenario | Result |
+|---|---|---|
+| 11 | Time control (US5-1/2/3) | **Pass.** Space pauses: the tick count stayed at 0 for 1.5 s and a "Paused — Space to resume. You can still give orders." banner shows. Orders given while paused (slider nudges) queue and apply after resume. Speed buttons (and keys 1–3) work: 121 ticks in 2 s at 3x, 40 ticks at 1x, i.e. exactly 60 and 20 ticks per second. |
+| — | Slider nudges while paused | **Fixed.** Three presses of `E` first only moved the slider 0.1, because each press started from the applied value. They now build on the pending value (0.3 to 0.6) and the slider shows it. Unit test added. |
+| — | Auto-pause (FR-027) | **Pass.** Losing window focus paused the game with a "Paused — click to resume" overlay; a click resumed it. |
+| — | Pause menu and screens (FR-029) | **Pass.** Esc opens the pause menu (Resume, Restart run, Quit to title) and closes it again. A forced victory showed the round-end screen with time, biggest size, nutrients gathered, rivals eliminated, seed, and best round. "Next round" loaded round 2 on a larger map (173×130 vs 160×120) and the best round was saved to browser storage. |
+
+### Observations
+
+- The HUD is tall (round, time, nutrients, income, map control, speed, slider, rivals). On a small window it covers a lot of the map, so a compact layout drops the hint text under 640 px of height and moves the build bar right under 900 px of width. Worth a pass in the accessibility step.
+- A mis-click on the HUD panel does not set a growth target (the panel sits above the map), which is correct but easy to do when the panel is large.
+- Not yet checked by eye: the `?debug` overlay (dev only).
+- The defeat screen cannot be reached yet; rivals arrive in the next phase.

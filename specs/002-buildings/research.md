@@ -91,7 +91,7 @@ replay log. Removal is out of scope (spec has no sell or demolish).
 
 **Decision**: A DOM build bar at the bottom of the screen, styled as comic buttons (R19). Each
 button shows the building's shape icon, name, cost, `count/limit`, and goes gray when it cannot
-be afforded. Clicking a button or pressing its hotkey (`1` for the farm) enters **placement
+be afforded. Clicking a button or pressing its hotkey (`F` for the farm) enters **placement
 mode**:
 - A ghost of the building follows the cursor, snapped to a cell. It is drawn with a green ink
   outline when valid and a red one when not, with the reason in a small tooltip at the cursor.
