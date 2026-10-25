@@ -4,6 +4,7 @@ import { Terrain } from '../sim/types';
 import type { World } from '../sim/types';
 import { CELL } from './units';
 import { INK, MAP, rgb } from './palette';
+import { style } from './style';
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
 
@@ -188,8 +189,12 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, f
         const litv = at(glass, x - 4, y - 4) + wobble;
         const lit = smooth(EDGE + 0.04, EDGE + 0.07, gv) * (1 - smooth(EDGE - 0.04, EDGE, litv)) * (1 - smooth(EDGE + 0.2, EDGE + 0.26, gv));
         mixIn(glassLightC, lit * inside);
-        // heavy ink outline just inside the edge
-        const outline = smooth(EDGE - 0.02, EDGE + 0.02, gv) * (1 - smooth(EDGE + 0.16, EDGE + 0.2, gv));
+        // heavy ink outline just inside the edge: thinner where the step toward the light is open
+        // and heavier where the step away from it is (the shadow side), within the style's range (A12)
+        const awayV = at(glass, x + 3, y + 3) + wobble;
+        const shadeSide = 1 - smooth(EDGE - 0.04, EDGE + 0.04, awayV);
+        const width = 0.1 * (style.outline.padLit + shadeSide * (style.outline.padShade - style.outline.padLit));
+        const outline = smooth(EDGE - 0.02, EDGE + 0.02, gv) * (1 - smooth(EDGE + width - 0.02, EDGE + width + 0.02, gv));
         mixIn(ink, outline);
       }
 

@@ -36,3 +36,11 @@ Run with `npm run dev` (add `?seed=7&nopause` for a fixed map). Tick each item w
 - [ ] The shake scales with the size of the fight and never moves the HUD or the build bar.
 - [ ] Reduce motion (pause menu, Settings) stops the shake completely and the bouncing hints too.
 - [ ] A fight in fog gives no sound, no splat and no shake.
+
+## US5: Grounding shadows and variable line weight
+
+- [ ] Veins, buildings and food cast a short hard shadow toward the lower right and read as sitting
+      on the ground, without hiding veins, patterns or fronts in a dense network.
+- [ ] Outlines look hand-inked (lighter toward the light, heavier on the shadow side), not doubled.
+- [ ] Fog memory shows no live shadow detail: remembered buildings and food keep their dimmed look.
+- [ ] On Low quality (once the setting exists) the vein shadow pass is gone and nothing else breaks.

@@ -160,11 +160,11 @@ Nothing in `src/sim/` changes in this feature.
 
 ### Implementation for User Story 5
 
-- [ ] T045 [US5] Update `src/render/vein-layer.ts`: add a first geometry pass (kind `2`, flat dark, `style.shadow.veinAlpha`) with the same edges and joints offset by `style.shadow.veinOffset`; make the outline pass pad `style.outline.padLit` on the lit side and `padShade` on the shadow side; skip the shadow pass when `style.quality[level].veinShadow` is false; update `vein.frag` to output the shadow colour and alpha for kind `2` (A12)
-- [ ] T046 [P] [US5] Update `src/render/building-layer.ts`: draw a flat offset ground shadow under every building (`style.shadow.groundOffset`) before the shape, and stroke each outline twice, once normally and once shifted by `style.outline.strokeShift`; shadows follow the building's own visibility and stale style so nothing leaks through fog (FR-011)
-- [ ] T047 [P] [US5] Update `src/render/food-layer.ts` the same way: a ground shadow and a shifted second outline stroke per food item
-- [ ] T048 [US5] Update `src/render/terrain-layer.ts` `paintGround`: make the obstacle ink outline thicker where the field one step toward the lower right is outside and thinner where it is inside, within the limited range of `style.outline`; the existing hatched drop shadow stays
-- [ ] T049 [US5] Playtest checklist (US5 section): shadows give depth without hiding veins, patterns or fronts in a dense network; outlines look hand-inked, not doubled; fog memory shows no live shadow detail; Low quality removes the vein shadow pass and nothing else breaks
+- [X] T045 [US5] Update `src/render/vein-layer.ts`: add a first geometry pass (kind `2`, flat dark, `style.shadow.veinAlpha`) with the same edges and joints offset by `style.shadow.veinOffset`; make the outline pass pad `style.outline.padLit` on the lit side and `padShade` on the shadow side; skip the shadow pass when `style.quality[level].veinShadow` is false; update `vein.frag` to output the shadow colour and alpha for kind `2` (A12)
+- [X] T046 [P] [US5] Update `src/render/building-layer.ts`: draw a flat offset ground shadow under every building (`style.shadow.groundOffset`) before the shape, and stroke each outline twice, once normally and once shifted by `style.outline.strokeShift`; shadows follow the building's own visibility and stale style so nothing leaks through fog (FR-011)
+- [X] T047 [P] [US5] Update `src/render/food-layer.ts` the same way: a ground shadow and a shifted second outline stroke per food item
+- [X] T048 [US5] Update `src/render/terrain-layer.ts` `paintGround`: make the obstacle ink outline thicker where the field one step toward the lower right is outside and thinner where it is inside, within the limited range of `style.outline`; the existing hatched drop shadow stays
+- [X] T049 [US5] Playtest checklist (US5 section): shadows give depth without hiding veins, patterns or fronts in a dense network; outlines look hand-inked, not doubled; fog memory shows no live shadow detail; Low quality removes the vein shadow pass and nothing else breaks
 
 **Checkpoint**: US5 works; the look has depth and hand-inked line weight
 
@@ -242,5 +242,7 @@ Nothing in `src/sim/` changes in this feature.
 - US4 (T039-T044): `shakeImpulse` is in `style.ts`; `Camera` got `addShake`/`tickShake`/`reduceMotion` and applies the offset only to the drawn world container (never to `x`, `y` or the clamp); `FxLayer` got `addSplat` (capped per frame, half on Low) with the dying mold colour and ink pattern; `main.ts` feeds both from `visibleDeaths`. The Settings menu has a Reduce motion toggle that also stops CSS animation through a `reduce-motion` class. Suite: 53 files / 347 tests.
 - The forage integration test got a 30 s timeout: it needs about 1-5 s depending on load and sat just under vitest's 5 s default when the whole suite runs in parallel.
 - Untracked files `public/` and `tools/generate-track.ts` (not from this feature work) are in the working tree and were left out of the commits; `npm run typecheck` reports errors inside `tools/generate-track.ts` only.
+
+- US5 (T045-T049): the vein shadow is a second geometry of the core silhouette moved by `shadow.veinOffset`, drawn opaque into a shared container with one `AlphaFilter` at `veinAlpha` so overlapping edges and joints do not darken twice (`vein-shadow.frag`); it sits under all veins and is skipped on Low quality. The vein outline pad is `padLit` on the lit side and `padShade` on the shadow side (joints interpolate). Buildings and food draw an ink-tinted copy (Graphics `tint`) shifted by `outline.strokeShift` behind the real shape for the heavier shadow-side line, and use `shadow.groundOffset`/`groundAlpha` for their ground shadows; the obstacle outline width follows the same range. Suite: 54 files / 359 tests.
 
 (more notes as tasks complete)

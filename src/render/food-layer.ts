@@ -2,16 +2,21 @@ import { Container, Graphics } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import type { FoodSource, World } from '../sim/types';
 import { FOOD, INK } from './palette';
+import { style } from './style';
 import { CELL } from './units';
 
 /** Outlined, cel-shaded food drawn procedurally; shrinks as it is eaten. */
 export class FoodLayer {
   readonly container = new Container();
   private readonly g = new Graphics();
+  /** an ink-tinted copy of every item shifted toward the lower right behind it: a heavier outline on the shadow side (A12) */
+  private readonly rim = new Graphics();
   private lastKey = '';
 
   constructor() {
-    this.container.addChild(this.g);
+    this.rim.tint = INK;
+    this.rim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
+    this.container.addChild(this.rim, this.g);
   }
 
   update(world: Readonly<World>): void {
@@ -47,9 +52,12 @@ export class FoodLayer {
     this.lastKey = key;
     const g = this.g;
     g.clear();
+    this.rim.clear();
     for (const f of world.foodSources) {
       const a = amounts.get(f.id);
-      if (a !== undefined) this.draw(g, f, a);
+      if (a === undefined) continue;
+      this.draw(this.rim, f, a);
+      this.draw(g, f, a);
     }
   }
 
@@ -81,7 +89,7 @@ export class FoodLayer {
     const round = f.type === 'sugarCube' ? 0.35 : f.type === 'fruitSlice' ? 0.7 : 0.55;
 
     // hard offset shadow, then outlined body, shade band, highlight
-    g.poly(blob(hw, hh, 2.5, 3, round), true).fill({ color: INK, alpha: 0.5 });
+    g.poly(blob(hw, hh, style.shadow.groundOffset[0], style.shadow.groundOffset[1], round), true).fill({ color: INK, alpha: style.shadow.groundAlpha * 1.6 });
     g.poly(blob(hw, hh, 0, 0, round), true).fill(pal.base).stroke({ width: 3, color: INK, join: 'round' });
     g.poly(blob(hw * 0.8, hh * 0.4, hw * 0.2, hh * 0.52, round), true).fill(pal.shade);
     g.poly(blob(hw * 0.28, hh * 0.46, hw * 0.74, hh * 0.1, round), true).fill(pal.shade);

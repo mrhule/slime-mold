@@ -3,6 +3,7 @@ import { boosterCover, storeCover } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
+import { style as look } from './style';
 import { CELL } from './units';
 
 const POT = 0x8a5a2b;
@@ -52,7 +53,7 @@ export function drawFarm(g: Graphics, cx: number, cy: number, capColor: number, 
   const w = ghost === undefined ? 3 : 2.5;
 
   // hard offset shadow
-  g.ellipse(cx + 2 * S, cy + 6 * S, 9.5 * S, 4.2 * S).fill({ color: INK, alpha: 0.45 * alpha });
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 9.5 * S, 4.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
 
   // stems and caps behind the pot rim
   const caps: [number, number, number][] = [[-5.5, -3, 3.6], [0.5, -6.5, 4.4], [6, -2.5, 3.4]];
@@ -76,7 +77,7 @@ export function drawBooster(g: Graphics, cx: number, cy: number, flag: number, s
   const S = 1.3;
   const w = style.ghost !== undefined ? 2.5 : 3;
   const body = style.stale ? STALE_GREY : BOOST_GREY;
-  g.ellipse(cx + 2 * S, cy + 6.5 * S, 10 * S, 3.6 * S).fill({ color: INK, alpha: 0.45 * alpha });
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6.5 * S, 10 * S, 3.6 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
   // chimney with a smoke puff
   g.rect(cx + 3.5 * S, cy - 9 * S, 4 * S, 9 * S).fill({ color: BOOST_SHADE, alpha }).stroke({ width: w, color: ink, alpha });
   g.circle(cx + 6 * S, cy - 12 * S, 2.8 * S).fill({ color: 0xe8e6de, alpha }).stroke({ width: 2, color: ink, alpha });
@@ -100,7 +101,7 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
   const S = 1.3;
   const w = style.ghost !== undefined ? 2.5 : 3;
   const col = style.stale || style.idle ? STALE_GREY : RIG;
-  g.ellipse(cx + 2 * S, cy + 6 * S, 9.5 * S, 3.4 * S).fill({ color: INK, alpha: 0.45 * alpha });
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 9.5 * S, 3.4 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
   // tripod legs, ink first and then the colored core
   const legs = (): void => {
     g.moveTo(cx, cy - 9 * S).lineTo(cx - 8 * S, cy + 5 * S);
@@ -137,7 +138,7 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
   const w = style.ghost !== undefined ? 2.5 : 3;
   const wood = style.stale ? STALE_GREY : BARN_WOOD;
   const roof = style.stale ? STALE_GREY : BARN_ROOF;
-  g.ellipse(cx + 2 * S, cy + 6.5 * S, 11 * S, 3.6 * S).fill({ color: INK, alpha: 0.45 * alpha });
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6.5 * S, 11 * S, 3.6 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
   // round tank on the right: a dark band under a lit stripe
   g.roundRect(cx + 3 * S, cy - 5 * S, 8 * S, 12 * S, 3.4 * S).fill({ color: TANK_SHADE, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
   g.roundRect(cx + 4.4 * S, cy - 3.6 * S, 3 * S, 8 * S, 1.4 * S).fill({ color: TANK_LIGHT, alpha });
@@ -200,10 +201,14 @@ export class BuildingLayer {
   readonly container = new Container();
   private readonly areas = new Graphics();
   private readonly g = new Graphics();
+  /** an ink-tinted copy of every building, shifted toward the lower right behind the real one: a heavier outline on the shadow side */
+  private readonly rim = new Graphics();
   private lastKey = '';
 
   constructor() {
-    this.container.addChild(this.areas, this.g);
+    this.rim.tint = INK;
+    this.rim.position.set(look.outline.strokeShift[0], look.outline.strokeShift[1]);
+    this.container.addChild(this.areas, this.rim, this.g);
   }
 
   update(world: Readonly<World>): void {
@@ -236,8 +241,10 @@ export class BuildingLayer {
 
     this.areas.clear();
     this.g.clear();
+    this.rim.clear();
     for (const r of remembered) {
       const [x, y] = cellCenter(r.cell, world.width);
+      drawBuilding(this.rim, r.type, x, y, 0, { stale: true });
       drawBuilding(this.g, r.type, x, y, 0, { stale: true });
     }
     const boosterSpec = world.balance.buildings.booster;
@@ -257,6 +264,7 @@ export class BuildingLayer {
         const len = Math.hypot(dx, dy) || 1;
         for (let d = 8; d < len - 6; d += 9) this.areas.circle(x + (dx / len) * d, y + (dy / len) * d, 1.6).fill({ color: INK, alpha: 0.7 });
       }
+      drawBuilding(this.rim, b.type, x, y, color, { idle });
       drawBuilding(this.g, b.type, x, y, color, { idle });
       if (b.type === 'farm' && !b.linked) drawUnlinked(this.g, x, y);
     }
