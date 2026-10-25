@@ -44,6 +44,13 @@ export interface BalanceConfig {
   dropWarning: number;         // 5 s
   dropWeights: Record<FoodType, number>; // breadCrumb 5, sugarCube 3, fruitSlice 2
 
+  // mapgen (R12)
+  startClearRadius: number;    // 6 cells
+  fairRadius: number;          // 25 cells (path distance)
+  fairTolerance: number;       // 0.10
+  minReachableArea: number;    // 0.55
+  mapgenAttempts: number;      // 10
+
   // rounds
   victoryControl: number;      // 0.75 (FR-022)
   defaultAllocation: number;   // 0.3

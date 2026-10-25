@@ -110,6 +110,7 @@ src/
 │   ├── fog.ts                 # vision + memory (R7)
 │   ├── view.ts                # MoldView builder (fairness surface)
 │   ├── round.ts               # win/loss, map control (FR-022)
+│   ├── hud.ts                 # readHud → HudModel (FR-026)
 │   ├── hash.ts                # stateHash, ReplayLog
 │   ├── step.ts                # tick orchestration and cadences (R10)
 │   └── ai/
