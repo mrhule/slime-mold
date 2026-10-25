@@ -10,7 +10,7 @@ export interface BalanceConfig {
   coreIncome: number;          // 0.5 /s, start core base income (R3)
   upkeepPerCell: number;       // 0.004 /s per owned cell
   cellBuildCost: number;       // 1.0 nutrient per cell × terrain cost
-  spendRateCap: number;        // 40 /s max spend per component
+  spendRateCap: number;        // 6 /s max spend per component (about 6 cells/s)
   playerStartNutrients: number;// 30
   rivalStartNutrientsBase: number; // 30 (× difficulty multiplier)
 

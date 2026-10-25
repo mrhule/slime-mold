@@ -1,0 +1,179 @@
+import type { FoodType } from '../sim/types';
+
+export interface FoodTypeSpec {
+  w: number;
+  h: number;
+  /** total nutrients in the food */
+  nutrients: number;
+  /** nutrients absorbed per owned cell per second */
+  absorbRate: number;
+}
+
+/** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
+export interface BalanceConfig {
+  // economy
+  coreIncome: number;
+  upkeepPerCell: number;
+  cellBuildCost: number;
+  spendRateCap: number;
+  playerStartNutrients: number;
+  rivalStartNutrientsBase: number;
+
+  // flow & veins (R2)
+  flowEvery: number;
+  conductivityDecay: number;
+  capacityPerD: number;
+  retractThreshold: number;
+  retractDelay: number;
+  retractRefund: number;
+  /** cells within this many cells (Chebyshev) of the core never retract */
+  coreSafeRadius: number;
+  orphanDecay: number;
+  initialConductivity: number;
+  maxConductivity: number;
+  /** pool is budgeted to drain over this many seconds */
+  demandHorizon: number;
+
+  // growth (R5)
+  terrainCost: { open: number; rough: number; enemy: number; own: number };
+  maxTargets: number;
+  targetSnapRadius: number;
+
+  // combat (R6)
+  attackEff: number;
+  consumeRefund: number;
+  biomassRegen: number;
+
+  // vision (R7)
+  visionRadius: number;
+  fogEvery: number;
+  fogFullEvery: number;
+
+  // drops
+  dropInterval: number;
+  dropJitter: number;
+  dropWarning: number;
+  dropWeights: Partial<Record<FoodType, number>>;
+
+  // mapgen (R12)
+  startClearRadius: number;
+  fairRadius: number;
+  fairTolerance: number;
+  minReachableArea: number;
+  mapgenAttempts: number;
+  obstacleThreshold: number;
+  roughThreshold: number;
+  foodSpacing: number;
+  /** one food item per this many cells at foodDensity 1 */
+  foodAreaPerItem: number;
+  starterFood: number;
+
+  // rounds
+  victoryControl: number;
+  defaultAllocation: number;
+
+  // AI (R8)
+  aiCommandsPerThink: number;
+
+  foodTypes: Record<FoodType, FoodTypeSpec>;
+
+  /** coefficients for difficultyFor(round), R14 */
+  difficulty: {
+    baseW: number;
+    baseH: number;
+    capW: number;
+    capH: number;
+    rivalsMax: number;
+    mapGrowth: number;
+    mapScaleMax: number;
+    foodDecay: number;
+    foodMin: number;
+    aggressionBase: number;
+    aggressionStep: number;
+    aggressionMax: number;
+    startNutrientsStep: number;
+    thinkBase: number;
+    thinkStep: number;
+    thinkMin: number;
+  };
+}
+
+export const defaultBalance: BalanceConfig = Object.freeze({
+  coreIncome: 0.5,
+  upkeepPerCell: 0.004,
+  cellBuildCost: 1.0,
+  spendRateCap: 6,
+  playerStartNutrients: 30,
+  rivalStartNutrientsBase: 30,
+
+  flowEvery: 5,
+  conductivityDecay: 0.8,
+  capacityPerD: 6.0,
+  retractThreshold: 0.05,
+  retractDelay: 8,
+  retractRefund: 0.5,
+  coreSafeRadius: 1,
+  orphanDecay: 0.25,
+  initialConductivity: 0.5,
+  maxConductivity: 20,
+  demandHorizon: 2,
+
+  terrainCost: { open: 1, rough: 2.5, enemy: 1.5, own: 0.2 },
+  maxTargets: 3,
+  targetSnapRadius: 6,
+
+  attackEff: 0.12,
+  consumeRefund: 0.4,
+  biomassRegen: 0.2,
+
+  visionRadius: 10,
+  fogEvery: 5,
+  fogFullEvery: 40,
+
+  dropInterval: 35,
+  dropJitter: 10,
+  dropWarning: 5,
+  dropWeights: { breadCrumb: 5, sugarCube: 3, fruitSlice: 2 },
+
+  startClearRadius: 6,
+  fairRadius: 25,
+  fairTolerance: 0.1,
+  minReachableArea: 0.55,
+  mapgenAttempts: 10,
+  obstacleThreshold: 0.7,
+  roughThreshold: 0.6,
+  foodSpacing: 12,
+  foodAreaPerItem: 900,
+  starterFood: 3,
+
+  victoryControl: 0.75,
+  defaultAllocation: 0.3,
+
+  aiCommandsPerThink: 3,
+
+  foodTypes: {
+    oatFlake: { w: 2, h: 2, nutrients: 40, absorbRate: 2.0 },
+    breadCrumb: { w: 3, h: 3, nutrients: 120, absorbRate: 1.5 },
+    sugarCube: { w: 4, h: 4, nutrients: 300, absorbRate: 3.0 },
+    fruitSlice: { w: 6, h: 4, nutrients: 500, absorbRate: 1.0 },
+  },
+
+  difficulty: {
+    baseW: 160,
+    baseH: 120,
+    capW: 320,
+    capH: 240,
+    rivalsMax: 5,
+    mapGrowth: 0.08,
+    mapScaleMax: 2.0,
+    foodDecay: 0.05,
+    foodMin: 0.5,
+    aggressionBase: 0.2,
+    aggressionStep: 0.08,
+    aggressionMax: 0.9,
+    startNutrientsStep: 0.1,
+    thinkBase: 1.4,
+    thinkStep: 0.05,
+    thinkMin: 0.8,
+  },
+});

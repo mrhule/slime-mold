@@ -1,0 +1,45 @@
+import { DX, DY, cellAt, cellX, cellY } from './grid';
+import { addCell } from './network';
+import { Terrain } from './types';
+import type { CellIndex, Mold, World } from './types';
+
+/**
+ * Create a mold with its core and four orthogonal neighbors, and give its piece the
+ * starting nutrients.
+ */
+export function addMold(world: World, kind: Mold['kind'], core: CellIndex, startNutrients: number): Mold {
+  const id = world.molds.length + 1;
+  const mold: Mold = {
+    id,
+    kind,
+    color: id - 1,
+    pattern: id - 1,
+    core,
+    allocation: world.balance.defaultAllocation,
+    targets: [],
+    status: 'alive',
+    cellCount: 0,
+    stats: { nutrientsGathered: 0, cellsBuilt: 0, cellsDestroyed: 0, peakSize: 0 },
+    netIncome: 0,
+    incomeTick: 0,
+    upkeepTick: 0,
+  };
+  world.molds.push(mold);
+  addCell(world, id, core, -1);
+  const w = world.width;
+  const h = world.height;
+  const cx = cellX(w, core);
+  const cy = cellY(w, core);
+  for (const k of [0, 2, 4, 6]) {
+    const x = cx + (DX[k] as number);
+    const y = cy + (DY[k] as number);
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const c = cellAt(w, x, y);
+    const t = world.terrain[c];
+    if (t === Terrain.Obstacle || t === Terrain.Wall || world.owner[c] !== 0) continue;
+    addCell(world, id, c, core);
+  }
+  const comp = world.components.get(world.component[core] as number);
+  if (comp) comp.pool = startNutrients;
+  return mold;
+}
