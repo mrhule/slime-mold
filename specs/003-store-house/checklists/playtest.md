@@ -24,3 +24,13 @@ Run with `npm run dev` (add `?seed=7&nopause` to keep a fixed map). Tick each it
 - [ ] Placing the store house on that vein makes the farm pay at once; income in the HUD rises.
 - [ ] With the stock at its cap the farms slow down instead of wasting output.
 - [ ] A new player can afford their first linked farm within about two minutes on round 1.
+
+## US3: Farm output dial
+
+- [ ] Clicking an own farm opens the panel and does not start growing there; Esc or clicking
+      elsewhere closes it.
+- [ ] `[` and `]` and the - / + buttons change the level; income and upkeep in the panel change with
+      it, and the gain per upkeep is visibly smaller at the top.
+- [ ] Level 0 reads "Parked" and the farm costs nothing; the status line also shows Unlinked and
+      Throttled when they apply.
+- [ ] The panel is usable with the keyboard alone, also while paused.

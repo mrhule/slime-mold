@@ -15,6 +15,9 @@ export const REASONS: Record<string, string> = {
   'food-too-small': 'That food is too small!',
   'already-harvested': 'Already harvesting that!',
   'not-fertile': 'Farms need fertile ground!',
+  'not-your-building': 'That is not your building!',
+  'not-a-farm': 'Only farms have an output dial!',
+  'bad-level': 'That output level is not allowed!',
 };
 
 export const FOOD_NAMES: Record<string, string> = {

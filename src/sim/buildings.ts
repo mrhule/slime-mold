@@ -102,9 +102,17 @@ export function isFarmCell(world: Readonly<World>, cell: CellIndex): boolean {
   return buildingOn(world, cell)?.type === 'farm';
 }
 
-/** a farm's output multiple: level * levelStep (level 4 = 1.0) */
-function outputMultiple(world: Readonly<World>, b: Building): number {
-  return b.level * world.balance.buildings.farm.levelStep;
+/** what a farm at `level` would pay per second once linked: income * o * (1.5 - 0.5 * o), o = level * levelStep (S6) */
+export function farmIncomeAt(world: Readonly<World>, level: number): number {
+  const spec = world.balance.buildings.farm;
+  const o = level * spec.levelStep;
+  return spec.income * o * (1.5 - 0.5 * o);
+}
+
+/** a farm's upkeep per second at `level`: it grows with the output and stops at level 0 */
+export function farmUpkeepAt(world: Readonly<World>, level: number): number {
+  const spec = world.balance.buildings.farm;
+  return spec.upkeep * level * spec.levelStep;
 }
 
 /** does a working store house stand in the farm's piece? (S4) */
@@ -115,20 +123,17 @@ export function farmLinked(world: Readonly<World>, b: Building): boolean {
 }
 
 /**
- * Nutrients per second a farm pays right now: nothing while unlinked, otherwise
- * income * o * (1.5 - 0.5 * o) with o = level * levelStep, so level 4 is the plain income and the
- * curve flattens toward the top (S6).
+ * Nutrients per second a farm pays right now: nothing while unlinked, otherwise its income at its
+ * level, so level 4 is the plain income and the curve flattens toward the top (S6).
  */
 export function farmOutput(world: Readonly<World>, b: Building): number {
   if (b.destroyed || b.type !== 'farm' || !farmLinked(world, b)) return 0;
-  const o = outputMultiple(world, b);
-  return world.balance.buildings.farm.income * o * (1.5 - 0.5 * o);
+  return farmIncomeAt(world, b.level);
 }
 
 /** per-second upkeep of one building; a farm's grows with its output level and stops at level 0 */
 function upkeepOf(world: Readonly<World>, b: Building): number {
-  const spec = world.balance.buildings[b.type];
-  return b.type === 'farm' ? spec.upkeep * outputMultiple(world, b) : spec.upkeep;
+  return b.type === 'farm' ? farmUpkeepAt(world, b.level) : world.balance.buildings[b.type].upkeep;
 }
 
 /**

@@ -9,6 +9,7 @@ import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
+import { FarmPanel } from './ui/farm-panel';
 import { InputController } from './ui/input';
 import { FOOD_NAMES, reasonText } from './ui/messages';
 import { Screens } from './ui/screens';
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
     escape: () => (run.state === 'paused' && run.pauseReason === 'menu' ? run.closeMenu() : run.openMenu()),
   });
   const buildBar = new BuildBar(ui, (type) => input.togglePlacing(type));
+  const farmPanel = new FarmPanel(ui, (delta) => input.nudgeFarm(delta));
   const screens = new Screens(ui, {
     start: () => run.start(),
     resume: () => run.resume(),
@@ -136,6 +138,7 @@ async function main(): Promise<void> {
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });
     buildBar.update(model.build, input.placing);
+    farmPanel.update(run.world, input.selectedFarm);
     buildBar.highlight(model.farms.unlinked > 0 && input.placing !== 'storehouse' ? 'storehouse' : null);
 
     for (const e of frameEvents) {

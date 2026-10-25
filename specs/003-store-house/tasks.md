@@ -115,17 +115,17 @@ description: "Task list for 003-store-house"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T032 [P] [US3] `tests/unit/sim/farm-output.test.ts`: with `o = level × 0.25`, income is `farm.income × o × (1.5 − 0.5 × o)` and upkeep is `farm.upkeep × o`; level 4 equals the 002 values; income per upkeep falls as the level rises; level 0 pays nothing, costs no upkeep, and the farm still counts as a source of supply; levels are integers 0–6
-- [ ] T033 [P] [US3] Extend `tests/unit/sim/commands.test.ts`: `setFarmOutput` is accepted for an own farm (also while paused) and rejected with `unknown-building`, `not-your-building`, `not-a-farm`, `bad-level` (non-integer, below 0, above 6) or `mold-eliminated`; a rejected command changes nothing and emits `commandRejected`
-- [ ] T034 [P] [US3] Extend `tests/unit/sim/hash.test.ts` (or `determinism.test.ts`): a round with `setFarmOutput` commands replays to the same hash
+- [X] T032 [P] [US3] `tests/unit/sim/farm-output.test.ts`: with `o = level × 0.25`, income is `farm.income × o × (1.5 − 0.5 × o)` and upkeep is `farm.upkeep × o`; level 4 equals the 002 values; income per upkeep falls as the level rises; level 0 pays nothing, costs no upkeep, and the farm still counts as a source of supply; levels are integers 0–6
+- [X] T033 [P] [US3] Extend `tests/unit/sim/commands.test.ts`: `setFarmOutput` is accepted for an own farm (also while paused) and rejected with `unknown-building`, `not-your-building`, `not-a-farm`, `bad-level` (non-integer, below 0, above 6) or `mold-eliminated`; a rejected command changes nothing and emits `commandRejected`
+- [X] T034 [P] [US3] Extend `tests/unit/sim/hash.test.ts` (or `determinism.test.ts`): a round with `setFarmOutput` commands replays to the same hash
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Handle `setFarmOutput` in `src/sim/commands.ts` and validate per contracts/commands.md; set `Building.level` and default it in `placeBuilding`
-- [ ] T036 [US3] Make `farmOutput` use the curve and make `buildingUpkeep` in `src/sim/buildings.ts` use `farm.upkeep × o`; `src/sim/upkeep.ts` already reads `buildingUpkeep`
-- [ ] T037 [US3] Selection and panel: in `src/ui/input.ts` a click on an own farm (outside placement mode) selects it instead of setting a target; `[` / `]` change the level; `Esc` or a click elsewhere deselects; in `src/ui/hud.ts` (or a new `src/ui/farm-panel.ts`) draw the comic panel with level pips, `−` / `+`, income, upkeep, and status text (`Working`, `Unlinked`, `Throttled`, `Parked`) (contracts/controls.md)
-- [ ] T038 [P] [US3] Add reason texts for the new rejections to `src/ui/messages.ts`
-- [ ] T039 [US3] Playtest checklist (US3 section): the panel is usable with the keyboard alone; clicking a farm never sets a stray target; the status line matches what the farm does
+- [X] T035 [US3] Handle `setFarmOutput` in `src/sim/commands.ts` and validate per contracts/commands.md; set `Building.level` and default it in `placeBuilding`
+- [X] T036 [US3] Make `farmOutput` use the curve and make `buildingUpkeep` in `src/sim/buildings.ts` use `farm.upkeep × o`; `src/sim/upkeep.ts` already reads `buildingUpkeep`
+- [X] T037 [US3] Selection and panel: in `src/ui/input.ts` a click on an own farm (outside placement mode) selects it instead of setting a target; `[` / `]` change the level; `Esc` or a click elsewhere deselects; in `src/ui/hud.ts` (or a new `src/ui/farm-panel.ts`) draw the comic panel with level pips, `−` / `+`, income, upkeep, and status text (`Working`, `Unlinked`, `Throttled`, `Parked`) (contracts/controls.md)
+- [X] T038 [P] [US3] Add reason texts for the new rejections to `src/ui/messages.ts`
+- [X] T039 [US3] Playtest checklist (US3 section): the panel is usable with the keyboard alone; clicking a farm never sets a stray target; the status line matches what the farm does
 
 ---
 
@@ -221,5 +221,7 @@ description: "Task list for 003-store-house"
 - T022: test worlds are fertile by default (`createOpenWorld` option `fertile`, default true); tests that need a farm to pay place a store house with `withStoreHouse`.
 - T030 batch-sim, rounds 1-3, 20 games each, AI stand-in (store house first, then farms on fertile ground): win 55% / 75% / 55% (it was 90% / 80% / 80% before this feature). The early game is slower because a store house (40) comes before the first paying farm; the balance pass (T055) retunes cost, start nutrients and cap.
 - US2 also pulled forward a minimal rival AI (store house first, then farms on fertile ground) so rival rounds still decide; US5 refines it.
+
+- US3: `setFarmOutput`, `farmIncomeAt`/`farmUpkeepAt`/`pendingFarmLevel` and the farm panel (`src/ui/farm-panel.ts`) are in. Clicking elsewhere on the map deselects the farm and also sets a growth target, as an ordinary click does. Verified in headless Chrome: select, `]` to level 6, `[` down to 0 (parked).
 
 (more notes as tasks complete)

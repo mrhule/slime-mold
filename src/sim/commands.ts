@@ -26,6 +26,15 @@ export function pendingAllocation(world: Readonly<World>, moldId: MoldId): numbe
   return value;
 }
 
+/** a farm's level once its queued orders run (what the panel should show while paused) */
+export function pendingFarmLevel(world: Readonly<World>, buildingId: number): number {
+  let level = world.buildings[buildingId]?.level ?? 0;
+  for (const c of world.commandQueue) {
+    if (c.type === 'setFarmOutput' && c.building === buildingId && Number.isInteger(c.level) && c.level >= 0 && c.level <= world.balance.buildings.farm.maxLevel) level = c.level;
+  }
+  return level;
+}
+
 export function applyCommand(world: World, cmd: Command): void {
   const mold = world.molds[cmd.mold - 1];
   if (!mold) return reject(world, cmd.mold, 'unknown-mold');
@@ -51,6 +60,17 @@ export function applyCommand(world: World, cmd: Command): void {
     case 'placeBuilding': {
       const res = placeBuilding(world, cmd.mold, cmd.building, cmd.cell);
       if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
+    case 'setFarmOutput': {
+      const b = world.buildings[cmd.building];
+      if (!b || b.destroyed) return reject(world, cmd.mold, 'unknown-building');
+      if (b.moldId !== cmd.mold) return reject(world, cmd.mold, 'not-your-building');
+      if (b.type !== 'farm') return reject(world, cmd.mold, 'not-a-farm');
+      if (!Number.isInteger(cmd.level) || cmd.level < 0 || cmd.level > world.balance.buildings.farm.maxLevel) {
+        return reject(world, cmd.mold, 'bad-level');
+      }
+      b.level = cmd.level;
       return;
     }
     case 'setAllocation': {

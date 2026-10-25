@@ -10,8 +10,8 @@ import { deriveSeed } from './rng';
 import { createWorld } from './world';
 import type { DifficultyProfile, World } from './types';
 
-export { boosterCover, canPlace, capOf, farmLinked, farmOutput, placePreview, storeCover, veinCover, workingStoreHouses } from './buildings';
-export { enqueue, pendingAllocation } from './commands';
+export { boosterCover, canPlace, capOf, farmIncomeAt, farmLinked, farmOutput, farmUpkeepAt, placePreview, storeCover, veinCover, workingStoreHouses } from './buildings';
+export { enqueue, pendingAllocation, pendingFarmLevel } from './commands';
 export { stateHash } from './hash';
 export { readHud } from './hud';
 export { step } from './step';

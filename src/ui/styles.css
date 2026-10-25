@@ -58,7 +58,8 @@ html, body {
   text-shadow: 2px 2px 0 var(--ink);
 }
 
-.hud .row {
+.hud .row,
+.farm-panel .row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -67,14 +68,16 @@ html, body {
   padding: 1px 0;
 }
 
-.hud .label {
+.hud .label,
+.farm-panel .label {
   font-family: var(--display);
   font-size: 17px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
-.hud .value {
+.hud .value,
+.farm-panel .value {
   font-weight: 800;
   font-size: 18px;
   font-variant-numeric: tabular-nums;
@@ -107,13 +110,44 @@ html, body {
   line-height: 1.2;
 }
 .hud .warn[hidden] { display: none; }
+
+.farm-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 230px;
+  pointer-events: auto;
+}
+.farm-panel[hidden] { display: none; }
+.farm-panel .dial { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
+.farm-panel .dial button {
+  width: 34px;
+  height: 34px;
+  font-family: var(--display);
+  font-size: 22px;
+  line-height: 1;
+  background: #fff6dc;
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.farm-panel .dial button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.farm-panel .pips { display: flex; gap: 4px; flex: 1; justify-content: center; }
+.farm-panel .pip { width: 14px; height: 22px; border: 3px solid var(--ink); background: #fff6dc; transform: skewX(-8deg); }
+.farm-panel .pip.on { background: #f2c744; }
+.farm-panel .farm-status { margin: 6px 0 2px; padding: 3px 6px; border: 3px solid var(--ink); font-weight: 800; font-size: 13px; background: #dff0c4; }
+.farm-panel .farm-status.unlinked { background: #ffe9a8; }
+.farm-panel .farm-status.throttled { background: #cfe3ea; }
+.farm-panel .farm-status.parked { background: #d9d6cc; }
 .buildbar button.hint-pulse { animation: hint-pulse 0.9s ease-in-out infinite alternate; }
 @keyframes hint-pulse {
   from { transform: translateY(0); }
   to { transform: translateY(-5px); }
 }
 
-.hud .hint {
+.hud .hint,
+.farm-panel .hint {
   margin-top: 8px;
   font-size: 12px;
   font-weight: 600;
