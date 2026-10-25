@@ -141,19 +141,19 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T043 [P] [US5] Pause integration test in `tests/integration/pause.test.ts`: at speed 0 no tick advances (`stateHash` unchanged); commands enqueued while paused are all applied on the first tick after resume, in order (SC-007)
-- [ ] T044 [P] [US5] Speed-equivalence test in `tests/integration/speed.test.ts`: the same seed and commands at the same ticks give the same `stateHash` after N game seconds when driven through the loop at 1x and at 3x
-- [ ] T045 [P] [US5] Map-control test in `tests/unit/sim/round.test.ts` (map-control part): `mapControl = cellCount / reachableCells`, where reachable excludes terrain 2 and 3
+- [X] T043 [P] [US5] Pause integration test in `tests/integration/pause.test.ts`: at speed 0 no tick advances (`stateHash` unchanged); commands enqueued while paused are all applied on the first tick after resume, in order (SC-007)
+- [X] T044 [P] [US5] Speed-equivalence test in `tests/integration/speed.test.ts`: the same seed and commands at the same ticks give the same `stateHash` after N game seconds when driven through the loop at 1x and at 3x
+- [X] T045 [P] [US5] Map-control test in `tests/unit/sim/round.test.ts` (map-control part): `mapControl = cellCount / reachableCells`, where reachable excludes terrain 2 and 3
 
 ### Implementation for User Story 5
 
-- [ ] T046 [US5] Pause and speed controls plus auto-pause on `visibilitychange` (hidden) and window `blur` in `src/game/loop.ts` and `src/main.ts` (FR-025, FR-027), with a "Paused — click to resume" overlay
-- [ ] T047 [US5] Compute `reachableCells` at round creation and `mapControl` every 10 ticks in `src/sim/round.ts`, exposed via `readHud`
-- [ ] T048 [US5] Full HUD in `src/ui/hud.ts` per FR-026: allocation slider (`<input type=range>` 0..1 step 0.05 → `setAllocation`, `Q`/`E` ±0.1), map control % with "win at 75%", round number, speed indicator, elapsed time, rival list placeholder, tooltips per contracts/controls.md; the slider is a chunky inked bar with a thick handle (R19)
-- [ ] T049 [US5] Run state machine (`title → playing ⇄ paused → roundEnd → …`, per data-model.md Run) in `src/game/run.ts`
-- [ ] T050 [US5] Screens in `src/ui/screens.ts`: title (Start), pause menu on `Esc` (resume, restart run, quit to title), round-end with elapsed time, peak size, nutrients gathered, rivals eliminated, and seed (FR-029)
-- [ ] T051 [P] [US5] Debug overlay (FPS, mean tick ms, ticks per frame, seed) toggled by backtick or `?debug`, dev builds only, in `src/ui/debug.ts`
-- [ ] T052 [US5] Playtest quickstart scenario 11 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US5 section)
+- [X] T046 [US5] Pause and speed controls plus auto-pause on `visibilitychange` (hidden) and window `blur` in `src/game/loop.ts` and `src/main.ts` (FR-025, FR-027), with a "Paused — click to resume" overlay
+- [X] T047 [US5] Compute `reachableCells` at round creation and `mapControl` every 10 ticks in `src/sim/round.ts`, exposed via `readHud`
+- [X] T048 [US5] Full HUD in `src/ui/hud.ts` per FR-026: allocation slider (`<input type=range>` 0..1 step 0.05 → `setAllocation`, `Q`/`E` ±0.1), map control % with "win at 75%", round number, speed indicator, elapsed time, rival list placeholder, tooltips per contracts/controls.md; the slider is a chunky inked bar with a thick handle (R19)
+- [X] T049 [US5] Run state machine (`title → playing ⇄ paused → roundEnd → …`, per data-model.md Run) in `src/game/run.ts`
+- [X] T050 [US5] Screens in `src/ui/screens.ts`: title (Start), pause menu on `Esc` (resume, restart run, quit to title), round-end with elapsed time, peak size, nutrients gathered, rivals eliminated, and seed (FR-029)
+- [X] T051 [P] [US5] Debug overlay (FPS, mean tick ms, ticks per frame, seed) toggled by backtick or `?debug`, dev builds only, in `src/ui/debug.ts`
+- [X] T052 [US5] Playtest quickstart scenario 11 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US5 section)
 
 **Checkpoint**: The foraging sandbox has full time control, HUD, and screens
 
@@ -167,31 +167,31 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T053 [P] [US2] Combat tests in `tests/unit/sim/combat.test.ts`: contact is 8-adjacency between different owners; damage `pressure · attackEff · dt` is applied simultaneously from start-of-tick state (swapping mold ids gives a mirrored result); a cell at biomass ≤ 0 dies, its edges are removed, and the highest-pressure attacker gets `consumeRefund` (40%) of build cost; regen `biomassRegen` only applies when supplied and not in contact; auto-advance claims adjacent dead or empty cells; a mold with 0 cells emits `moldEliminated`
-- [ ] T054 [P] [US2] Front-allocation tests in `tests/unit/sim/flow.test.ts` (front part): with allocation `a`, front sinks share `a·budget` weighted toward the most enemy pressure and tips share `(1−a)·budget`; with no tips, the front gets the full budget
-- [ ] T055 [P] [US2] Fog tests in `tests/unit/sim/fog.test.ts`: Chebyshev `visionRadius` 10 from own cells; states 0 unseen / 1 remembered / 2 visible; memory keeps last-seen owner and food; incremental update followed by a full recompute matches a from-scratch recompute
-- [ ] T056 [P] [US2] View tests in `tests/unit/sim/view.test.ts`: `MoldView` returns nothing about cells with visibility 0; `biomassAt` is `null` unless the cell is visible; `ownerAt` and `foodAt` return last-known values when remembered; `dropWarnings()` is global; terrain is global
-- [ ] T057 [P] [US2] Round-outcome tests in `tests/unit/sim/round.test.ts`: victory when every rival is eliminated (`eliminated-all`) or `mapControl ≥ 0.75` (`map-control`); defeat when the player is eliminated; "When both happen in the same tick, defeat wins"
-- [ ] T058 [P] [US2] AI tests in `tests/unit/sim/ai.test.ts`: `think()` returns at most `aiCommandsPerThink` (3) commands, all stamped with its own mold id; the same view, state, and rng give the same commands; it targets visible food when uncontested; it explores when it knows no food; it raises allocation when `frontLoss` is high
-- [ ] T059 [US2] Integration and determinism tests: `tests/integration/rival-round.test.ts` (an AI-driven "player" vs 1 rival reaches a decided outcome within 20 game minutes; invariants hold) and `tests/integration/determinism.test.ts` (record a ReplayLog, replay it from the seed, final `stateHash` equal across 20 seeds — SC-006)
+- [X] T053 [P] [US2] Combat tests in `tests/unit/sim/combat.test.ts`: contact is 8-adjacency between different owners; damage `pressure · attackEff · dt` is applied simultaneously from start-of-tick state (swapping mold ids gives a mirrored result); a cell at biomass ≤ 0 dies, its edges are removed, and the highest-pressure attacker gets `consumeRefund` (40%) of build cost; regen `biomassRegen` only applies when supplied and not in contact; auto-advance claims adjacent dead or empty cells; a mold with 0 cells emits `moldEliminated`
+- [X] T054 [P] [US2] Front-allocation tests in `tests/unit/sim/flow.test.ts` (front part): with allocation `a`, front sinks share `a·budget` weighted toward the most enemy pressure and tips share `(1−a)·budget`; with no tips, the front gets the full budget
+- [X] T055 [P] [US2] Fog tests in `tests/unit/sim/fog.test.ts`: Chebyshev `visionRadius` 10 from own cells; states 0 unseen / 1 remembered / 2 visible; memory keeps last-seen owner and food; incremental update followed by a full recompute matches a from-scratch recompute
+- [X] T056 [P] [US2] View tests in `tests/unit/sim/view.test.ts`: `MoldView` returns nothing about cells with visibility 0; `biomassAt` is `null` unless the cell is visible; `ownerAt` and `foodAt` return last-known values when remembered; `dropWarnings()` is global; terrain is global
+- [X] T057 [P] [US2] Round-outcome tests in `tests/unit/sim/round.test.ts`: victory when every rival is eliminated (`eliminated-all`) or `mapControl ≥ 0.75` (`map-control`); defeat when the player is eliminated; "When both happen in the same tick, defeat wins"
+- [X] T058 [P] [US2] AI tests in `tests/unit/sim/ai.test.ts`: `think()` returns at most `aiCommandsPerThink` (3) commands, all stamped with its own mold id; the same view, state, and rng give the same commands; it targets visible food when uncontested; it explores when it knows no food; it raises allocation when `frontLoss` is high
+- [X] T059 [US2] Integration and determinism tests: `tests/integration/rival-round.test.ts` (an AI-driven "player" vs 1 rival reaches a decided outcome within 20 game minutes; invariants hold) and `tests/integration/determinism.test.ts` (record a ReplayLog, replay it from the seed, final `stateHash` equal across 20 seeds — SC-006)
 
 ### Implementation for User Story 2
 
-- [ ] T060 [US2] Multi-start map generation in `src/sim/mapgen.ts`: N+1 starts by best-candidate sampling (maximize minimum distance, minimum distance from the wall), each start area of radius 6 cleared, the player assigned to a random start, cores placed; `createRound` takes the rival count
-- [ ] T061 [US2] Implement the contact scan, front grouping per mold pair, simultaneous damage, cell death with refund and events, regen, and auto-advance in `src/sim/combat.ts`, wired into `src/sim/step.ts` every tick
-- [ ] T062 [US2] Add front sinks and the pressure array to the flow solve in `src/sim/flow.ts` (allocation split, front weighting, spillover both ways)
-- [ ] T063 [US2] After cell deaths, run the split, re-label, and orphan pass for affected components only in `src/sim/network.ts`; eliminate molds at 0 cells and clear their targets
-- [ ] T064 [US2] Implement the vision grid, memory arrays, incremental stamping every `fogEvery` ticks, and full recompute every `fogFullEvery` ticks in `src/sim/fog.ts`
-- [ ] T065 [US2] Implement the `MoldView` builder (the only AI input; exposes only the fields in contracts/sim-api.md, with fog-limited `pathCost`) in `src/sim/view.ts`
-- [ ] T066 [US2] Implement the utility AI `think(view, state, rng)` in `src/sim/ai/rival-ai.ts`: scores for forage, attack weak visible enemy cells × aggression, defend/reinforce, and explore; picks up to 3 targets with a diversity penalty; sets allocation from the front pressure ratio and aggression (R8)
-- [ ] T067 [US2] Call the AI in `src/sim/step.ts`: think cadence `aiThinkInterval` ± seeded jitter per rival from stream `ai:<id>`, commands go through the same `enqueue`, at most `aiCommandsPerThink` per think, and rival start nutrients come from difficulty
-- [ ] T068 [US2] Implement `roundOutcome` (checked every 10 ticks, defeat-first tie rule) in `src/sim/round.ts`, and route victory and defeat to roundEnd in `src/game/run.ts`
-- [ ] T069 [P] [US2] Fog layer: vision → R8 texture → fog filter (dense ink scribble/cross-hatching for unseen, halftone dots with flat gray tones for remembered, clear for visible, hand-drawn wavy boundary line), with remembered rival cells drawn from memory marked as stale, in `src/render/fog-layer.ts` and `src/render/shaders/fog.frag`
-- [ ] T070 [P] [US2] Angular comic starburst FX scaled by pressure in `src/render/fx-layer.ts`, and per-rival ink patterns (plain, hatching, halftone dots, rings, cross-hatch) in `src/render/shaders/toon.frag`
-- [ ] T071 [US2] HUD rival list (color and pattern swatch, alive/eliminated, `visibleCells` or "?") and elimination toasts in `src/ui/hud.ts`
-- [ ] T072 [US2] Add AI target scores and front pressures to the debug overlay in `src/ui/debug.ts`
-- [ ] T073 [US2] Fill in `tests/bench/tick.bench.ts` with combat, fog, and AI at 160×120 with 2 molds and at 275×206 with 6 molds; record the mean tick ms in `specs/001-core-game-loop/checklists/playtest.md`
-- [ ] T074 [US2] Playtest quickstart scenarios 5–7 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US2 section)
+- [X] T060 [US2] Multi-start map generation in `src/sim/mapgen.ts`: N+1 starts by best-candidate sampling (maximize minimum distance, minimum distance from the wall), each start area of radius 6 cleared, the player assigned to a random start, cores placed; `createRound` takes the rival count
+- [X] T061 [US2] Implement the contact scan, front grouping per mold pair, simultaneous damage, cell death with refund and events, regen, and auto-advance in `src/sim/combat.ts`, wired into `src/sim/step.ts` every tick
+- [X] T062 [US2] Add front sinks and the pressure array to the flow solve in `src/sim/flow.ts` (allocation split, front weighting, spillover both ways)
+- [X] T063 [US2] After cell deaths, run the split, re-label, and orphan pass for affected components only in `src/sim/network.ts`; eliminate molds at 0 cells and clear their targets
+- [X] T064 [US2] Implement the vision grid, memory arrays, incremental stamping every `fogEvery` ticks, and full recompute every `fogFullEvery` ticks in `src/sim/fog.ts`
+- [X] T065 [US2] Implement the `MoldView` builder (the only AI input; exposes only the fields in contracts/sim-api.md, with fog-limited `pathCost`) in `src/sim/view.ts`
+- [X] T066 [US2] Implement the utility AI `think(view, state, rng)` in `src/sim/ai/rival-ai.ts`: scores for forage, attack weak visible enemy cells × aggression, defend/reinforce, and explore; picks up to 3 targets with a diversity penalty; sets allocation from the front pressure ratio and aggression (R8)
+- [X] T067 [US2] Call the AI in `src/sim/step.ts`: think cadence `aiThinkInterval` ± seeded jitter per rival from stream `ai:<id>`, commands go through the same `enqueue`, at most `aiCommandsPerThink` per think, and rival start nutrients come from difficulty
+- [X] T068 [US2] Implement `roundOutcome` (checked every 10 ticks, defeat-first tie rule) in `src/sim/round.ts`, and route victory and defeat to roundEnd in `src/game/run.ts`
+- [X] T069 [P] [US2] Fog layer: vision → R8 texture → fog filter (dense ink scribble/cross-hatching for unseen, halftone dots with flat gray tones for remembered, clear for visible, hand-drawn wavy boundary line), with remembered rival cells drawn from memory marked as stale, in `src/render/fog-layer.ts` and `src/render/shaders/fog.frag`
+- [X] T070 [P] [US2] Angular comic starburst FX scaled by pressure in `src/render/fx-layer.ts`, and per-rival ink patterns (plain, hatching, halftone dots, rings, cross-hatch) in `src/render/shaders/toon.frag`
+- [X] T071 [US2] HUD rival list (color and pattern swatch, alive/eliminated, `visibleCells` or "?") and elimination toasts in `src/ui/hud.ts`
+- [X] T072 [US2] Add AI target scores and front pressures to the debug overlay in `src/ui/debug.ts`
+- [X] T073 [US2] Fill in `tests/bench/tick.bench.ts` with combat, fog, and AI at 160×120 with 2 molds and at 275×206 with 6 molds; record the mean tick ms in `specs/001-core-game-loop/checklists/playtest.md`
+- [X] T074 [US2] Playtest quickstart scenarios 5–7 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US2 section)
 
 **Checkpoint**: A full 1-rival round is winnable and losable. All P1 stories work
 
@@ -205,15 +205,15 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T075 [P] [US3] Drop tests in `tests/unit/sim/drops.test.ts`: the next drop is scheduled when the previous one enters `warning`, at `dropInterval ± dropJitter` (35 ± 10 s); "`landTick − warnTick` = `dropWarning` (5 s)"; the footprint fits on non-obstacle terrain; type is a weighted pick by `dropWeights` (breadCrumb 5, sugarCube 3, fruitSlice 2); landing on owned cells absorbs on the next tick; contested food is split by coverage; values per data-model.md FoodType (breadCrumb 3×3/120/1.5, sugarCube 4×4/300/3.0, fruitSlice 6×4/500/1.0)
+- [X] T075 [P] [US3] Drop tests in `tests/unit/sim/drops.test.ts`: the next drop is scheduled when the previous one enters `warning`, at `dropInterval ± dropJitter` (35 ± 10 s); "`landTick − warnTick` = `dropWarning` (5 s)"; the footprint fits on non-obstacle terrain; type is a weighted pick by `dropWeights` (breadCrumb 5, sugarCube 3, fruitSlice 2); landing on owned cells absorbs on the next tick; contested food is split by coverage; values per data-model.md FoodType (breadCrumb 3×3/120/1.5, sugarCube 4×4/300/3.0, fruitSlice 6×4/500/1.0)
 
 ### Implementation for User Story 3
 
-- [ ] T076 [US3] Add drop food types to the FoodType table in `src/sim/food.ts` (values from data-model.md) and `dropWeights` in `src/config/balance.ts`
-- [ ] T077 [US3] Implement drop scheduling and state transitions (`scheduled → warning → landed`) from the `drops` stream, with `dropWarning` and `dropLanded` events, in `src/sim/food.ts`, wired into `src/sim/step.ts`
-- [ ] T078 [US3] Add the race-drop score (own ETA vs estimated rival ETA from visible info) to `src/sim/ai/rival-ai.ts` using `view.dropWarnings()`
-- [ ] T079 [P] [US3] Drop warning ring with countdown and landing animation in `src/render/food-layer.ts`, and a HUD toast "Sugar cube incoming!" in `src/ui/hud.ts`
-- [ ] T080 [US3] Playtest quickstart scenario 8 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US3 section)
+- [X] T076 [US3] Add drop food types to the FoodType table in `src/sim/food.ts` (values from data-model.md) and `dropWeights` in `src/config/balance.ts`
+- [X] T077 [US3] Implement drop scheduling and state transitions (`scheduled → warning → landed`) from the `drops` stream, with `dropWarning` and `dropLanded` events, in `src/sim/food.ts`, wired into `src/sim/step.ts`
+- [X] T078 [US3] Add the race-drop score (own ETA vs estimated rival ETA from visible info) to `src/sim/ai/rival-ai.ts` using `view.dropWarnings()`
+- [X] T079 [P] [US3] Drop warning ring with countdown and landing animation in `src/render/food-layer.ts`, and a HUD toast "Sugar cube incoming!" in `src/ui/hud.ts`
+- [X] T080 [US3] Playtest quickstart scenario 8 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US3 section)
 
 **Checkpoint**: Rounds have drop-driven races
 
@@ -227,23 +227,23 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T081 [P] [US4] Mapgen tests in `tests/unit/sim/mapgen.test.ts` over 500 seeds: every start reachable from every other start; food value within `fairRadius` (25 cells by path distance) of every start within ±10% of the richest; reachable open area ≥ 55%; the same seed and round give a byte-identical map; the no-obstacle fallback is used in < 1% of seeds
-- [ ] T082 [P] [US4] Difficulty tests in `tests/unit/sim/difficulty.test.ts`: values match the R14 table at rounds 1, 5, and 10; "For all n in 1..50, `profile(n+1)` is at least as hard as `profile(n)` in every field, and strictly harder in at least one"
-- [ ] T083 [P] [US4] Storage tests in `tests/unit/game/storage.test.ts`: reads and writes `slime-mold:v1:best` as `{ bestRound }`; returns defaults and does not throw when `localStorage` is missing or throws
-- [ ] T084 [P] [US4] Run-flow tests in `tests/unit/game/run.test.ts`: round seed = `hash(runSeed, number)`; victory → round n+1 and `bestRound = max(bestRound, number)`; defeat → new run at round 1 with a new runSeed (FR-023); nothing carries over between rounds (FR-024)
+- [X] T081 [P] [US4] Mapgen tests in `tests/unit/sim/mapgen.test.ts` over 500 seeds: every start reachable from every other start; food value within `fairRadius` (25 cells by path distance) of every start within ±10% of the richest; reachable open area ≥ 55%; the same seed and round give a byte-identical map; the no-obstacle fallback is used in < 1% of seeds
+- [X] T082 [P] [US4] Difficulty tests in `tests/unit/sim/difficulty.test.ts`: values match the R14 table at rounds 1, 5, and 10; "For all n in 1..50, `profile(n+1)` is at least as hard as `profile(n)` in every field, and strictly harder in at least one"
+- [X] T083 [P] [US4] Storage tests in `tests/unit/game/storage.test.ts`: reads and writes `slime-mold:v1:best` as `{ bestRound }`; returns defaults and does not throw when `localStorage` is missing or throws
+- [X] T084 [P] [US4] Run-flow tests in `tests/unit/game/run.test.ts`: round seed = `hash(runSeed, number)`; victory → round n+1 and `bestRound = max(bestRound, number)`; defeat → new run at round 1 with a new runSeed (FR-023); nothing carries over between rounds (FR-024)
 
 ### Implementation for User Story 4
 
-- [ ] T085 [US4] Implement `difficultyFor(round)` with the R14 formulas (rival count, map size scale, food density, aggression, uncapped rival start nutrients, AI think interval, drop interval) in `src/sim/difficulty.ts`
-- [ ] T086 [US4] Connectivity in `src/sim/mapgen.ts`: flood fill from the player start, carve an A* corridor that ignores obstacles to any unreached start, re-check (R12 step 4)
-- [ ] T087 [US4] Food fairness pass in `src/sim/mapgen.ts`: sum food value by path distance within `fairRadius` per start, top up the poorest starts to within ±10% (R12 step 5)
-- [ ] T088 [US4] Map validation with retry on a derived seed (up to 10 attempts) and a logged no-obstacle fallback in `src/sim/mapgen.ts` (R12 step 6); `createRound` uses the difficulty profile for size, rivals, and food density
-- [ ] T089 [US4] Best-round persistence with try/catch in `src/game/storage.ts` (R17)
-- [ ] T090 [US4] Round progression, defeat → new run, best-round update, and round-end "Next round" / "New run" buttons in `src/game/run.ts` and `src/ui/screens.ts`; title screen shows the best round
-- [ ] T091 [US4] URL parameters `?seed=`, `?round=`, `?debug` (dev builds) in `src/main.ts` (R11)
-- [ ] T092 [US4] Batch sim tool in `tools/batch-sim.ts`: `--rounds a-b --games n`; plays medium-AI "player" vs rivals headless; reports median and p10/p90 round length, win rate per round, share of runs reaching round 10, and mean tick ms per scale
-- [ ] T093 [US4] Balance pass: tune `src/config/balance.ts` and the difficulty coefficients until the batch tool shows median round length 5–15 min for rounds 1–10 (SC-002), round-1 win rate > 80%, and < 20% of runs reaching round 10 (SC-005). Record the results in `specs/001-core-game-loop/checklists/playtest.md`
-- [ ] T094 [US4] Playtest quickstart scenarios 9–10 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US4 section)
+- [X] T085 [US4] Implement `difficultyFor(round)` with the R14 formulas (rival count, map size scale, food density, aggression, uncapped rival start nutrients, AI think interval, drop interval) in `src/sim/difficulty.ts`
+- [X] T086 [US4] Connectivity in `src/sim/mapgen.ts`: flood fill from the player start, carve an A* corridor that ignores obstacles to any unreached start, re-check (R12 step 4)
+- [X] T087 [US4] Food fairness pass in `src/sim/mapgen.ts`: sum food value by path distance within `fairRadius` per start, top up the poorest starts to within ±10% (R12 step 5)
+- [X] T088 [US4] Map validation with retry on a derived seed (up to 10 attempts) and a logged no-obstacle fallback in `src/sim/mapgen.ts` (R12 step 6); `createRound` uses the difficulty profile for size, rivals, and food density
+- [X] T089 [US4] Best-round persistence with try/catch in `src/game/storage.ts` (R17)
+- [X] T090 [US4] Round progression, defeat → new run, best-round update, and round-end "Next round" / "New run" buttons in `src/game/run.ts` and `src/ui/screens.ts`; title screen shows the best round
+- [X] T091 [US4] URL parameters `?seed=`, `?round=`, `?debug` (dev builds) in `src/main.ts` (R11)
+- [X] T092 [US4] Batch sim tool in `tools/batch-sim.ts`: `--rounds a-b --games n`; plays medium-AI "player" vs rivals headless; reports median and p10/p90 round length, win rate per round, share of runs reaching round 10, and mean tick ms per scale
+- [X] T093 [US4] Balance pass: tune `src/config/balance.ts` and the difficulty coefficients until the batch tool shows median round length 5–15 min for rounds 1–10 (SC-002), round-1 win rate > 80%, and < 20% of runs reaching round 10 (SC-005). Record the results in `specs/001-core-game-loop/checklists/playtest.md`
+- [X] T094 [US4] Playtest quickstart scenarios 9–10 and record the results in `specs/001-core-game-loop/checklists/playtest.md` (US4 section)
 
 **Checkpoint**: The full game loop works — runs, escalating rounds, and the best round kept
 
@@ -253,12 +253,12 @@ Sim code in `src/sim/**` MUST NOT import `pixi.js`, `src/render`, `src/ui`, or D
 
 **Purpose**: Performance gates, accessibility, and final validation
 
-- [ ] T095 Perf gate (Constitution V): `npm run bench` mean tick ≤ 6 ms at 275×206 with 6 molds. If it misses, move the sim into a Web Worker per R13 (`src/game/sim-worker.ts`, snapshot transfer) and record the decision in plan.md Complexity Tracking
-- [ ] T096 Render perf: with `?round=10&debug`, hold about 60 fps during a 5-rival battle (quickstart scenario 12, SC-003); fix hotspots in `src/render/vein-layer.ts` and `src/render/film-layer.ts`
-- [ ] T097 [P] Accessibility check: rivals can be told apart by pattern alone (grayscale screenshot), HUD contrast, slider keyboard operable; also check outline readability at 0.5x and 3x zoom (FR-033); fix in `src/render/palette.ts`, `src/render/shaders/toon.frag`, `src/ui/styles.css`
-- [ ] T098 [P] Make sure the debug overlay and URL parameters are stripped from production builds (`import.meta.env.DEV` guards) in `src/ui/debug.ts` and `src/main.ts`
-- [ ] T099 [P] Update `README.md` with gameplay overview, controls (from contracts/controls.md), and dev commands
-- [ ] T100 Run the full quickstart.md validation (all automated checks and all 12 playtest scenarios) from a fresh clone, and record the results in `specs/001-core-game-loop/checklists/playtest.md`
+- [X] T095 Perf gate (Constitution V): `npm run bench` mean tick ≤ 6 ms at 275×206 with 6 molds. If it misses, move the sim into a Web Worker per R13 (`src/game/sim-worker.ts`, snapshot transfer) and record the decision in plan.md Complexity Tracking
+- [X] T096 Render perf: with `?round=10&debug`, hold about 60 fps during a 5-rival battle (quickstart scenario 12, SC-003); fix hotspots in `src/render/vein-layer.ts` and `src/render/film-layer.ts`
+- [X] T097 [P] Accessibility check: rivals can be told apart by pattern alone (grayscale screenshot), HUD contrast, slider keyboard operable; also check outline readability at 0.5x and 3x zoom (FR-033); fix in `src/render/palette.ts`, `src/render/shaders/toon.frag`, `src/ui/styles.css`
+- [X] T098 [P] Make sure the debug overlay and URL parameters are stripped from production builds (`import.meta.env.DEV` guards) in `src/ui/debug.ts` and `src/main.ts`
+- [X] T099 [P] Update `README.md` with gameplay overview, controls (from contracts/controls.md), and dev commands
+- [X] T100 Run the full quickstart.md validation (all automated checks and all 12 playtest scenarios) from a fresh clone, and record the results in `specs/001-core-game-loop/checklists/playtest.md`
 
 ---
 
