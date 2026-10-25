@@ -53,3 +53,10 @@ Turn on Settings → Print texture, then compare on and off in a busy late-round
 - [ ] Dots and grain look like print, not noise; the red/blue fringe is subtle
 - [ ] Off looks exactly as before; it is unavailable on Low and Medium quality
 - [ ] Decision: keep (default off) or remove `src/render/print-filter.ts` and the toggle
+
+## Polish: performance (T056)
+
+- Round 5 map (211 x 158, 3 rivals), seed 7, fully zoomed out, every effect on High: 60 fps, with and
+  without Print texture (measured over 3 s in the in-app browser on the dev server, `?round=5&seed=7`).
+- Not measured: Auto dropping to Low on a throttled tab (covered by the governor unit tests only); a
+  slow machine needs a human check.

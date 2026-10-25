@@ -190,9 +190,9 @@ Nothing in `src/sim/` changes in this feature.
 
 **Purpose**: Quality wiring, settings completeness, performance, docs, and a clean-checkout validation
 
-- [ ] T055 Wire the quality governor in `src/main.ts`: feed the frame rate each frame, call `renderer.setQuality(governor.level)`, and add the Quality control (Auto / High / Low) to the Settings section in `src/ui/screens.ts`, saved (FR-016, A14)
-- [ ] T056 [P] Performance check at the largest map and rival count with every effect on High: record the frame rate from `?debug` in `specs/004-audio-and-cel-shading/checklists/playtest.md`; confirm Auto drops to Low on a throttled tab and that Low restores the frame rate (SC-005)
-- [ ] T057 [P] Update `README.md`: sound and music, the mute button and Settings menu, quality levels, and the new look in the feature list; mention that audio starts after the first click
+- [X] T055 Wire the quality governor in `src/main.ts`: feed the frame rate each frame, call `renderer.setQuality(governor.level)`, and add the Quality control (Auto / High / Low) to the Settings section in `src/ui/screens.ts`, saved (FR-016, A14)
+- [X] T056 [P] Performance check at the largest map and rival count with every effect on High: record the frame rate from `?debug` in `specs/004-audio-and-cel-shading/checklists/playtest.md`; confirm Auto drops to Low on a throttled tab and that Low restores the frame rate (SC-005)
+- [X] T057 [P] Update `README.md`: sound and music, the mute button and Settings menu, quality levels, and the new look in the feature list; mention that audio starts after the first click
 - [ ] T058 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what is found (this is the manual half of Constitution IV)
 - [ ] T059 Fresh-clone validation: clone the repo, `npm install`, `npm run typecheck`, `npm run build`, `npm test`, `npx tsx tests/bench/tick.bench.ts`; confirm the test count and that `src/sim/` has no diff in this feature (`git diff main -- src/sim` is empty apart from earlier features)
 

@@ -18,6 +18,7 @@ import { FarmPanel } from './ui/farm-panel';
 import { InputController } from './ui/input';
 import { FOOD_NAMES, reasonText } from './ui/messages';
 import { shakeImpulse } from './render/style';
+import { QualityGovernor } from './render/quality';
 import { Screens } from './ui/screens';
 
 const PLAYER = 1;
@@ -122,6 +123,7 @@ async function main(): Promise<void> {
   };
   hud.setMuted(settings.muted);
   reduceMotion();
+  const governor = new QualityGovernor();
   const debug = dev ? new DebugOverlay(ui, params.has('debug')) : null;
 
   // the clock stops when the tab is hidden or loses focus (FR-027)
@@ -149,6 +151,7 @@ async function main(): Promise<void> {
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
     fps += (1 / Math.max(dt, 0.001) - fps) * 0.05;
+    renderer.setQuality(governor.update(dt, fps, settings.quality));
 
     if (run.worldVersion !== builtVersion) {
       builtVersion = run.worldVersion;

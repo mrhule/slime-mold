@@ -107,6 +107,7 @@ export class Screens {
       <label class="setting"><span>Music</span>${slider('musicVolume', s.musicVolume)}</label>
       <label class="setting"><span>Mute all</span><input type="checkbox" data-setting="muted" ${s.muted ? 'checked' : ''} /></label>
       <label class="setting" title="Turns off screen shake and flashing or bouncing effects"><span>Reduce motion</span><input type="checkbox" data-setting="reduceMotion" ${s.reduceMotion ? 'checked' : ''} /></label>
+      <label class="setting" title="Auto drops to Low when the frame rate stays low and returns when it recovers"><span>Quality</span><select data-setting="quality">${(['auto', 'high', 'low'] as const).map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0]?.toUpperCase()}${q.slice(1)}</option>`).join('')}</select></label>
       ${this.settings.printAvailable === false ? '' : `<label class="setting" title="A comic print look: halftone dots, grain and slightly off-register colour. High quality only."><span>Print texture</span><input type="checkbox" data-setting="printTexture" ${s.printTexture ? 'checked' : ''} /></label>`}
     </div>`;
   }

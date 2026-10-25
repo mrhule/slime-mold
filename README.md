@@ -6,6 +6,19 @@ on fighting, and beat the rival molds. Each round is a new map and gets harder.
 
 Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatching and grit.
 
+## Sound, music and look
+
+- Sound effects and generated music start after your first click or key press (browsers block audio
+  until then). The speaker button in the corner mutes everything; the pause menu has Sound and Music
+  sliders, **Reduce motion** (no screen shake or UI animation), **Quality** and **Print texture**.
+  Settings are saved in your browser.
+- Quality is **Auto** by default: it drops to **Low** (no flow pulses or vein shadows, fewer splats)
+  when the frame rate stays low and returns when it recovers. You can pin High or Low.
+- Veins are lit from the upper left and drawn in three width bands with a heavier line on the
+  shadow side; flow pulses run along fed veins, fights throw ink splats and shake the screen
+  (only fights you can see). **Print texture** (off by default, High quality only) adds a halftone
+  dot screen, grain and a slight colour offset.
+
 ## How to play
 
 - **Grow.** Click the map to set a growth target (up to 3 at once). Your veins extend toward it
