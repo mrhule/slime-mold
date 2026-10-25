@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-25
 
-**Status**: Draft (to be built right after 003-store-house)
+**Status**: Draft (003 merged; ready to plan)
 
 **Input**: User description: "Sound and juice (squelch sounds, a pulse along veins when nutrients
 flow, screen shake on big fights)" combined with "make the graphics more cell-shaded" (a shared
@@ -195,6 +195,8 @@ that molds, food, and fronts stay readable with it on.
 - **FR-003**: Sounds MUST be rate-limited per kind so many simultaneous events stay readable.
 - **FR-004**: Sounds and effects MUST be driven only by events and state the simulation already
   exposes; they MUST NOT change simulation state or timing.
+- **FR-005a**: The game MUST play a simple looping background music track, with its own volume and
+  mute, that starts after the first player action and pauses with the game.
 - **FR-005**: Nothing about events in fog MAY be played or shown to the player (fairness, 001
   FR-028).
 
@@ -261,9 +263,9 @@ that molds, food, and fronts stay readable with it on.
 
 ## Assumptions
 
-- Sounds are short, original or royalty-free clips bundled with the game, or generated in the
-  browser; no new runtime dependency is needed beyond the browser's audio support.
-- Music is out of scope for this feature and can be a later addition.
+- No new runtime dependency is needed beyond the browser's audio support.
+- Sounds and the music loop are generated in the browser with its audio engine, so there are no
+  audio files to bundle or license. The music is one simple ambient loop.
 - Lighting is faked by drawing (bands, offsets, and shadows), not a real 3D light model, and the
   light comes from the upper left, matching the glass obstacles that already exist.
 - This feature does not depend on 005 or 006, but it touches the same drawing files as building
@@ -272,10 +274,12 @@ that molds, food, and fronts stay readable with it on.
 - Exact widths, thresholds, weights, volumes, and quality levels are set in planning and tuned by
   eye and ear.
 
-## Open questions for the clarify step
+## Clarifications
 
-- Original recorded clips or sounds generated in the browser?
-- Is background music wanted now or later?
-- Should the light direction ever change between rounds, or stay fixed?
-- Should halftone and paper grain ship at all, or wait until the earlier stories are judged?
-- A visible quality setting in the menu, or only automatic scaling?
+### Session 2026-10-25
+
+- Q: Where should sounds come from? → A: Generated in the browser; no bundled clips.
+- Q: Background music? → A: Yes, one simple looping track (also generated), with its own volume.
+- Q: Print texture? → A: Build it last behind a toggle and keep it only if it looks good.
+- Q: Quality settings? → A: Automatic scaling plus a High/Low switch in the menu.
+- Q: Light direction? → A: Fixed at the upper left (default; not asked).
