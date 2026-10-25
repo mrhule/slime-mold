@@ -1,4 +1,4 @@
-import { canPlace, capOf, workingStoreHouses } from './buildings';
+import { canPlace, capOf, farmLinked, workingStoreHouses } from './buildings';
 import { SQRT2, octile } from './grid';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -27,7 +27,15 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
 
   const components = [...world.components.values()]
     .filter((c) => c.moldId === moldId)
-    .map((c) => ({ id: c.id, pool: c.pool, cap: capOf(world, c), storeHouses: workingStoreHouses(world, c), cellCount: c.cells.length, orphaned: c.orphaned }));
+    .map((c) => ({
+      id: c.id,
+      pool: c.pool,
+      cap: capOf(world, c),
+      storeHouses: workingStoreHouses(world, c),
+      linkedFarms: world.buildings.filter((b) => !b.destroyed && b.type === 'farm' && world.component[b.cell] === c.id && farmLinked(world, b)).length,
+      cellCount: c.cells.length,
+      orphaned: c.orphaned,
+    }));
 
   return {
     self: {
@@ -44,6 +52,21 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
     terrain: world.terrain,
     visibility,
     fertileAt: (cell) => world.fertile[cell] === 1,
+    farms() {
+      const out: { id: number; cell: CellIndex; level: number; linked: boolean; pool: number; cap: number }[] = [];
+      for (const b of world.buildings) {
+        if (b.destroyed || b.type !== 'farm' || b.moldId !== moldId) continue;
+        const comp = world.components.get(world.component[b.cell] as number);
+        if (!comp) continue;
+        out.push({ id: b.id, cell: b.cell, level: b.level, linked: farmLinked(world, b), pool: comp.pool, cap: capOf(world, comp) });
+      }
+      return out;
+    },
+    farmLevel(buildingId) {
+      const b = world.buildings[buildingId];
+      return b && !b.destroyed && b.type === 'farm' && b.moldId === moldId ? b.level : -1;
+    },
+    rules: { storeHousesPerPiece: world.balance.buildings.storehouse.perPiece, farmDefaultLevel: world.balance.buildings.farm.defaultLevel },
     pieceOf: (cell) => (world.owner[cell] === moldId ? (world.component[cell] as number) : -1),
     ownerAt(cell) {
       const v = vision[cell];

@@ -160,15 +160,15 @@ description: "Task list for 003-store-house"
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T049 [P] [US5] Extend `tests/unit/sim/view.test.ts`: `fertileAt` is global terrain; `capOf` and `farmLevel` work for own pieces and farms only; nothing about an opponent's caps or levels is exposed; `canBuild('farm', cell)` reflects fertile and cost
-- [ ] T050 [P] [US5] Extend `tests/unit/sim/ai.test.ts`: with fertile ground in reach and no Store House, the AI builds a Store House first, then farms on fertile cells in a piece that has one; it never issues a placement `canPlace` would refuse; it turns farms down only while net income is negative
-- [ ] T051 [US5] Extend `tests/integration/rival-round.test.ts`: over several seeds, rivals build Store Houses and linked farms; the round still ends within the time limit and invariants hold
+- [X] T049 [P] [US5] Extend `tests/unit/sim/view.test.ts`: `fertileAt` is global terrain; `capOf` and `farmLevel` work for own pieces and farms only; nothing about an opponent's caps or levels is exposed; `canBuild('farm', cell)` reflects fertile and cost
+- [X] T050 [P] [US5] Extend `tests/unit/sim/ai.test.ts`: with fertile ground in reach and no Store House, the AI builds a Store House first, then farms on fertile cells in a piece that has one; it never issues a placement `canPlace` would refuse; it turns farms down only while net income is negative
+- [X] T051 [US5] Extend `tests/integration/rival-round.test.ts`: over several seeds, rivals build Store Houses and linked farms; the round still ends within the time limit and invariants hold
 
 ### Implementation for User Story 5
 
-- [ ] T052 [US5] Add `fertileAt`, `capOf`, `pieces().cap/linkedFarms`, and `farmLevel` to `MoldView` in `src/sim/view.ts` and `src/sim/types.ts` (contracts/sim-api.md)
-- [ ] T053 [US5] Extend `planBuild` in `src/sim/ai/rival-ai.ts`: Store House first when fertile sites are in reach and the piece has none; farms on fertile cells of a piece with a Store House; a Store House for capacity when the pool exceeds 80% of the cap; a `setFarmOutput` to level 2 while net income is negative, back to the default when it recovers; `buildReserve` gating unchanged (S12)
-- [ ] T054 [US5] Extend the difficulty table if needed so harder rounds build the new buildings earlier (`src/sim/difficulty.ts`, `src/config/balance.ts`); no change to costs or limits (spec User Story 5)
+- [X] T052 [US5] Add `fertileAt`, `capOf`, `pieces().cap/linkedFarms`, and `farmLevel` to `MoldView` in `src/sim/view.ts` and `src/sim/types.ts` (contracts/sim-api.md)
+- [X] T053 [US5] Extend `planBuild` in `src/sim/ai/rival-ai.ts`: Store House first when fertile sites are in reach and the piece has none; farms on fertile cells of a piece with a Store House; a Store House for capacity when the pool exceeds 80% of the cap; a `setFarmOutput` to level 2 while net income is negative, back to the default when it recovers; `buildReserve` gating unchanged (S12)
+- [X] T054 [US5] Extend the difficulty table if needed so harder rounds build the new buildings earlier (`src/sim/difficulty.ts`, `src/config/balance.ts`); no change to costs or limits (spec User Story 5)
 
 ---
 
@@ -225,5 +225,9 @@ description: "Task list for 003-store-house"
 - US3: `setFarmOutput`, `farmIncomeAt`/`farmUpkeepAt`/`pendingFarmLevel` and the farm panel (`src/ui/farm-panel.ts`) are in. Clicking elsewhere on the map deselects the farm and also sets a growth target, as an ordinary click does. Verified in headless Chrome: select, `]` to level 6, `[` down to 0 (parked).
 
 - US4: `recomputeSupply` runs at flow cadence (and on place/destroy) before food and growth; a store house boosts while its piece is paid and stock >= lowStock (back on at 1.25x). Tips multiply the progress of each granted nutrient by `supply[head]`; harvester-owned food absorbs `base x rateMult x supply[cell]`. A per-tick `supplyUse` set (not hashed) records pieces where a boosted tip or harvester did work, and `drainStoreHouses` (after growth) drains `drain`/s per boosting store house there. Rings (not the booster glow) mark the covered vein; a `boosting` flag per building is hashed.
+
+- US5: `MoldView` gained `fertileAt`, `pieceOf`, `farms()`, `farmLevel`, `rules`, and per-piece `cap`/`storeHouses`/`linkedFarms`; nothing about other molds' farms. The AI builds a store house first, then farms on fertile cells of a stocked piece, and a capacity store house when a piece passes 80% of its cap (up to `perPiece`).
+- T053 deviation: the plan said turn farms down while net income is negative, but a lower level always earns less than it saves, so the AI turns a linked farm down to level 2 while its piece is full (it pays nothing then but still costs upkeep) and back to the default once the stock is under half the cap.
+- T054: no change needed. `rivalBuildReserve` already shrinks each round (`buildReserveBase` minus `buildReserveStep` per round, floored at `buildReserveMin`), so harder rounds build the new buildings earlier through the same gate, with no change to costs or limits.
 
 (more notes as tasks complete)

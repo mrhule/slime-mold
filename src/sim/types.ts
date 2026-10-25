@@ -264,7 +264,7 @@ export interface MoldView {
     id: MoldId;
     allocation: number;
     cellCount: number;
-    components: { id: number; pool: number; cap: number; storeHouses: number; cellCount: number; orphaned: boolean }[];
+    components: { id: number; pool: number; cap: number; storeHouses: number; linkedFarms: number; cellCount: number; orphaned: boolean }[];
     targets: HudTarget[];
     frontCells: CellIndex[];
     frontLoss: number;
@@ -275,6 +275,12 @@ export interface MoldView {
   visibility(cell: CellIndex): 0 | 1 | 2;
   /** fertile ground is terrain: known to every mold, like obstacles */
   fertileAt(cell: CellIndex): boolean;
+  /** the mold's own farms with the stock and cap of the piece each stands in (nothing is exposed about other molds' farms) */
+  farms(): { id: number; cell: CellIndex; level: number; linked: boolean; pool: number; cap: number }[];
+  /** an own farm's output level, or -1 if the id is not one of its farms */
+  farmLevel(buildingId: number): number;
+  /** public rules the AI plans with */
+  rules: { storeHousesPerPiece: number; farmDefaultLevel: number };
   /** id of the mold's own piece holding this cell, or -1 */
   pieceOf(cell: CellIndex): number;
   ownerAt(cell: CellIndex): MoldId | 0;

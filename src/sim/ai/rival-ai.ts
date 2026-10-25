@@ -54,6 +54,16 @@ function planBuild(view: MoldView, state: AiState): Command | null {
     }
   }
 
+  // a piece that is nearly full: another store house, so income is not wasted at the cap
+  if (affords('storehouse', 0.5)) {
+    const crowded = view.self.components.filter((c) => !c.orphaned && c.cap > 0 && c.pool > 0.8 * c.cap && c.storeHouses < view.rules.storeHousesPerPiece);
+    for (const piece of crowded) {
+      for (const s of own) {
+        if (view.pieceOf(s) === piece.id && view.canBuild('storehouse', s)) return place('storehouse', s);
+      }
+    }
+  }
+
   // big food within reach: a harvester to pay it out sooner
   if (affords('harvester', 0.5)) {
     for (const f of view.knownFood()) {
@@ -84,6 +94,20 @@ function planBuild(view: MoldView, state: AiState): Command | null {
       }
       return place('farm', c);
     }
+  }
+  return null;
+}
+
+/**
+ * Farm output (003): a farm whose piece is full pays nothing but still costs upkeep, so turn it
+ * down to level 2; turn it back up to the default once the stock has room again. Same command the
+ * player's dial sends.
+ */
+function planOutput(view: MoldView): Command | null {
+  const me = view.self.id;
+  for (const f of view.farms()) {
+    if (f.linked && f.pool >= f.cap - 1 && f.level > 2) return { type: 'setFarmOutput', mold: me, building: f.id, level: 2 };
+    if (f.pool < 0.5 * f.cap && f.level < view.rules.farmDefaultLevel) return { type: 'setFarmOutput', mold: me, building: f.id, level: view.rules.farmDefaultLevel };
   }
   return null;
 }
@@ -162,6 +186,8 @@ export function think(view: MoldView, state: AiState, rng: Rng, maxCommands: num
 
   const build = planBuild(view, state);
   if (build) commands.splice(Math.min(1, commands.length), 0, build);
+  const output = planOutput(view);
+  if (output) commands.splice(Math.min(1, commands.length), 0, output); // cheap and rare, so it is never cut by the command limit
 
   state.debug = candidates.slice(0, 3).map((c) => `${c.kind}@${c.cell % w},${Math.floor(c.cell / w)} ${c.score.toFixed(2)}`);
   if (build && build.type === 'placeBuilding') state.debug.unshift(`build ${build.building}`);

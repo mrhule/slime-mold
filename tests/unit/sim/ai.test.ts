@@ -10,6 +10,8 @@ import { addCell } from '../../../src/sim/network';
 import { Rng } from '../../../src/sim/rng';
 import type { AiState, Command, World } from '../../../src/sim/types';
 import { viewFor } from '../../../src/sim/view';
+import { defaultBalance } from '../../../src/config/balance';
+import { canPlace, placeBuilding } from '../../../src/sim/buildings';
 import { cellOf, createOpenWorld, withStoreHouse } from '../../helpers';
 
 function rivalWorld(aggression = 0.5): { world: World; id: number; state: AiState } {
@@ -241,5 +243,67 @@ describe('rival AI building (US4)', () => {
     expect(view.canBuild('farm', cellOf(world, 21, 30))).toBe(true);
     expect(view.canBuild('farm', cellOf(world, 50, 10))).toBe(false); // empty ground
     expect(view.canBuild('farm', cellOf(world, 90, 50))).toBe(false); // the other mold's core
+  });
+});
+
+describe('rival AI: store houses, farms and output (003 US5)', () => {
+  const placements2 = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'placeBuilding' }> => c.type === 'placeBuilding');
+  const outputs = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'setFarmOutput' }> => c.type === 'setFarmOutput');
+
+  function funded(pool: number, reserve = 10) {
+    const { world, id, state } = rivalWorld(0.5);
+    state.buildReserve = reserve;
+    for (const c of world.components.values()) if (c.moldId === id) c.pool = pool;
+    updateVision(world);
+    return { world, id, state };
+  }
+
+  it('never issues a placement the sim would refuse', () => {
+    const { world, id, state } = funded(250);
+    world.fertile[cellOf(world, 21, 30)] = 1;
+    for (let round = 0; round < 6; round++) {
+      const cmds = think(viewFor(world, id), state, new Rng(round + 1), 3);
+      for (const p of placements2(cmds)) {
+        expect(canPlace(world, id, p.building, p.cell), `${p.building}@${p.cell}`).toEqual({ ok: true });
+        enqueue(world, p);
+      }
+      step(world);
+      for (const c of world.components.values()) if (c.moldId === id) c.pool = 250;
+    }
+  });
+
+  it('builds a store house for capacity when a piece is nearly full, up to the per-piece count', () => {
+    const { world, id, state } = funded(0.9 * defaultBalance.pool.baseCap);
+    const cmds = placements2(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(cmds.some((c) => c.building === 'storehouse')).toBe(true);
+    // with the per-piece count already reached it does not stack more
+    const piece = [...world.components.values()].find((c) => c.moldId === id)!;
+    const arms = [world.molds[id - 1]!.core + 1, world.molds[id - 1]!.core - 1, world.molds[id - 1]!.core + world.width];
+    for (const cell of arms.slice(0, defaultBalance.buildings.storehouse.perPiece)) withStoreHouse(world, id, cell);
+    piece.pool = 0.95 * (defaultBalance.pool.baseCap + defaultBalance.buildings.storehouse.capacity * defaultBalance.buildings.storehouse.perPiece);
+    updateVision(world);
+    const again = placements2(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(again.some((c) => c.building === 'storehouse')).toBe(false);
+  });
+
+  it('turns a farm down while its piece is full, and back up when there is room', () => {
+    const { world, id, state } = funded(100);
+    const core = world.molds[id - 1]!.core;
+    world.fertile[core + 1] = 1;
+    placeBuilding(world, id, 'farm', core + 1);
+    withStoreHouse(world, id, core - 1);
+    const piece = [...world.components.values()].find((c) => c.moldId === id)!;
+    const cap = defaultBalance.pool.baseCap + defaultBalance.buildings.storehouse.capacity;
+    piece.pool = cap;
+    updateVision(world);
+    const down = outputs(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(down).toHaveLength(1);
+    expect(down[0]).toMatchObject({ mold: id, level: 2 });
+    const farmB = world.buildings.find((b) => b.type === 'farm')!;
+    farmB.level = 2;
+    piece.pool = 0.3 * cap;
+    updateVision(world);
+    const up = outputs(think(viewFor(world, id), state, new Rng(1), 3));
+    expect(up[0]).toMatchObject({ level: defaultBalance.buildings.farm.defaultLevel });
   });
 });

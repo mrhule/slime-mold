@@ -49,3 +49,40 @@ describe('a round against a rival (US2 independent test)', () => {
     }
   }, 240_000);
 });
+
+describe('rivals use store houses and fertile farms (003 US5)', () => {
+  it('over several seeds rivals build store houses and linked farms, only legally', () => {
+    let storeHouses = 0;
+    let farms = 0;
+    let linkedFarms = 0;
+    // a rich start so the build reserve is met early (difficulty changes timing only)
+    for (const seed of [2001, 2002, 2003, 2004]) {
+      const world = createRound({ runSeed: seed, roundNumber: 6 });
+      const state: AiState = { aggression: 0.5, debug: [] };
+      const rng = new Rng(seed ^ 0x77);
+      const interval = Math.round(1.2 / 0.05);
+      for (let t = 0; t < 20 * 60 * 6; t++) {
+        if (t % interval === 0 && world.molds[0]!.status === 'alive') {
+          for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
+        }
+        step(world);
+        if (world.outcome !== 'playing') break;
+      }
+      assertInvariants(world); // includes: every farm stands on fertile ground, levels are 0..6
+      for (const b of world.buildings) {
+        if (b.destroyed) continue;
+        if (b.type === 'storehouse') storeHouses++;
+        if (b.type === 'farm') {
+          farms++;
+          expect(world.fertile[b.cell]).toBe(1);
+          if (b.linked) linkedFarms++;
+        }
+      }
+      // the rivals of the round (molds 2..) obey the same rules; their records are in the same list
+      expect(world.molds.length).toBeGreaterThan(1);
+    }
+    expect(storeHouses).toBeGreaterThan(0);
+    expect(farms).toBeGreaterThan(0);
+    expect(linkedFarms).toBeGreaterThan(0);
+  }, 120_000);
+});
