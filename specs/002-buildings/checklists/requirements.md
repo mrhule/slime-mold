@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain (1 open: FR-010, what "stronger" covers)
+- [x] No [NEEDS CLARIFICATION] markers remain (FR-010 resolved 2026-10-25)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Resolve FR-010, then run `/speckit-clarify` (optional) or `/speckit-plan`.
+- All items pass. Ready for `/speckit-clarify` (optional) or `/speckit-plan`.
 - `.specify/feature.json` still points at `specs/001-core-game-loop`, so the Spec Kit commands
   keep working on the core game. Point it at `specs/002-buildings` when planning this feature.

@@ -186,9 +186,8 @@ player only when it is in view.
 **Booster Factory**
 
 - **FR-010**: A Booster Factory MUST strengthen its owner's cells inside a fixed area around it
-  while it works. [NEEDS CLARIFICATION: what does "stronger" cover? Combat only (stronger
-  attack and tougher cells at fronts), combat plus faster growth in the area, or combat plus
-  extra income from the area?]
+  while it works, in combat only: those cells MUST deliver stronger pressure at fronts and MUST
+  be harder to destroy. It MUST NOT change growth speed or income.
 - **FR-011**: The factory's bonus MUST stop while its piece cannot pay its upkeep.
 - **FR-012**: Overlapping factory areas MUST stack with a cap, so stacking does not grow without
   limit.
@@ -257,3 +256,10 @@ player only when it is in view.
   upkeep loses its outermost cells (001 FR-006). That makes income, and so farms and food, the
   limit on how big a mold can grow.
 - Buildings are placed by mouse and keyboard on desktop, like the rest of the game.
+
+## Clarifications
+
+### Session 2026-10-25
+
+- Q: What should a Booster Factory make stronger? → A: Combat only (attack pressure and
+  toughness of cells at fronts). No growth or income bonus.
