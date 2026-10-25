@@ -2,6 +2,7 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
+import trackUrls from 'virtual:music-tracks';
 import { loadSettings, saveSettings } from './audio/settings';
 import type { Settings } from './audio/settings';
 import { FixedStepLoop } from './game/loop';
@@ -66,6 +67,7 @@ async function main(): Promise<void> {
   const store = safeLocalStorage();
   let settings: Settings = loadSettings(store);
   const engine = new AudioEngine();
+  engine.setTracks(trackUrls); // the files in public/music; none means the generated loop
   const director = new Director();
   engine.setSettings(settings);
   const unlockAudio = (): void => {

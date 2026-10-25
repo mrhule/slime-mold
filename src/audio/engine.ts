@@ -4,6 +4,8 @@ import { Music } from './music';
 import { defaultSettings } from './settings';
 import type { Settings } from './settings';
 import { playCue } from './synth';
+import { TrackPlayer } from './tracks';
+import type { TrackElementFactory } from './tracks';
 
 /** music sits under the effects at the same slider position */
 const MUSIC_BUS_SCALE = 0.55;
@@ -30,6 +32,8 @@ export class AudioEngine {
   private sfx: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private music: Music | null = null;
+  private tracks: TrackPlayer | null = null;
+  private trackUrls: string[] = [];
   private settings: Settings = defaultSettings();
   private playing = false;
   private wantMusic = false;
@@ -38,7 +42,13 @@ export class AudioEngine {
   constructor(
     private readonly makeContext: ContextFactory = browserContext,
     private readonly now: () => number = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()),
+    private readonly makeTrackElement?: TrackElementFactory,
   ) {}
+
+  /** recorded tracks to play as the music (shuffled, endless); with none, or none that load, the generated loop plays */
+  setTracks(urls: readonly string[]): void {
+    this.trackUrls = urls.slice();
+  }
 
   /** whether sound can play at all (a context exists) */
   get available(): boolean {
@@ -93,8 +103,13 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (!ctx) return;
     try {
-      if (this.playing) void ctx.resume?.();
-      else void ctx.suspend?.();
+      if (this.playing) {
+        void ctx.resume?.();
+        this.tracks?.resume();
+      } else {
+        void ctx.suspend?.();
+        this.tracks?.pause();
+      }
     } catch {
       /* ignore */
     }
@@ -115,7 +130,23 @@ export class AudioEngine {
   startMusic(): void {
     this.wantMusic = true;
     const ctx = this.ctx;
-    if (!ctx || !this.musicBus || this.music?.playing) return;
+    if (!ctx || !this.musicBus || this.music?.playing || this.tracks?.playing) return;
+    if (this.trackUrls.length > 0) {
+      try {
+        this.tracks = new TrackPlayer(ctx, this.musicBus, this.trackUrls, () => this.startGeneratedMusic(), this.makeTrackElement);
+        this.tracks.start();
+        if (!this.playing) this.tracks.pause();
+        return;
+      } catch {
+        this.tracks = null;
+      }
+    }
+    this.startGeneratedMusic();
+  }
+
+  private startGeneratedMusic(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.musicBus || this.music?.playing || !this.wantMusic) return;
     try {
       this.music = new Music(ctx, this.musicBus);
       this.music.start();
@@ -126,6 +157,8 @@ export class AudioEngine {
 
   stopMusic(): void {
     this.wantMusic = false;
+    this.tracks?.stop();
+    this.tracks = null;
     this.music?.stop();
     this.music = null;
   }
