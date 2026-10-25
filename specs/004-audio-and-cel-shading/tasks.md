@@ -138,15 +138,15 @@ Nothing in `src/sim/` changes in this feature.
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T039 [P] [US4] Test shake in `tests/unit/render/shake.test.ts`: `shakeImpulse(n)` is `0` for `0` deaths, grows with `sqrt(n)`, and caps at `style.shake.max`; the amplitude decays to under 5% within one second; with `reduceMotion` set, the offset is always `0`; the offset never changes the camera's real `x`, `y` or clamping
+- [X] T039 [P] [US4] Test shake in `tests/unit/render/shake.test.ts`: `shakeImpulse(n)` is `0` for `0` deaths, grows with `sqrt(n)`, and caps at `style.shake.max`; the amplitude decays to under 5% within one second; with `reduceMotion` set, the offset is always `0`; the offset never changes the camera's real `x`, `y` or clamping
 
 ### Implementation for User Story 4
 
-- [ ] T040 [US4] Add `shakeImpulse(n)` to `src/render/style.ts` and a decaying shake to `src/render/camera.ts`: `addShake(amount)`, `tickShake(dt)`, and an offset applied inside `apply()` to `world.position` only (never to `x`, `y`, `centerOn` or `clamp`); a small local seeded generator drives the direction; `reduceMotion` makes the offset `0` (A13, FR-014)
-- [ ] T041 [US4] Add splats to `src/render/fx-layer.ts`: `addSplat(cell, width, color, pattern)` draws a short comic ink burst in the dying mold's colour with its ink pattern marks, fading over `style.splats.lifeSeconds`; at most `maxPerFrame` per frame, scaled by `style.quality[level].splatScale`
-- [ ] T042 [US4] Wire fights in `src/main.ts`: for each entry of `visibleDeaths(...)`, call `renderer.fx.addSplat`; call `renderer.camera.addShake(shakeImpulse(count))` once per frame with the visible count; pass `reduceMotion` from settings to the camera
-- [ ] T043 [US4] Add a Reduce motion toggle to the Settings section in `src/ui/screens.ts` (also turns off any flashing, such as repeated bright full-screen effects), applied immediately and saved
-- [ ] T044 [US4] Playtest checklist (US4 section): splats read in the dying mold's colour and pattern; shake scales with fight size and never moves the HUD; Reduce motion stops it completely; a fight in fog gives no sound, splat or shake
+- [X] T040 [US4] Add `shakeImpulse(n)` to `src/render/style.ts` and a decaying shake to `src/render/camera.ts`: `addShake(amount)`, `tickShake(dt)`, and an offset applied inside `apply()` to `world.position` only (never to `x`, `y`, `centerOn` or `clamp`); a small local seeded generator drives the direction; `reduceMotion` makes the offset `0` (A13, FR-014)
+- [X] T041 [US4] Add splats to `src/render/fx-layer.ts`: `addSplat(cell, width, color, pattern)` draws a short comic ink burst in the dying mold's colour with its ink pattern marks, fading over `style.splats.lifeSeconds`; at most `maxPerFrame` per frame, scaled by `style.quality[level].splatScale`
+- [X] T042 [US4] Wire fights in `src/main.ts`: for each entry of `visibleDeaths(...)`, call `renderer.fx.addSplat`; call `renderer.camera.addShake(shakeImpulse(count))` once per frame with the visible count; pass `reduceMotion` from settings to the camera
+- [X] T043 [US4] Add a Reduce motion toggle to the Settings section in `src/ui/screens.ts` (also turns off any flashing, such as repeated bright full-screen effects), applied immediately and saved
+- [X] T044 [US4] Playtest checklist (US4 section): splats read in the dying mold's colour and pattern; shake scales with fight size and never moves the HUD; Reduce motion stops it completely; a fight in fog gives no sound, splat or shake
 
 **Checkpoint**: US4 works; fights feel heavier
 
@@ -238,5 +238,9 @@ Nothing in `src/sim/` changes in this feature.
 - T036/T037: the vein vertex format gained a third style float (pulse phase hashed per edge); the flow attribute now carries a signed pulse count (0, 1 or 2) instead of raw flow. `uPulses` is 0 on Low quality (set by `GameRenderer.setQuality`).
 - T029/T030: building and food shading were extended in the existing draw code (lit strips upper left, shade strips lower right); glass obstacles already matched the light (T031, no change).
 - Sound was not heard by the implementer: the synth recipes and music need an ear check (checklist US1).
+
+- US4 (T039-T044): `shakeImpulse` is in `style.ts`; `Camera` got `addShake`/`tickShake`/`reduceMotion` and applies the offset only to the drawn world container (never to `x`, `y` or the clamp); `FxLayer` got `addSplat` (capped per frame, half on Low) with the dying mold colour and ink pattern; `main.ts` feeds both from `visibleDeaths`. The Settings menu has a Reduce motion toggle that also stops CSS animation through a `reduce-motion` class. Suite: 53 files / 347 tests.
+- The forage integration test got a 30 s timeout: it needs about 1-5 s depending on load and sat just under vitest's 5 s default when the whole suite runs in parallel.
+- Untracked files `public/` and `tools/generate-track.ts` (not from this feature work) are in the working tree and were left out of the commits; `npm run typecheck` reports errors inside `tools/generate-track.ts` only.
 
 (more notes as tasks complete)

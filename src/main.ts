@@ -17,6 +17,7 @@ import { Hud } from './ui/hud';
 import { FarmPanel } from './ui/farm-panel';
 import { InputController } from './ui/input';
 import { FOOD_NAMES, reasonText } from './ui/messages';
+import { shakeImpulse } from './render/style';
 import { Screens } from './ui/screens';
 
 const PLAYER = 1;
@@ -106,14 +107,20 @@ async function main(): Promise<void> {
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
   }, { get: () => settings, set: (change) => applySettings(change) });
+  const reduceMotion = (): void => {
+    renderer.camera.reduceMotion = settings.reduceMotion;
+    document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);
+  };
   applySettings = (change) => {
     settings = { ...settings, ...change };
     saveSettings(settings, store);
     engine.setSettings(settings);
     hud.setMuted(settings.muted);
+    reduceMotion();
     screens.syncSettings();
   };
   hud.setMuted(settings.muted);
+  reduceMotion();
   const debug = dev ? new DebugOverlay(ui, params.has('debug')) : null;
 
   // the clock stops when the tab is hidden or loses focus (FR-027)
@@ -206,6 +213,15 @@ async function main(): Promise<void> {
       });
       for (const request of requests) engine.play(request);
     }
+
+    // fights you can see: ink splats for each visible death and a shake scaled by how many (A13)
+    const deaths = visibleDeaths(run.world, frameEvents, PLAYER);
+    for (const d of deaths) {
+      const dying = run.world.molds[d.mold - 1];
+      if (dying) renderer.fx.addSplat(d.cell, run.world.width, dying.color, dying.pattern);
+    }
+    renderer.camera.addShake(shakeImpulse(deaths.length));
+    renderer.camera.tickShake(dt);
     frameEvents.length = 0;
 
     const extra = run.world.molds

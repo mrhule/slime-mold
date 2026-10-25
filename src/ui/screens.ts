@@ -104,6 +104,7 @@ export class Screens {
       <label class="setting"><span>Sound</span>${slider('sfxVolume', s.sfxVolume)}</label>
       <label class="setting"><span>Music</span>${slider('musicVolume', s.musicVolume)}</label>
       <label class="setting"><span>Mute all</span><input type="checkbox" data-setting="muted" ${s.muted ? 'checked' : ''} /></label>
+      <label class="setting" title="Turns off screen shake and flashing or bouncing effects"><span>Reduce motion</span><input type="checkbox" data-setting="reduceMotion" ${s.reduceMotion ? 'checked' : ''} /></label>
     </div>`;
   }
 

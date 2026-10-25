@@ -128,6 +128,12 @@ html, body {
 .mute-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 .mute-btn.muted { background: #ffd9d0; }
 
+/* Reduce motion: nothing bounces, pulses or flashes in the interface */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 .settings { margin: 10px 0 6px; padding-top: 8px; border-top: 3px solid var(--ink); text-align: left; }
 .settings h3 { font-family: var(--display); font-size: 20px; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 6px; }
 .settings .setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 0; font-weight: 800; }

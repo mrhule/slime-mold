@@ -8,6 +8,7 @@ import { FoodLayer } from './food-layer';
 import { FxLayer } from './fx-layer';
 import type { PlacementGhost } from './fx-layer';
 import { bakeTerrain } from './terrain-layer';
+import { style } from './style';
 import type { QualityLevel } from './style';
 import { VeinLayer } from './vein-layer';
 import { CELL } from './units';
@@ -46,6 +47,7 @@ export class GameRenderer {
     this.buildings = new BuildingLayer();
     this.fog = new FogLayer(sim);
     this.fx = new FxLayer();
+    this.fx.setSplatScale(style.quality[this.quality].splatScale);
     this.world.addChild(bakeTerrain(sim), this.film.container, this.food.container, this.veins.container, this.buildings.container, this.fog.container, this.fx.container);
     const core = sim.molds[0]?.core ?? 0;
     this.camera.zoom = 1.2;
@@ -55,6 +57,7 @@ export class GameRenderer {
   /** switch the quality level; layers pick it up on their next draw */
   setQuality(level: QualityLevel): void {
     this.quality = level;
+    this.fx?.setSplatScale(style.quality[level].splatScale);
   }
 
   resize(): void {

@@ -4,6 +4,7 @@ import { boosterCover, storeCover } from '../sim/index';
 import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
+import { style } from './style';
 import { CELL } from './units';
 
 interface Ping {
@@ -31,6 +32,16 @@ interface Landing {
 
 const LANDING_SECONDS = 0.8;
 
+/** a short ink burst where a visible cell died, in the dying mold's colour and ink pattern */
+interface Splat {
+  x: number;
+  y: number;
+  seed: number;
+  color: number;
+  pattern: number;
+  age: number;
+}
+
 const STATE_COLOR = { growing: -1, starved: 0xe8872b, blocked: 0xe0432a, arrived: 0xffffff } as const;
 const PING_SECONDS = 0.9;
 
@@ -40,6 +51,9 @@ export class FxLayer {
   private readonly g = new Graphics();
   private pings: Ping[] = [];
   private landings: Landing[] = [];
+  private splats: Splat[] = [];
+  private splatBudget: number = style.splats.maxPerFrame;
+  private splatsThisFrame = 0;
   private readonly countdowns = new Map<number, Text>();
 
   constructor() {
@@ -49,6 +63,56 @@ export class FxLayer {
   /** a dust burst where a food drop just landed */
   addLanding(cell: number, width: number, radius: number): void {
     this.landings.push({ x: (cell % width) * CELL + CELL / 2, y: Math.floor(cell / width) * CELL + CELL / 2, r: radius, age: 0 });
+  }
+
+  /** how many splats a frame may add (half on Low quality, A14) */
+  setSplatScale(scale: number): void {
+    this.splatBudget = Math.max(0, Math.floor(style.splats.maxPerFrame * scale));
+  }
+
+  /**
+   * An ink splat for a cell that died in view (A13). Capped per frame so a huge fight stays cheap;
+   * callers pass only deaths the player can see, so a splat never reveals a hidden fight (FR-005).
+   */
+  addSplat(cell: number, width: number, colorIndex: number, pattern: number): void {
+    if (this.splatsThisFrame >= this.splatBudget) return;
+    this.splatsThisFrame++;
+    this.splats.push({
+      x: (cell % width) * CELL + CELL / 2,
+      y: Math.floor(cell / width) * CELL + CELL / 2,
+      seed: cell,
+      color: moldColor(colorIndex),
+      pattern,
+      age: 0,
+    });
+  }
+
+  /** jagged comic splat that swells and fades, with the dying mold's pattern marks inside */
+  private drawSplats(g: Graphics, dt: number): void {
+    const life = style.splats.lifeSeconds;
+    this.splats = this.splats.filter((s) => (s.age += dt) < life);
+    for (const s of this.splats) {
+      const t = s.age / life;
+      const a = 1 - t * t;
+      const outer = 8 + 9 * Math.sqrt(t);
+      const pts: number[] = [];
+      const spikes = 7;
+      for (let i = 0; i < spikes * 2; i++) {
+        const ang = (i / (spikes * 2)) * Math.PI * 2 + hash2(s.seed, 3, 17) * 6;
+        const r = i % 2 === 0 ? outer * (0.8 + hash2(s.seed, i, 18) * 0.5) : outer * 0.5;
+        pts.push(s.x + Math.cos(ang) * r, s.y + Math.sin(ang) * r);
+      }
+      g.poly(pts, true).fill({ color: s.color, alpha: a }).stroke({ width: 1.8, color: INK, alpha: a, join: "miter" });
+      // the mold's ink pattern, so the splat is not identified by colour alone (FR-033)
+      const m = { width: 1.4, color: INK, alpha: a * 0.8 };
+      const k = outer * 0.38;
+      if (s.pattern === 1) g.moveTo(s.x - k, s.y + k).lineTo(s.x + k, s.y - k).stroke(m);
+      else if (s.pattern === 2) for (const [ox, oy] of [[-k * 0.5, -k * 0.4], [k * 0.5, k * 0.1], [-k * 0.1, k * 0.6]] as const) g.circle(s.x + ox, s.y + oy, 1.1).fill({ color: INK, alpha: a * 0.8 });
+      else if (s.pattern === 3) g.circle(s.x, s.y, k * 0.7).stroke(m);
+      else if (s.pattern === 4) g.moveTo(s.x - k, s.y - k).lineTo(s.x + k, s.y + k).moveTo(s.x + k, s.y - k).lineTo(s.x - k, s.y + k).stroke(m);
+      else if (s.pattern === 5) g.moveTo(s.x - k, s.y).quadraticCurveTo(s.x - k * 0.4, s.y - k * 0.8, s.x, s.y).quadraticCurveTo(s.x + k * 0.4, s.y + k * 0.8, s.x + k, s.y).stroke(m);
+    }
+    this.splatsThisFrame = 0;
   }
 
   addRejectPing(cell: number, width: number): void {
@@ -176,6 +240,7 @@ export class FxLayer {
       }
     }
     this.drawBursts(g, world, timeSeconds);
+    this.drawSplats(g, dt);
     this.drawDrops(g, world, dt, timeSeconds);
     if (ghost && player) {
       const [gx, gy] = cellCenter(ghost.cell, world.width);

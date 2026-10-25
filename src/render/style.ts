@@ -58,3 +58,9 @@ export function pulseCount(flow: number): 0 | 1 | 2 {
   if (!(flow >= style.pulse.minFlow)) return 0;
   return flow >= style.pulse.heavyFlow ? 2 : 1;
 }
+
+/** screen-shake amplitude (px) for `n` visible deaths in a frame: grows with sqrt(n), capped (A13) */
+export function shakeImpulse(n: number): number {
+  if (!(n > 0)) return 0;
+  return Math.min(style.shake.max, style.shake.k * Math.sqrt(n));
+}

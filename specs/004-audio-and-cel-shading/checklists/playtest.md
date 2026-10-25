@@ -28,3 +28,11 @@ Run with `npm run dev` (add `?seed=7&nopause` for a fixed map). Tick each item w
 - [ ] Pulses shift toward the fronts when the slider goes to Fight.
 - [ ] Rival veins in view pulse; rival veins in fog are not drawn and show nothing.
 - [ ] On Low quality (once the setting exists) pulses are off and nothing else breaks.
+
+## US4: Fight impact and screen shake
+
+- [ ] A cell dying in view bursts into an ink splat in the dying mold's colour, with its ink pattern
+      marks inside, so it is not told apart by colour alone.
+- [ ] The shake scales with the size of the fight and never moves the HUD or the build bar.
+- [ ] Reduce motion (pause menu, Settings) stops the shake completely and the bouncing hints too.
+- [ ] A fight in fog gives no sound, no splat and no shake.
