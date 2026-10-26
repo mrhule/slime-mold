@@ -77,6 +77,11 @@ export class InputController {
     return snapPlacement(this.getWorld(), PLAYER, this.placing, cell, radius);
   }
 
+  /** the cell under the mouse, or null (off the map, or no mouse over the canvas) */
+  get pointerCell(): number | null {
+    return this.pointer ? this.cellAt(this.pointer.x, this.pointer.y) : null;
+  }
+
   private cellAt(sx: number, sy: number): number | null {
     const sim = this.getWorld();
     const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);

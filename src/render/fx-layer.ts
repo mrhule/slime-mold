@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import { boosterCover, storeCover } from '../sim/index';
-import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover } from './building-layer';
+import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { style } from './style';
@@ -55,6 +55,8 @@ export class FxLayer {
   private splatBudget: number = style.splats.maxPerFrame;
   private splatsThisFrame = 0;
   private readonly countdowns = new Map<number, Text>();
+  /** per working store house: its covered veins and each cell's step toward home, refreshed a few times a second */
+  private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number }[] }>();
 
   constructor() {
     this.container.addChild(this.g);
@@ -213,9 +215,36 @@ export class FxLayer {
     return [(cell % width) * CELL + CELL / 2, Math.floor(cell / width) * CELL + CELL / 2];
   }
 
-  update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null): void {
+  /**
+   * Droplets flowing home along every vein a working store house speeds up. The full coverage
+   * rings appear only for the store house being inspected (hovered), not all the time.
+   */
+  private drawStoreFlow(g: Graphics, world: Readonly<World>, timeSeconds: number, inspect: number | null): void {
+    const vision = world.molds[0]?.vision;
+    const slot = Math.floor(world.tick / 10);
+    const live = new Set<number>();
+    for (const b of world.buildings) {
+      if (b.type !== 'storehouse' || b.destroyed || !b.boosting) continue;
+      if (b.moldId !== 1 && vision && vision[b.cell] !== 2) continue;
+      live.add(b.id);
+      let entry = this.storeFlows.get(b.id);
+      if (!entry || entry.slot !== slot) {
+        const cover = storeCover(world, b.cell);
+        entry = { slot, cover, steps: homewardSteps(world.width, cover) };
+        this.storeFlows.set(b.id, entry);
+      }
+      const mold = world.molds[b.moldId - 1];
+      const color = moldColor(mold ? mold.color : 0);
+      if (inspect === b.cell) drawStoreCover(g, world.width, entry.cover, world.balance.buildings.storehouse.bonus, color);
+      drawStoreDrops(g, world.width, entry.steps, color, timeSeconds);
+    }
+    for (const id of this.storeFlows.keys()) if (!live.has(id)) this.storeFlows.delete(id);
+  }
+
+  update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null, inspect: number | null = null): void {
     const g = this.g;
     g.clear();
+    this.drawStoreFlow(g, world, timeSeconds, inspect);
     if (player) {
       for (const t of player.targets) {
         const [x, y] = FxLayer.markerPosition(t.cell, world.width);
