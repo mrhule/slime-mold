@@ -10,7 +10,7 @@ import { cellOf, createOpenWorld } from '../helpers';
  * growth/fight slider. Playing it twice with the sides swapped shows the slider, not the
  * position, decides the front.
  */
-function duel(allocLeft: number, allocRight: number, ticks = 2400): { left: number; right: number; world: World } {
+function duel(allocLeft: number, allocRight: number, ticks = 3600): { left: number; right: number; world: World; mostFronts: number } {
   const world = createOpenWorld(91, 41);
   const left = addMold(world, 'player', cellOf(world, 18, 20), 300);
   const right = addMold(world, 'player', cellOf(world, 72, 20), 300);
@@ -18,19 +18,21 @@ function duel(allocLeft: number, allocRight: number, ticks = 2400): { left: numb
   enqueue(world, { type: 'setAllocation', mold: right.id, value: allocRight });
   enqueue(world, { type: 'setTarget', mold: left.id, cell: cellOf(world, 72, 20) });
   enqueue(world, { type: 'setTarget', mold: right.id, cell: cellOf(world, 18, 20) });
+  // fronts come and go as the stock runs out, so remember the most there were at once
+  let mostFronts = 0;
   for (let t = 0; t < ticks; t++) {
     step(world);
     if (t % 400 === 0) assertInvariants(world);
+    if (t % 20 === 0) mostFronts = Math.max(mostFronts, world.molds.reduce((n, m) => n + m.frontCells.length, 0));
   }
   assertInvariants(world);
-  return { left: left.cellCount, right: right.cellCount, world };
+  return { left: left.cellCount, right: right.cellCount, world, mostFronts };
 }
 
 describe('the growth/fight slider (US2 independent test)', () => {
   it('a front forms where the molds meet', () => {
-    const { world } = duel(0.5, 0.5, 1500);
-    const fronts = world.molds.reduce((s, m) => s + m.frontCells.length, 0);
-    expect(fronts).toBeGreaterThan(0);
+    const { mostFronts } = duel(0.5, 0.5, 1500);
+    expect(mostFronts).toBeGreaterThan(0);
   });
 
   it('the side that sends more nutrients to the front wins it', () => {

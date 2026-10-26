@@ -253,7 +253,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 
-  feed: { coreReach: 40, trickle: 0.8 },
+  feed: { coreReach: 40, trickle: 0.5 },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },
