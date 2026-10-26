@@ -1,6 +1,8 @@
 import type { GameRenderer } from '../render/renderer';
 import { FxLayer } from '../render/fx-layer';
 import { canPlace, pendingAllocation } from '../sim';
+import { neighbor } from '../sim/grid';
+import { cutCells } from '../sim/index';
 import { CELL } from '../render/units';
 import type { BuildingType, Command, World } from '../sim/types';
 import { BUILD_HOTKEYS } from './buildbar';
@@ -14,6 +16,8 @@ const EDGE_PAN_SPEED = 520;
 const EDGE_PX = 8;
 const MARKER_HIT_PX = 16;
 const TOUCH_MARKER_HIT_PX = 28;
+const VEIN_HIT_PX = 10;
+const TOUCH_VEIN_HIT_PX = 20;
 
 export interface InputActions {
   /** false on the title and round-end screens, where the map ignores input */
@@ -140,7 +144,7 @@ export class InputController {
         this.send({ type: 'clearTargets', mold: PLAYER });
         return;
       }
-      this.cancelNear(sx, sy, MARKER_HIT_PX);
+      this.secondary(sx, sy, MARKER_HIT_PX, VEIN_HIT_PX);
     }
   };
 
@@ -155,14 +159,70 @@ export class InputController {
       if (allowed && !keepPlacing) this.placing = null;
       return;
     }
+    const factory = this.factoryAt(sx, sy);
+    if (factory !== null) {
+      this.send({ type: 'upgradeBuilding', mold: PLAYER, cell: factory });
+      return;
+    }
     this.send({ type: 'setTarget', mold: PLAYER, cell });
   }
 
+  /** the building the player armed for demolition (right-clicked once, a moment ago), or null */
+  get demolishArmed(): number | null {
+    return this.armed && performance.now() < this.armed.until ? this.armed.cell : null;
+  }
+
+  private armed: { cell: number; until: number } | null = null;
+
+  /**
+   * The right click (or a long press): cancel a target marker, else demolish a building (the second
+   * click within three seconds; the first only arms it), else cut or rejoin a vein.
+   */
+  private secondary(sx: number, sy: number, markerPx: number, veinPx: number): void {
+    if (this.cancelNear(sx, sy, markerPx)) return;
+    const building = this.buildingAt(sx, sy);
+    if (building !== null) {
+      if (this.demolishArmed === building) {
+        this.armed = null;
+        this.send({ type: 'demolishBuilding', mold: PLAYER, cell: building });
+      } else this.armed = { cell: building, until: performance.now() + 3000 };
+      return;
+    }
+    this.armed = null;
+    this.toggleLinkNear(sx, sy, veinPx);
+  }
+
+  /** the cell of the player's building (any kind) under a screen point */
+  private buildingAt(sx: number, sy: number): number | null {
+    const sim = this.getWorld();
+    const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
+    for (const b of sim.buildings) {
+      if (b.destroyed || b.moldId !== PLAYER) continue;
+      const bx = (b.cell % sim.width) * CELL + CELL / 2;
+      const by = Math.floor(b.cell / sim.width) * CELL + CELL / 2;
+      if (Math.hypot(bx - wx, by - wy) <= 14) return b.cell;
+    }
+    return null;
+  }
+
+  /** the cell of the player's factory or relay (the buildings that upgrade) under a screen point, or null */
+  private factoryAt(sx: number, sy: number): number | null {
+    const sim = this.getWorld();
+    const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
+    for (const b of sim.buildings) {
+      if (b.destroyed || (b.type !== 'storehouse' && b.type !== 'relay') || b.moldId !== PLAYER) continue;
+      const bx = (b.cell % sim.width) * CELL + CELL / 2;
+      const by = Math.floor(b.cell / sim.width) * CELL + CELL / 2;
+      if (Math.hypot(bx - wx, by - wy) <= 14) return b.cell;
+    }
+    return null;
+  }
+
   /** cancel the growth target whose marker is nearest to a screen point, if one is within `radius` */
-  private cancelNear(sx: number, sy: number, radius: number): void {
+  private cancelNear(sx: number, sy: number, radius: number): boolean {
     const sim = this.getWorld();
     const mold = sim.molds[PLAYER - 1];
-    if (!mold) return;
+    if (!mold) return false;
     let best: { id: number; d: number } | null = null;
     for (const t of mold.targets) {
       const [mx, my] = FxLayer.markerPosition(t.cell, sim.width);
@@ -170,7 +230,49 @@ export class InputController {
       const d = Math.hypot(px - sx, py - sy);
       if (d <= radius && (!best || d < best.d)) best = { id: t.id, d };
     }
-    if (best) this.send({ type: 'cancelTarget', mold: PLAYER, targetId: best.id });
+    if (!best) return false;
+    this.send({ type: 'cancelTarget', mold: PLAYER, targetId: best.id });
+    return true;
+  }
+
+  /**
+   * Cut the player's vein nearest a screen point, or rejoin a cut it marked, if one is within `radius`.
+   * A cut mark wins a tie so it can always be undone.
+   */
+  private toggleLinkNear(sx: number, sy: number, radius: number): void {
+    const sim = this.getWorld();
+    const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
+    const reach = radius / this.renderer.camera.zoom;
+    const center = (c: number): [number, number] => [(c % sim.width) * CELL + CELL / 2, Math.floor(c / sim.width) * CELL + CELL / 2];
+    let best: { a: number; b: number; d: number } | null = null;
+    for (const key of sim.cuts) {
+      const [a, b] = cutCells(sim, key);
+      const [ax, ay] = center(a);
+      const [bx, by] = center(b);
+      const d = Math.hypot((ax + bx) / 2 - wx, (ay + by) / 2 - wy);
+      if (d <= reach && (!best || d < best.d)) best = { a, b, d: d - 2 };
+    }
+    const cx = Math.floor(wx / CELL);
+    const cy = Math.floor(wy / CELL);
+    const span = Math.ceil(reach / CELL) + 1;
+    for (let y = cy - span; y <= cy + span; y++) {
+      for (let x = cx - span; x <= cx + span; x++) {
+        if (x < 0 || y < 0 || x >= sim.width || y >= sim.height) continue;
+        const a = y * sim.width + x;
+        if (sim.owner[a] !== PLAYER) continue;
+        const bits = sim.edges[a] as number;
+        for (let k = 0; k < 8; k++) {
+          if (!(bits & (1 << k))) continue;
+          const b = neighbor(sim.width, sim.height, a, k);
+          if (b < a) continue; // each vein once
+          const [ax, ay] = center(a);
+          const [bx, by] = center(b);
+          const d = distToSegment(wx, wy, ax, ay, bx, by);
+          if (d <= reach && (!best || d < best.d)) best = { a, b, d };
+        }
+      }
+    }
+    if (best) this.send({ type: 'toggleLink', mold: PLAYER, a: best.a, b: best.b });
   }
 
   /** what a recognized touch gesture does; the same commands the mouse sends, plus local camera moves */
@@ -184,7 +286,9 @@ export class InputController {
         if (cell !== null) this.pending = cell;
       } else this.primary(g.x, g.y, false);
     }
-    else if (g.kind === 'longpress') this.cancelNear(g.x, g.y, TOUCH_MARKER_HIT_PX);
+    else if (g.kind === 'longpress') {
+      this.secondary(g.x, g.y, TOUCH_MARKER_HIT_PX, TOUCH_VEIN_HIT_PX);
+    }
     else if (g.kind === 'pan') cam.pan(-g.dx, -g.dy);
     else cam.zoomAt(g.x, g.y, g.factor);
   }
@@ -230,6 +334,10 @@ export class InputController {
     const building = BUILD_HOTKEYS[k];
     if (building) {
       this.togglePlacing(building);
+      return;
+    }
+    if (k === 'v') {
+      this.send({ type: 'evolve', mold: PLAYER });
       return;
     }
     if (k === ' ') {
@@ -309,4 +417,13 @@ export class InputController {
       if (ex !== 0 || ey !== 0) cam.pan(ex * EDGE_PAN_SPEED * dtSeconds, ey * EDGE_PAN_SPEED * dtSeconds);
     }
   }
+}
+
+/** distance from point (px, py) to the segment (ax, ay)-(bx, by) */
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }

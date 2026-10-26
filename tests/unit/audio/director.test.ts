@@ -109,3 +109,31 @@ describe('director (contracts/audio-cues.md)', () => {
     expect(cues(new Director(), snap({ playerCells: 99, playerGathered: 50 }))).toEqual([]);
   });
 });
+
+describe('director: evolving, upgrading, demolishing and dying back', () => {
+  const ev = (e: SimEvent): DirectorSnapshot => snap({ events: [e] });
+
+  it('plays evolve, upgrade and demolish for the player\'s own events only', () => {
+    const d = new Director();
+    expect(cues(d, ev({ type: 'moldEvolved', mold: 1, tier: 2 }))).toContain('evolve');
+    expect(cues(d, ev({ type: 'buildingUpgraded', id: 0, building: 'storehouse', mold: 1, cell: 5, level: 2 }))).toContain('upgrade');
+    expect(cues(d, ev({ type: 'buildingDestroyed', id: 0, building: 'relay', mold: 1, cell: 5 }))).toContain('demolish');
+    expect(cues(d, ev({ type: 'moldEvolved', mold: 2, tier: 2 }))).not.toContain('evolve');
+    expect(cues(d, ev({ type: 'buildingUpgraded', id: 1, building: 'storehouse', mold: 2, cell: 9, level: 2 }))).not.toContain('upgrade');
+    expect(cues(d, ev({ type: 'buildingDestroyed', id: 1, building: 'relay', mold: 2, cell: 9 }))).not.toContain('demolish');
+  });
+
+  it('plays a soft wither, not a front cue, when your own veins die with no enemy to blame', () => {
+    const d = new Director();
+    const out = cues(d, snap({ visibleDeaths: [{ own: true, byEnemy: false }, { own: true, byEnemy: false }] }));
+    expect(out).toContain('wither');
+    expect(out).not.toContain('frontLost');
+    expect(out).not.toContain('frontWon');
+  });
+
+  it('still plays front cues for kills by an enemy, and ignores rivals withering out of sight of this rule', () => {
+    const d = new Director();
+    expect(cues(d, snap({ nowMs: 1000, visibleDeaths: [{ own: true, byEnemy: true }] }))).toContain('frontLost');
+    expect(cues(d, snap({ nowMs: 5000, visibleDeaths: [{ own: false, byEnemy: false }] }))).not.toContain('wither');
+  });
+});

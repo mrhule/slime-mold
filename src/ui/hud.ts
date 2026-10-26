@@ -6,6 +6,7 @@ export interface HudActions {
   onSpeed(speed: 1 | 2 | 3): void;
   onAllocation(value: number): void;
   onToggleMute(): void;
+  onEvolve(): void;
 }
 
 export interface HudClock {
@@ -40,7 +41,7 @@ export class Hud {
         <div class="panel-title">Slime Mold</div>
         <div class="row"><span class="label">Round</span><span class="value" data-hud="round">1</span></div>
         <div class="row"><span class="label">Time</span><span class="value" data-hud="time">0:00</span></div>
-        <div class="row" title="Nutrients stored across your whole mold, against how much your pieces can hold. Build store houses to hold more."><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
+        <div class="row" title="Nutrients stored across your whole mold, against how much your pieces can hold. Build factories to hold more."><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
         <div class="row" title="Income minus upkeep, per second"><span class="label">Income</span><span class="value" data-hud="income">+0.0/s</span></div>
         <div class="row" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
         <div class="meter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-goal"></div></div>
@@ -55,10 +56,11 @@ export class Hud {
           <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus fight" />
         </label>
         <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
+        <button type="button" class="evolve" data-hud="evolve" hidden title="Spend a fixed amount of nutrients to evolve and unlock new buildings (V). The price does not grow with your factories.">Evolve</button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
         <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
-        <div class="hint kbd-only">Click the map to grow there. Right-click a marker to cancel.</div>
+        <div class="hint kbd-only">Click the map to grow there. Right-click a marker to cancel, or a vein to cut it.</div>
       </div>
       <button type="button" class="mute-btn" data-hud="mute" aria-label="Mute" aria-pressed="false" title="Mute or unmute sound">
         <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
@@ -72,8 +74,9 @@ export class Hud {
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve']) this.el[k] = q(k);
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
+    this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
     this.slider = q('alloc') as HTMLInputElement;
     this.speedButtons = [...root.querySelectorAll<HTMLButtonElement>('.clock button')];
 
@@ -120,6 +123,11 @@ export class Hud {
     this.el.time!.textContent = fmtTime(hud.elapsedSeconds);
     this.el.nutrients!.textContent = `${hud.stock.total.toFixed(1)} / ${Math.round(hud.stock.cap)}${hud.stock.full ? ' FULL' : ''}`;
     this.el.nutrients!.classList.toggle('neg', hud.stock.full);
+    const evolveBtn = this.el.evolve as HTMLButtonElement;
+    const t = hud.tier;
+    evolveBtn.hidden = t.current >= t.max;
+    evolveBtn.classList.toggle('ready', t.ready);
+    evolveBtn.textContent = t.ready ? `Evolve to tier ${t.current + 1} (V): costs ${Math.round(t.cost)}` : `Evolve: needs ${Math.round(t.cost)} nutrients`;
     const sign = hud.netIncome >= 0 ? '+' : '';
     this.el.income!.textContent = `${sign}${hud.netIncome.toFixed(1)}/s`;
     this.el.income!.classList.toggle('neg', hud.netIncome < 0);
@@ -128,7 +136,7 @@ export class Hud {
     this.el.starved!.hidden = !hud.growthStarved;
     const waiting = hud.pools.waiting;
     this.el.unlinked!.hidden = waiting === 0;
-    if (waiting > 0) this.el.unlinked!.textContent = `${waiting} goo ${waiting === 1 ? 'pool is' : 'pools are'} waiting: build a Store House (T) on the same vein`;
+    if (waiting > 0) this.el.unlinked!.textContent = `${waiting} goo ${waiting === 1 ? 'pool is' : 'pools are'} waiting: build a Factory (F) on the same vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
     this.el.chip!.textContent = `Fight ${Math.round(hud.allocation * 100)}%`;
     for (const b of this.speedButtons) {

@@ -13,11 +13,11 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | 'goo';
 
-export type BuildingType = 'booster' | 'harvester' | 'storehouse';
+export type BuildingType = 'booster' | 'harvester' | 'storehouse' | 'relay';
 
 /** what `Mold.memBuilding` stores for each building type (0 = none) */
-export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3 };
-export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse'];
+export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3, relay: 4 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse', 'relay'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -67,6 +67,8 @@ export interface Mold {
   core: CellIndex;
   /** 0 = all growth, 1 = all fight */
   allocation: number;
+  /** 1 at the start; evolving raises it and unlocks buildings with a higher minTier */
+  tier: number;
   targets: GrowthTarget[];
   status: 'alive' | 'eliminated';
   cellCount: number;
@@ -134,7 +136,9 @@ export interface Building {
   placedTick: number;
   /** harvester only: the food source it speeds up, otherwise -1 */
   target: number;
-  /** store house only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
+  /** factory only: 1 when placed, up to maxLevel; each level adds reach */
+  level: number;
+  /** factory only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
   boosting: boolean;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
@@ -154,7 +158,15 @@ export type Command =
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
   | { type: 'setAllocation'; mold: MoldId; value: number }
-  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex };
+  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex }
+  /** cut the vein between two adjacent cells of the mold, or rejoin one it cut earlier */
+  | { type: 'toggleLink'; mold: MoldId; a: CellIndex; b: CellIndex }
+  /** raise the factory on a cell one level: more reach, paid from its piece */
+  | { type: 'upgradeBuilding'; mold: MoldId; cell: CellIndex }
+  /** tear down the mold's building on a cell, getting part of its cost back */
+  | { type: 'demolishBuilding'; mold: MoldId; cell: CellIndex }
+  /** spend most of a full stock to move up a tier */
+  | { type: 'evolve'; mold: MoldId };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -167,7 +179,11 @@ export type PlaceReason =
   | 'cant-afford'
   | 'no-food-nearby'
   | 'food-too-small'
-  | 'already-harvested';
+  | 'already-harvested'
+  | 'no-building'
+  | 'not-upgradable'
+  | 'max-level'
+  | 'locked';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -179,6 +195,8 @@ export type SimEvent =
   | { type: 'moldEliminated'; mold: MoldId }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
+  | { type: 'moldEvolved'; mold: MoldId; tier: number }
+  | { type: 'buildingUpgraded'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex; level: number }
   | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'storeFull'; componentId: number }
   | { type: 'capLost'; componentId: number; amount: number }
@@ -222,6 +240,10 @@ export interface BuildOption {
   limit: number;
   /** some piece of the mold holds at least `cost` */
   affordable: boolean;
+  /** the mold has not evolved far enough to build this yet */
+  locked: boolean;
+  /** the tier that unlocks it */
+  minTier: number;
 }
 
 export interface HudModel {
@@ -237,6 +259,8 @@ export interface HudModel {
   poolIncome: number;
   /** stored nutrients against the caps of the mold's pieces (003) */
   stock: { total: number; cap: number; full: boolean };
+  /** evolving: the mold's tier, the top tier, whether the stock is full enough now, and what the next step costs */
+  tier: { current: number; max: number; ready: boolean; needed: number; cost: number };
   /** goo pools the mold holds a ring cell of, and how many of those wait for a store house on their piece (008) */
   pools: { held: number; waiting: number };
   rivals: {
@@ -267,11 +291,13 @@ export interface MoldView {
   /** goo pools are terrain, known to every mold in the fog like obstacles: the top-left cell and the cells the mold holds of each */
   knownPools(): { cell: CellIndex; w: number; h: number; cells: number; owned: number }[];
   /** public rules the AI plans with */
-  rules: { storeHousesPerPiece: number };
+  rules: { storeHousesPerPiece: number; /** feed at the end of a supply's reach: cells at or below it are out of reach */ feedTrickle: number; factoryMaxLevel: number; factoryUpgradeCost: number[] };
   /** id of the mold's own piece holding this cell, or -1 */
   pieceOf(cell: CellIndex): number;
   ownerAt(cell: CellIndex): MoldId | 0;
   biomassAt(cell: CellIndex): number | null;
+  /** how well fed one of the mold's own cells is, from 1 at supply down to the floor far from it (see balance.feed) */
+  feedAt(cell: CellIndex): number;
   foodAt(cell: CellIndex): number;
   visibleEnemyCells(): CellIndex[];
   knownFood(): { cell: CellIndex; amount: number; stale: boolean }[];
@@ -282,6 +308,8 @@ export interface MoldView {
   ownCells(): CellIndex[];
   /** would a building be allowed here right now? (same rules as the player, own cells only) */
   canBuild(type: BuildingType, cell: CellIndex): boolean;
+  /** the mold's own factories: where, how upgraded, and the piece they stand in */
+  ownFactories(): { cell: CellIndex; level: number; piece: number }[];
   /** the most nutrients any one piece of the mold holds */
   richestPool(): number;
   /** what a building costs (public knowledge) */
@@ -361,8 +389,14 @@ export interface World {
   supply: Float32Array;
   /** true while any working store house boosts some cell (lets rebuilding be skipped) */
   supplyActive: boolean;
+  /** growth speed (trickle..1) from how far each cell is along the veins from the core or a working store house; 1 = right at supply */
+  feed: Float32Array;
+  /** seconds each cell has been out of every supply's reach (it starts dying back after the grace period) */
+  strayFor: Float32Array;
   /** ids of pieces where a boosted tip or harvester did work this tick (store houses drain only then); not hashed, rebuilt every tick */
   supplyUse: Set<number>;
+  /** veins the player cut on purpose, as cutKey(a, b); they are not healed or bridged around until rejoined */
+  cuts: Set<number>;
   drops: DropEvent[];
   /** walkable cells reachable from the starts; drops only fall where molds can get to them */
   reachable: Uint8Array;

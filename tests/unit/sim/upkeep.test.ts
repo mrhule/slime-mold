@@ -78,7 +78,7 @@ describe('upkeep', () => {
   });
 
   it('a half-starved cell heals once upkeep is covered again', () => {
-    const { world, mold, end } = brokeWorld(40);
+    const { world, mold, end } = brokeWorld(30);
     for (let i = 0; i < 20 * 5; i++) step(world);
     expect(world.biomass[end]!).toBeLessThan(1);
     for (const c of world.components.values()) c.pool = 100; // a food windfall

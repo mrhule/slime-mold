@@ -58,6 +58,7 @@ export function canPlace(world: Readonly<World>, moldId: MoldId, type: BuildingT
     if (harvested(world, moldId, target.id)) return { ok: false, reason: 'already-harvested' };
   }
   const spec = world.balance.buildings[type];
+  if (mold.tier < (spec.minTier ?? 1)) return { ok: false, reason: 'locked' };
   if (countBuildings(world, moldId, type) >= spec.limit) return { ok: false, reason: 'limit-reached' };
   const comp = world.components.get(world.component[cell] as number);
   if (!comp || comp.pool < spec.cost) return { ok: false, reason: 'cant-afford' };
@@ -77,6 +78,7 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     cell,
     placedTick: world.tick,
     target: type === 'harvester' ? (harvestTarget(world, cell) as FoodSource).id : -1,
+    level: 1,
     boosting: false,
     destroyed: false,
   };
@@ -87,6 +89,61 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
   if (type === 'storehouse') {
     clampPools(world); // records the higher cap
     recomputeSupply(world);
+  }
+  return { ok: true };
+}
+
+/** how far along the veins a factory reaches: its base reach plus a step for each level above the first */
+export function reachOf(world: Readonly<World>, b: Readonly<Building> | undefined): number {
+  const spec = b?.type === 'relay' ? world.balance.buildings.relay : world.balance.buildings.storehouse;
+  return spec.reach + ((b?.level ?? 1) - 1) * spec.reachPerLevel;
+}
+
+/** the upgrade ladder of a building that has one (factories and relays), else null */
+export function upgradeSpec(world: Readonly<World>, type: BuildingType): { maxLevel: number; reachPerLevel: number; upgradeCost: number[] } | null {
+  if (type === 'storehouse') return world.balance.buildings.storehouse;
+  if (type === 'relay') return world.balance.buildings.relay;
+  return null;
+}
+
+/** Raise a factory one level, paying from its piece; more reach (and a wider boost) at once. */
+export function upgradeBuilding(world: World, moldId: MoldId, cell: CellIndex): PlaceResult {
+  const b = buildingOn(world, cell);
+  if (!b) return { ok: false, reason: 'no-building' };
+  if (b.moldId !== moldId) return { ok: false, reason: 'not-your-cell' };
+  const spec = upgradeSpec(world, b.type);
+  if (!spec) return { ok: false, reason: 'not-upgradable' };
+  if (b.level >= spec.maxLevel) return { ok: false, reason: 'max-level' };
+  const cost = spec.upgradeCost[b.level - 1] ?? Infinity;
+  const comp = world.components.get(world.component[cell] as number);
+  if (!comp || comp.pool < cost) return { ok: false, reason: 'cant-afford' };
+  comp.pool -= cost;
+  b.level++;
+  world.events.push({ type: 'buildingUpgraded', id: b.id, building: b.type, mold: moldId, cell, level: b.level });
+  recomputeSupply(world);
+  recomputeFeed(world);
+  return { ok: true };
+}
+
+/** Tear down a building, paying part of its cost back into its piece. The cell and its veins stay. */
+export function demolishBuilding(world: World, moldId: MoldId, cell: CellIndex): PlaceResult {
+  const b = buildingOn(world, cell);
+  if (!b) return { ok: false, reason: 'no-building' };
+  if (b.moldId !== moldId) return { ok: false, reason: 'not-your-cell' };
+  const comp = world.components.get(world.component[cell] as number);
+  if (comp) {
+    const spec = world.balance.buildings[b.type];
+    const extra = (upgradeSpec(world, b.type)?.upgradeCost ?? []).slice(0, b.level - 1).reduce((a, c) => a + c, 0);
+    comp.pool += (spec.cost + extra) * world.balance.demolishRefund;
+  }
+  b.destroyed = true;
+  world.buildingAt[cell] = -1;
+  world.events.push({ type: 'buildingDestroyed', id: b.id, building: b.type, mold: moldId, cell });
+  if (b.type === 'booster') recomputeBoost(world); // its bonus ends at once
+  if (b.type === 'storehouse') {
+    clampPools(world); // its cap ends at once
+    recomputeSupply(world); // and so does its boost
+    recomputeFeed(world); // and its reach, so veins only it fed start their clock
   }
   return { ok: true };
 }
@@ -209,7 +266,7 @@ export function clampPools(world: World): void {
 /** The cells a store house at `start` boosts for growth and harvest, with their bonus (FR-020). */
 export function storeCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
   const spec = world.balance.buildings.storehouse;
-  return veinCover(world, start, spec.reach, spec.bonus);
+  return veinCover(world, start, reachOf(world, buildingOn(world, start)), spec.bonus);
 }
 
 /** What the placement ghost shows: the verdict plus, for valid spots, what it would do (003). */
@@ -254,6 +311,71 @@ export function recomputeSupply(world: World): void {
     for (const { cell, bonus } of storeCover(world, b.cell)) {
       world.supply[cell] = Math.min(1 + spec.stackCap, (world.supply[cell] as number) + bonus);
     }
+  }
+}
+
+/**
+ * How well fed a vein cell `d` steps along the veins from a supply with the given reach is: 1 right at
+ * it, falling in a line to `trickle` at the end of the reach, then to `floor` (growth almost stops)
+ * half a reach further out, and `floor` beyond.
+ */
+export function feedAt(world: Readonly<World>, d: number, reach: number): number {
+  const { trickle, floor } = world.balance.feed;
+  if (d <= reach) return 1 - ((1 - trickle) * d) / reach;
+  const over = Math.min(1, (d - reach) / (0.5 * reach));
+  return trickle - (trickle - floor) * over;
+}
+
+/**
+ * Rebuild how well each vein cell is fed (see `feedAt`) from the best supply near it: a mold's core,
+ * any cell over food, or a working factory (which has its own reach). Overlapping supplies take the
+ * best, not the sum. Cells out of every reach are left at the floor.
+ */
+export function recomputeFeed(world: World): void {
+  const { coreReach, floor } = world.balance.feed;
+  world.feed.fill(floor);
+  const take = (cell: CellIndex, f: number): void => {
+    if (f > (world.feed[cell] as number)) world.feed[cell] = f;
+  };
+  // the core and every cell over food supply their own veins, all at once: one search from every source
+  const w = world.width;
+  const limit = 1.5 * coreReach;
+  const dist = new Int32Array(world.owner.length).fill(-1);
+  const queue: CellIndex[] = [];
+  const seed = (c: CellIndex): void => {
+    if (dist[c] === 0) return;
+    dist[c] = 0;
+    queue.push(c);
+  };
+  for (const mold of world.molds) if (mold.status === 'alive') seed(mold.core);
+  for (const comp of world.components.values()) for (const s of comp.sources) if (world.owner[s] !== 0) seed(s);
+  for (let head = 0; head < queue.length; head++) {
+    const c = queue[head] as CellIndex;
+    const d = dist[c] as number;
+    take(c, feedAt(world, d, coreReach));
+    if (d + 1 >= limit) continue;
+    const bits = world.edges[c] as number;
+    for (let k = 0; k < 8; k++) {
+      if (!(bits & (1 << k))) continue;
+      const n = c + (DX[k] as number) + (DY[k] as number) * w;
+      if (dist[n] !== -1) continue;
+      dist[n] = d + 1;
+      queue.push(n);
+    }
+  }
+  for (const b of world.buildings) {
+    if (b.destroyed) continue;
+    if (b.type === 'relay') {
+      // a relay carries supply as long as its piece can pay upkeep; it needs no stock
+      const relayReach = reachOf(world, b);
+      const comp = world.components.get(world.component[b.cell] as number);
+      if (comp && !comp.unpaid) for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * relayReach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * relayReach, relayReach));
+      continue;
+    }
+    if (b.type !== 'storehouse' || !b.boosting) continue;
+    const reach = reachOf(world, b);
+    // veinCover tapers 1 -> 0 over its reach, so ask for one and a half reaches and turn each value back into a distance
+    for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * reach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * reach, reach));
   }
 }
 

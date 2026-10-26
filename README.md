@@ -39,10 +39,10 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
   everyone, so it becomes a race.
 - **Spend.** Growing costs nutrients and every cell costs upkeep. If you grow past what your
   income can pay for, your outermost cells starve. Each connected piece of vein holds only so many
-  nutrients, so build **Store Houses** (`T`) to raise that cap. Income comes from **pools of
+  nutrients, so build **Factories** (`F`) to raise that cap. Income comes from **pools of
   primordial goo** (glowing green wells, visible even in the fog): grow a vein to one and the mold
   spreads over it and harvests it. A pool never runs dry, pays for each of its cells you hold, and
-  only pays while a store house is on the same vein; where two molds reach one pool, the cells each
+  only pays while a factory is on the same vein; where two molds reach one pool, the cells each
   holds decide the split. A store
   house also speeds up tips and **Harvesters** (`M`, beside big food) along its vein, fading with
   distance, at a small drain on the stock. **Booster Factories** (`B`) make the whole vein they sit
@@ -64,7 +64,10 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 |---|---|
 | Left-click | Set a growth target (or place a building in placement mode) |
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
-| `T` / `B` / `M` | Place a Store House / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
+| Right-click a building (twice) | Demolish it and get half its cost back |
+| Right-click a vein | Cut it (a cut-off piece with no core or food starves); right-click the snip to rejoin |
+| `V` | Evolve: spend a fixed 250 nutrients to move up a tier and unlock the Relay (the price grows only with each evolution, not with your factories) |
+| `F` / `B` / `M` / `R` | Place a Factory / Booster / Harvester / Relay (tier 2) (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |
 | `1` `2` `3` | Speed 1x, 2x, 3x |

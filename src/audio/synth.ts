@@ -127,6 +127,28 @@ export const recipes: Record<CueName, Recipe> = {
   refuse(ctx, bus, _strength, when) {
     tone(ctx, bus, { type: 'sawtooth', freq: 110, start: when, dur: 0.16, gain: 0.14, lowpass: 420 });
   },
+  // a big rising fanfare: a fifth stacked on a swelling low note, then a bright top
+  evolve(ctx, bus, _strength, when) {
+    tone(ctx, bus, { type: 'sine', freq: 130, freqEnd: 260, start: when, dur: 0.7, gain: 0.16, attack: 0.05 });
+    for (const [i, f] of [392, 523, 659, 784, 1047].entries()) tone(ctx, bus, { type: 'triangle', freq: f, start: when + i * 0.1, dur: 0.4, gain: 0.15 });
+    burst(ctx, bus, { start: when + 0.45, dur: 0.3, gain: 0.08, filter: 'highpass', freq: 3000 });
+  },
+  // a quick two-step rising chime, brighter than a placement
+  upgrade(ctx, bus, _strength, when) {
+    tone(ctx, bus, { type: 'triangle', freq: 784, start: when, dur: 0.12, gain: 0.15 });
+    tone(ctx, bus, { type: 'triangle', freq: 1175, start: when + 0.08, dur: 0.14, gain: 0.15 });
+    tone(ctx, bus, { type: 'sine', freq: 1568, start: when + 0.16, dur: 0.2, gain: 0.1 });
+  },
+  // a crumbling thud: a dull falling tone under a short crunch of noise
+  demolish(ctx, bus, _strength, when) {
+    tone(ctx, bus, { type: 'sine', freq: 170, freqEnd: 50, start: when, dur: 0.26, gain: 0.34, attack: 0.003 });
+    burst(ctx, bus, { start: when, dur: 0.22, gain: 0.2, filter: 'bandpass', freq: 700, freqEnd: 260, q: 0.9 });
+  },
+  // a dry falling sigh for veins dying back: soft and low, so a long die-back is not a nuisance
+  wither(ctx, bus, strength, when) {
+    burst(ctx, bus, { start: when, dur: 0.55, gain: 0.07 + 0.05 * strength, filter: 'lowpass', freq: 900, freqEnd: 140, q: 2 });
+    tone(ctx, bus, { type: 'sine', freq: 200, freqEnd: 90, start: when, dur: 0.5, gain: 0.07, attack: 0.04 });
+  },
   // a punchy hit with a major chord, scaled by the size of the fight
   frontWon(ctx, bus, strength, when) {
     const g = 0.18 + 0.2 * strength;

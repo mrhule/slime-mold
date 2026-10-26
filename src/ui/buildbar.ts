@@ -1,53 +1,88 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { storehouse: 'Store House', booster: 'Booster Factory', harvester: 'Harvester' };
-const SHORT: Record<BuildingType, string> = { storehouse: 'Store', booster: 'Booster', harvester: 'Harvest' };
+const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvester', relay: 'Relay' };
+const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvest', relay: 'Relay' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
-  storehouse: 'Raises how many nutrients its vein can hold, and goo pools on the vein pay into it. Pools only pay with a store house on their vein.',
+  storehouse: 'Keeps nearby veins alive and growing fast, holds more nutrients, and goo pools on the vein pay into it. Veins out of reach of a factory or your core fade and die. Click one to upgrade its range.',
   booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
+  relay: 'Carries supply along its vein like a small factory, but stores nothing. Keeps far veins alive and growing. Unlocked by evolving.',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { t: 'storehouse', b: 'booster', m: 'harvester' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'booster', m: 'harvester', r: 'relay' };
 
 const ICONS: Record<BuildingType, string> = {
   storehouse: '',
   booster: '',
   harvester: '',
+  relay: '',
 };
 
+// the same shapes as the map art: a pulse node, a digestor and a sac, drawn flat (the map ones move)
 const BOOSTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
-    <ellipse cx="21" cy="32" rx="15" ry="3.4" fill="#14110f" opacity=".45"/>
+    <ellipse cx="21" cy="33" rx="14" ry="3.2" fill="#14110f" opacity=".45"/>
     <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
-      <rect x="24" y="6" width="6" height="14" fill="#4b4f53"/>
-      <circle cx="28" cy="4" r="3.2" fill="#e8e6de"/>
-      <rect x="8" y="14" width="24" height="16" rx="2" fill="#4b4f53"/>
-      <rect x="10" y="16" width="20" height="8" fill="#7a7f84" stroke="none"/>
-      <polygon points="19,16 14,24 19,23 16,30 26,21 21,22 24,16" fill="#ffd23a" stroke-width="1.8"/>
+      <polygon points="21,3 25,15 37,18 25,21 21,32 17,21 5,18 17,15" fill="#c9c27a"/>
+      <polygon points="21,9 23.4,16 31,18 23.4,20 21,27 18.6,20 11,18 18.6,16" fill="#f5f2d2" stroke="none"/>
+      <circle cx="21" cy="18" r="4.4" fill="#ffee4a"/>
+      <circle cx="20" cy="17" r="1.5" fill="#ffffff" stroke="none"/>
     </g>
   </svg>`;
 const HARVESTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
-    <ellipse cx="21" cy="32" rx="14" ry="3.2" fill="#14110f" opacity=".45"/>
-    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M20 5 L9 30 M20 5 L31 30 M20 5 L20 31" fill="none" stroke-width="5"/>
-      <path d="M20 5 L9 30 M20 5 L31 30 M20 5 L20 31" fill="none" stroke="#2f6a77" stroke-width="2"/>
-      <path d="M20 5 V21" fill="none" stroke-width="1.8"/>
-      <polygon points="14,21 26,21 24,28 16,28" fill="#4f9aa8"/>
-      <circle cx="20" cy="5" r="3.2" fill="#f2c744"/>
+    <ellipse cx="21" cy="33" rx="12" ry="3" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-linejoin="round" stroke-linecap="round" fill="none">
+      <path d="M21 31 Q22 24 21 18" stroke-width="6.4"/>
+      <path d="M21 31 Q22 24 21 18" stroke="#9ccc2e" stroke-width="3.4"/>
+      <circle cx="21" cy="30" r="3.2" fill="#f2c744" stroke-width="2"/>
+      <ellipse cx="21" cy="18" rx="8" ry="3.4" fill="#5c8a1a" stroke-width="2.4"/>
+      <ellipse cx="21" cy="17.3" rx="5.6" ry="2" fill="#223a0c" stroke="none"/>
+      <path d="M14.5 18 Q7 3 18 7" stroke-width="5.2"/>
+      <path d="M14.5 18 Q7 3 18 7" stroke="#9ccc2e" stroke-width="2.6"/>
+      <path d="M27.5 18 Q35 3 24 7" stroke-width="5.2"/>
+      <path d="M27.5 18 Q35 3 24 7" stroke="#9ccc2e" stroke-width="2.6"/>
+      <path d="M21 17 Q22 8 21 4" stroke-width="5.2"/>
+      <path d="M21 17 Q22 8 21 4" stroke="#9ccc2e" stroke-width="2.6"/>
+      <circle cx="18" cy="7" r="2" fill="#e3ff9c" stroke-width="1.8"/>
+      <circle cx="24" cy="7" r="2" fill="#e3ff9c" stroke-width="1.8"/>
+      <circle cx="21" cy="4" r="2" fill="#e3ff9c" stroke-width="1.8"/>
     </g>
   </svg>`;
 
 const STOREHOUSE_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
-    <ellipse cx="21" cy="32" rx="15" ry="3.4" fill="#14110f" opacity=".45"/>
-    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
-      <rect x="23" y="12" width="11" height="18" rx="4" fill="#b8b9a8"/>
-      <rect x="6" y="15" width="18" height="15" fill="#9a6a3a"/>
-      <polygon points="4,16 15,5 26,16" fill="#a8432f"/>
-      <rect x="11.5" y="21" width="7" height="9" fill="#5e3a1b"/>
+    <ellipse cx="21" cy="33" rx="16" ry="3.4" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-linecap="round" fill="none">
+      <path d="M13 24 Q5 30 3 31 M18 25 Q16 31 16 31 M25 25 Q27 31 27 31 M29 24 Q36 30 38 31" stroke-width="4.4"/>
+      <path d="M13 24 Q5 30 3 31 M18 25 Q16 31 16 31 M25 25 Q27 31 27 31 M29 24 Q36 30 38 31" stroke="#a8620c" stroke-width="1.8"/>
     </g>
+    <g stroke="#14110f" stroke-width="2.4">
+      <circle cx="9" cy="21" r="6" fill="#e8a21e"/>
+      <circle cx="9" cy="21" r="3.6" fill="#ffcf3a" stroke="none" opacity=".7"/>
+      <circle cx="32" cy="22" r="5.4" fill="#e8a21e"/>
+      <circle cx="32" cy="22" r="3.2" fill="#ffcf3a" stroke="none" opacity=".7"/>
+      <circle cx="21" cy="17" r="9.4" fill="#e8a21e"/>
+      <circle cx="21" cy="17.5" r="5.8" fill="#ffcf3a" stroke="none" opacity=".8"/>
+    </g>
+    <path d="M14.5 12 A8 8 0 0 1 20 8" fill="none" stroke="#ffe9a0" stroke-width="1.8" stroke-linecap="round"/>
   </svg>`;
 
+const RELAY_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="33" rx="13" ry="3" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-linecap="round" fill="none">
+      <path d="M21 19 L8 8 M21 19 L34 8 M21 19 L8 30 M21 19 L34 30" stroke-width="4.6"/>
+      <path d="M21 19 L8 8 M21 19 L34 8 M21 19 L8 30 M21 19 L34 30" stroke="#4fc9c1" stroke-width="2"/>
+    </g>
+    <g stroke="#14110f" stroke-width="2">
+      <circle cx="8" cy="8" r="3" fill="#cffaf4"/>
+      <circle cx="34" cy="8" r="3" fill="#cffaf4"/>
+      <circle cx="8" cy="30" r="3" fill="#cffaf4"/>
+      <circle cx="34" cy="30" r="3" fill="#cffaf4"/>
+      <circle cx="21" cy="19" r="7" fill="#4fc9c1"/>
+    </g>
+    <circle cx="21" cy="19" r="2.4" fill="#f2c744" stroke="#14110f" stroke-width="1.6"/>
+  </svg>`;
+
+ICONS.relay = RELAY_ICON;
 ICONS.storehouse = STOREHOUSE_ICON;
 ICONS.booster = BOOSTER_ICON;
 ICONS.harvester = HARVESTER_ICON;
@@ -103,8 +138,10 @@ export class BuildBar {
       (btn.querySelector('[data-f="count"]') as HTMLElement).textContent = `${opt.count}/${opt.limit}`;
       btn.classList.toggle('selected', selected === opt.type);
       const full = opt.count >= opt.limit;
-      btn.classList.toggle('disabled', !opt.affordable || full);
-      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
+      btn.classList.toggle('disabled', !opt.affordable || full || opt.locked);
+      btn.classList.toggle('locked', opt.locked);
+      btn.hidden = opt.locked && opt.minTier > 2; // far-off buildings stay out of sight
+      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${opt.upkeep}/s upkeep. Costs ${opt.cost}.${opt.locked ? ` Locked: evolve to tier ${opt.minTier} (V).` : full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
     }
   }
 

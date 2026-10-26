@@ -1,6 +1,7 @@
 import { capOf, countBuildings } from './buildings';
 import { poolCounts, poolIncome } from './food';
 import { mapControl } from './round';
+import { evolveStatus } from './tiers';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { BuildOption, BuildingType, HudModel, MoldId, World } from './types';
@@ -39,6 +40,8 @@ function buildOptions(world: World, moldId: MoldId): BuildOption[] {
       count: countBuildings(world, moldId, type),
       limit: spec.limit,
       affordable,
+      locked: moldOf(world, moldId).tier < (spec.minTier ?? 1),
+      minTier: spec.minTier ?? 1,
     };
     out.push(option);
   }
@@ -58,6 +61,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     build: buildOptions(world, moldId),
     poolIncome: poolIncome(world, moldId),
     stock: stockOf(world, moldId),
+    tier: evolveStatus(world, moldId),
     pools: poolCounts(world, moldId),
     rivals: world.molds
       .filter((m) => m.id !== moldId)

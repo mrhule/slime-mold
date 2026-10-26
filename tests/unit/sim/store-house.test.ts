@@ -49,12 +49,12 @@ describe('store house and the pool cap (FR-001..FR-007)', () => {
   });
 
   it('store houses beyond perPiece add no more capacity', () => {
-    const { world, mold, cells, comp } = vein();
+    const { world, mold, cells, comp } = vein(quiet, 20);
     comp.pool = 1000;
     for (let i = 0; i < spec.limit; i++) expect(placeBuilding(world, mold.id, 'storehouse', cells[2 + i * 2] as number)).toEqual({ ok: true });
     expect(spec.limit).toBeGreaterThan(spec.perPiece);
     expect(capOf(world, comp)).toBe(base + spec.capacity * spec.perPiece);
-    expect(placeBuilding(world, mold.id, 'storehouse', cells[12] as number)).toEqual({ ok: false, reason: 'limit-reached' });
+    expect(placeBuilding(world, mold.id, 'storehouse', cells[2 + spec.limit * 2] as number)).toEqual({ ok: false, reason: 'limit-reached' });
   });
 
   it('a store house in a piece that cannot pay its upkeep adds nothing', () => {

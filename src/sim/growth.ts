@@ -225,7 +225,8 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
         comp.pool -= grant;
         // a store house on this vein makes each delivered nutrient go further (S8)
         const boost = world.supply[head] as number;
-        tip.progress += grant * boost;
+        // and the farther the head is from supply along the veins, the less of it arrives (feed)
+        tip.progress += grant * boost * (world.feed[head] as number);
         if (boost > 1) world.supplyUse.add(comp.id);
       }
       // starved = the stock is (nearly) empty, so growth is limited to whatever income arrives
@@ -236,6 +237,11 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
     tip.progress -= cost;
     builtThisTick++;
     addCell(world, mold.id, next, head);
+    // a new cell is one step farther from supply than the one it grew from, until the next recompute
+    const fd = world.balance.feed;
+    const here = world.feed[head] as number;
+    const step = here > fd.trickle ? (1 - fd.trickle) / fd.coreReach : (fd.trickle - fd.floor) / (0.5 * fd.coreReach);
+    world.feed[next] = Math.max(fd.floor, here - step);
     engulfFood(world, mold.id, next);
     growSpurs(world, mold, tip, head, next);
     tip.pos++;

@@ -63,12 +63,14 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
       }
       return out;
     },
-    rules: { storeHousesPerPiece: world.balance.buildings.storehouse.perPiece },
+    rules: { storeHousesPerPiece: world.balance.buildings.storehouse.perPiece, feedTrickle: world.balance.feed.trickle, factoryMaxLevel: world.balance.buildings.storehouse.maxLevel, factoryUpgradeCost: world.balance.buildings.storehouse.upgradeCost },
     pieceOf: (cell) => (world.owner[cell] === moldId ? (world.component[cell] as number) : -1),
     ownerAt(cell) {
       const v = vision[cell];
       return v === 2 ? (world.owner[cell] as number) : v === 1 ? (mold.memOwner[cell] as number) : 0;
     },
+    feedAt: (cell) => (world.owner[cell] === moldId ? (world.feed[cell] as number) : 1),
+    ownFactories: () => world.buildings.filter((b) => !b.destroyed && b.moldId === moldId && b.type === 'storehouse').map((b) => ({ cell: b.cell, level: b.level, piece: world.component[b.cell] as number })),
     biomassAt: (cell) => (vision[cell] === 2 ? (world.biomass[cell] as number) : null),
     foodAt,
     visibleEnemyCells() {

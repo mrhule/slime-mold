@@ -52,7 +52,7 @@ export class GameRenderer {
     this.fog = new FogLayer(sim);
     this.fx = new FxLayer();
     this.fx.setSplatScale(style.quality[this.quality].splatScale);
-    this.world.addChild(bakeTerrain(sim), this.film.container, this.food.container, this.veins.container, this.buildings.container, this.fog.container, this.food.poolContainer, this.fx.container);
+    this.world.addChild(bakeTerrain(sim), this.film.container, this.food.container, this.veins.container, this.fx.flowContainer, this.buildings.container, this.fog.container, this.food.poolContainer, this.fx.container);
     const core = sim.molds[0]?.core ?? 0;
     this.camera.zoom = 1.2;
     this.camera.centerOn((core % sim.width) * CELL, Math.floor(core / sim.width) * CELL);
@@ -93,7 +93,7 @@ export class GameRenderer {
     this.film.update(sim, this.timeSeconds);
     this.food.update(sim);
     this.veins.update(sim, this.timeSeconds, this.quality);
-    this.buildings.update(sim);
+    this.buildings.update(sim, this.timeSeconds);
     this.fog.update(sim, this.timeSeconds);
     this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost, inspect);
   }

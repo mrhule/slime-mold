@@ -26,6 +26,7 @@ export function addCell(world: World, moldId: MoldId, cell: CellIndex, linkTo: C
   const mold = moldOf(world, moldId);
   world.owner[cell] = moldId;
   world.biomass[cell] = 1;
+  world.strayFor[cell] = 0;
   mold.cellCount++;
   mold.stats.cellsBuilt++;
   if (mold.cellCount > mold.stats.peakSize) mold.stats.peakSize = mold.cellCount;
@@ -215,3 +216,15 @@ export function degree(world: World, cell: CellIndex): number {
 }
 
 export { DX, DY };
+
+/** the key a deliberately cut vein is stored under: the same for either order of its two cells */
+export function cutKey(world: Readonly<World>, a: CellIndex, b: CellIndex): number {
+  const n = world.width * world.height;
+  return a < b ? a * n + b : b * n + a;
+}
+
+/** both cells of a stored cut key */
+export function cutCells(world: Readonly<World>, key: number): [CellIndex, CellIndex] {
+  const n = world.width * world.height;
+  return [Math.floor(key / n), key % n];
+}

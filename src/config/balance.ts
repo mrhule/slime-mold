@@ -28,6 +28,19 @@ export interface BuildingSpec {
   upkeep: number;
   /** most a single mold may have */
   limit: number;
+  /** the tier a mold must have evolved to before it can build this (1 or missing: from the start) */
+  minTier?: number;
+}
+
+export interface RelaySpec extends BuildingSpec {
+  /** how far along the veins it carries supply, in cells (the same falloff as a factory's reach) */
+  reach: number;
+  /** most levels a relay can reach (it is placed at level 1) */
+  maxLevel: number;
+  /** extra reach, in cells, for each level above the first */
+  reachPerLevel: number;
+  /** nutrients to go from level n to n + 1, at index n - 1 */
+  upgradeCost: number[];
 }
 
 export interface BoosterSpec extends BuildingSpec {
@@ -61,6 +74,12 @@ export interface StoreHouseSpec extends BuildingSpec {
   drain: number;
   /** below this stock the boost stops; it resumes at 1.25x this */
   lowStock: number;
+  /** most levels a factory can reach (it is placed at level 1) */
+  maxLevel: number;
+  /** extra reach, in cells, for each level above the first */
+  reachPerLevel: number;
+  /** nutrients to go from level n to n + 1, at index n - 1 */
+  upgradeCost: number[];
 }
 
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
@@ -127,6 +146,8 @@ export interface BalanceConfig {
   foodSpacing: number;
   /** pieces of one mold within this many cells (2 = one free cell apart) join up on their own */
   connectGap: number;
+  /** a loop closes between two cells of one piece only when the veins between them are at least this many steps long */
+  loopMinSteps: number;
   /** ticks between those checks */
   connectEvery: number;
   /** one food item per this many cells at foodDensity 1 */
@@ -143,7 +164,21 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
+  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec; relay: RelaySpec };
+
+  /** evolving: the highest tier, and what it costs in nutrients to go up from tier n (at index n - 1). The cost is fixed: it does not grow with the factories you have built. */
+  tiers: { max: number; costs: number[] };
+
+  /**
+   * how far supply carries along the veins: from the core and from each working factory, in cells (a
+   * factory has its own reach). Growth speed falls from 1 at supply to `trickle` at the end of the reach,
+   * then to `floor` (almost nothing) half a reach further out. A vein out of every reach for `graceSeconds`
+   * (time to build a factory) starts to die back, taking `fadeSeconds` to go.
+   */
+  feed: { coreReach: number; trickle: number; floor: number; graceSeconds: number; fadeSeconds: number };
+
+  /** the share of a building's cost paid back into its piece when the player demolishes it */
+  demolishRefund: number;
 
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
@@ -222,6 +257,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   roughThreshold: 0.6,
   foodSpacing: 12,
   connectGap: 2,
+  loopMinSteps: 20,
   connectEvery: 10,
   foodAreaPerItem: 900,
   starterFood: 3,
@@ -242,10 +278,17 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
+    storehouse: { cost: 25, upkeep: 0.2, limit: 6, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
+    relay: { cost: 15, upkeep: 0.1, limit: 6, minTier: 2, reach: 16, maxLevel: 3, reachPerLevel: 8, upgradeCost: [20, 35] },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
+
+  feed: { coreReach: 40, trickle: 0.5, floor: 0.04, graceSeconds: 30, fadeSeconds: 60 },
+
+  demolishRefund: 0.5,
+
+  tiers: { max: 2, costs: [250] },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

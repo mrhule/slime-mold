@@ -41,9 +41,13 @@ export function stateHash(world: World): number {
   h.array(world.food);
   h.array(world.buildingAt);
   h.array(world.supply);
+  h.array(world.feed);
+  h.array(world.strayFor);
+  for (const k of [...world.cuts].sort((x, y) => x - y)) h.num(k);
   for (const m of world.molds) {
     h.num(m.id);
     h.num(m.allocation);
+    h.num(m.tier);
     h.num(m.cellCount);
     h.num(m.core);
     h.num(m.status === 'alive' ? 1 : 0);
@@ -68,6 +72,7 @@ export function stateHash(world: World): number {
     h.num(b.cell);
     h.num(b.target);
     h.num(b.boosting ? 1 : 0);
+    h.num(b.level);
     h.num(b.destroyed ? 1 : 0);
   }
   h.num(world.nextDropTick);

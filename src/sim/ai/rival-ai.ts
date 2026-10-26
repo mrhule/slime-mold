@@ -56,6 +56,23 @@ function planBuild(view: MoldView, state: AiState): Command | null {
     }
   }
 
+  // veins stretching past their supply: a factory near the end of the reach carries it further
+  if (affords('storehouse', 0.3)) {
+    const edge = { trickle: view.rules.feedTrickle, near: view.rules.feedTrickle + 0.25 };
+    let stretched = false;
+    let best = -1;
+    let bestFeed = Infinity;
+    for (const c of own) {
+      const f = view.feedAt(c);
+      if (f <= edge.trickle + 1e-6) stretched = true;
+      else if (f <= edge.near && f < bestFeed && view.canBuild('storehouse', c)) {
+        bestFeed = f;
+        best = c;
+      }
+    }
+    if (stretched && best >= 0) return place('storehouse', best);
+  }
+
   // a piece that is nearly full: another store house, so income is not wasted at the cap
   if (affords('storehouse', 0.5)) {
     const crowded = view.self.components.filter((c) => !c.orphaned && c.cap > 0 && c.pool > 0.8 * c.cap && c.storeHouses < view.rules.storeHousesPerPiece);
@@ -94,6 +111,13 @@ function planBuild(view: MoldView, state: AiState): Command | null {
         }
       }
     }
+  }
+  // spare nutrients in a piece: raise its factory a level, so its reach (and so its growth) carries further
+  const factories = view.ownFactories().filter((f) => f.level < view.rules.factoryMaxLevel).sort((a, b) => a.level - b.level || a.cell - b.cell);
+  for (const f of factories) {
+    const cost = view.rules.factoryUpgradeCost[f.level - 1] ?? Infinity;
+    const piece = view.self.components.find((c) => c.id === f.piece);
+    if (piece && piece.pool >= cost + reserve * 0.5) return { type: 'upgradeBuilding', mold: me, cell: f.cell };
   }
   return null;
 }

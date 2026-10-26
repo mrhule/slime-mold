@@ -1,7 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
-import { boosterCover, storeCover } from '../sim/index';
-import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
+import { cutCells } from '../sim/index';
+import { boosterCover, reachOf, storeCover, veinCover } from '../sim/index';
+import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { style } from './style';
@@ -22,6 +23,8 @@ export interface PlacementGhost {
 
 const GHOST_OK = 0x2ea84a;
 const GHOST_BAD = 0xe0432a;
+const BOOST_DROP = 0xdfe6ea;
+const BOOST_BOLT = 0xffd23a;
 
 interface Landing {
   x: number;
@@ -48,6 +51,9 @@ const PING_SECONDS = 0.9;
 /** Inked target markers with tip state, and the rough red "X" shown for a rejected command. */
 export class FxLayer {
   readonly container = new Container();
+  /** the flow drops and coverage rings: they run along the veins but pass under the buildings */
+  readonly flowContainer = new Container();
+  private readonly flow = new Graphics();
   private readonly g = new Graphics();
   private pings: Ping[] = [];
   private landings: Landing[] = [];
@@ -56,9 +62,10 @@ export class FxLayer {
   private splatsThisFrame = 0;
   private readonly countdowns = new Map<number, Text>();
   /** per working store house: its covered veins and each cell's step toward home, refreshed a few times a second */
-  private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number }[] }>();
+  private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number; tNext: number }[] }>();
 
   constructor() {
+    this.flowContainer.addChild(this.flow);
     this.container.addChild(this.g);
   }
 
@@ -224,27 +231,64 @@ export class FxLayer {
     const slot = Math.floor(world.tick / 10);
     const live = new Set<number>();
     for (const b of world.buildings) {
-      if (b.type !== 'storehouse' || b.destroyed || !b.boosting) continue;
+      if (b.destroyed || b.type === 'harvester' || (b.type === 'storehouse' && !b.boosting)) continue;
       if (b.moldId !== 1 && vision && vision[b.cell] !== 2) continue;
       live.add(b.id);
       let entry = this.storeFlows.get(b.id);
       if (!entry || entry.slot !== slot) {
-        const cover = storeCover(world, b.cell);
+        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, reachOf(world, b), 1) : storeCover(world, b.cell);
         entry = { slot, cover, steps: homewardSteps(world.width, cover) };
         this.storeFlows.set(b.id, entry);
       }
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
+      if (b.type === 'booster') {
+        // steel drops flowing out to the veins it strengthens, apart from the owner-colored drops flowing in to a store house
+        drawStoreDrops(g, world.width, entry.steps, BOOST_DROP, timeSeconds, BOOST_BOLT);
+        continue;
+      }
       if (inspect === b.cell) drawStoreCover(g, world.width, entry.cover, world.balance.buildings.storehouse.bonus, color);
       drawStoreDrops(g, world.width, entry.steps, color, timeSeconds);
     }
     for (const id of this.storeFlows.keys()) if (!live.has(id)) this.storeFlows.delete(id);
   }
 
+  /** a small inked snip across every vein the player cut on purpose, so it can be found and rejoined */
+  private drawCuts(g: Graphics, world: Readonly<World>): void {
+    for (const key of world.cuts) {
+      const [a, b] = cutCells(world, key);
+      if (world.owner[a] !== 1 || world.owner[b] !== 1) continue;
+      const [ax, ay] = cellCenter(a, world.width);
+      const [bx, by] = cellCenter(b, world.width);
+      const x = (ax + bx) / 2;
+      const y = (ay + by) / 2;
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      // across the vein: the perpendicular, drawn as two short slanted ticks
+      const nx = -(by - ay) / len;
+      const ny = (bx - ax) / len;
+      const tx = (bx - ax) / len;
+      const ty = (by - ay) / len;
+      for (const off of [-2.2, 2.2]) {
+        const cx = x + tx * off;
+        const cy = y + ty * off;
+        g.moveTo(cx - nx * 5 - tx * 1.5, cy - ny * 5 - ty * 1.5).lineTo(cx + nx * 5 + tx * 1.5, cy + ny * 5 + ty * 1.5);
+      }
+      g.stroke({ width: 4.2, color: INK, cap: 'round' });
+      for (const off of [-2.2, 2.2]) {
+        const cx = x + tx * off;
+        const cy = y + ty * off;
+        g.moveTo(cx - nx * 5 - tx * 1.5, cy - ny * 5 - ty * 1.5).lineTo(cx + nx * 5 + tx * 1.5, cy + ny * 5 + ty * 1.5);
+      }
+      g.stroke({ width: 2, color: 0xe0432a, cap: 'round' });
+    }
+  }
+
   update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null, inspect: number | null = null): void {
     const g = this.g;
     g.clear();
-    this.drawStoreFlow(g, world, timeSeconds, inspect);
+    this.flow.clear();
+    this.drawStoreFlow(this.flow, world, timeSeconds, inspect);
+    this.drawCuts(g, world);
     if (player) {
       for (const t of player.targets) {
         const [x, y] = FxLayer.markerPosition(t.cell, world.width);
@@ -275,9 +319,9 @@ export class FxLayer {
       const [gx, gy] = cellCenter(ghost.cell, world.width);
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
-      if (ghost.type === 'booster') drawBoosterCover(g, world.width, boosterCover(world, ghost.cell), world.balance.buildings.booster.bonus, color, 0.8);
+      if (ghost.type === 'booster') drawStoreDrops(g, world.width, homewardSteps(world.width, boosterCover(world, ghost.cell)), BOOST_DROP, timeSeconds, BOOST_BOLT);
       if (ghost.type === 'storehouse') drawStoreCover(g, world.width, storeCover(world, ghost.cell), world.balance.buildings.storehouse.bonus, color, 0.8);
-      drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color });
+      drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color, t: timeSeconds, fill: 0.5 });
     }
     this.pings = this.pings.filter((p) => (p.age += dt) < PING_SECONDS);
     for (const p of this.pings) {

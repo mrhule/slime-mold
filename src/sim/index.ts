@@ -10,7 +10,7 @@ import { deriveSeed } from './rng';
 import { createWorld } from './world';
 import type { DifficultyProfile, World } from './types';
 
-export { boosterCover, canPlace, capOf, drainStoreHouses, placePreview, recomputeSupply, storeCover, veinCover, workingStoreHouses } from './buildings';
+export { boosterCover, canPlace, capOf, drainStoreHouses, placePreview, demolishBuilding, reachOf, upgradeSpec, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding, veinCover, workingStoreHouses } from './buildings';
 export { enqueue, pendingAllocation } from './commands';
 export { stateHash } from './hash';
 export { readHud } from './hud';
@@ -73,3 +73,5 @@ export function createRound(opts: CreateRoundOptions): World {
   updateVision(world);
   return world;
 }
+export { cutCells, cutKey } from './network';
+export { evolve, evolveStatus } from './tiers';

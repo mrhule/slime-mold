@@ -9,6 +9,10 @@ export type CueName =
   | 'land'
   | 'place'
   | 'refuse'
+  | 'evolve'
+  | 'upgrade'
+  | 'demolish'
+  | 'wither'
   | 'frontWon'
   | 'frontLost'
   | 'roundStart'
@@ -39,6 +43,10 @@ export const CUE_RULES: Record<CueName, CueRule> = {
   land: { minIntervalMs: 0, maxPerSecond: 2, bypass: true, durationMs: 420 },
   place: { minIntervalMs: 80, maxPerSecond: 4, bypass: false, durationMs: 240 },
   refuse: { minIntervalMs: 150, maxPerSecond: 3, bypass: false, durationMs: 220 },
+  evolve: { minIntervalMs: 0, maxPerSecond: 1, bypass: true, durationMs: 1000 },
+  upgrade: { minIntervalMs: 100, maxPerSecond: 3, bypass: false, durationMs: 420 },
+  demolish: { minIntervalMs: 100, maxPerSecond: 3, bypass: false, durationMs: 380 },
+  wither: { minIntervalMs: 1500, maxPerSecond: 1, bypass: false, durationMs: 700 },
   frontWon: { minIntervalMs: 600, maxPerSecond: 1, bypass: false, durationMs: 420 },
   frontLost: { minIntervalMs: 600, maxPerSecond: 1, bypass: false, durationMs: 420 },
   roundStart: { minIntervalMs: 0, maxPerSecond: 1, bypass: true, durationMs: 700 },

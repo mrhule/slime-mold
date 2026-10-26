@@ -1,5 +1,8 @@
-import { placeBuilding } from './buildings';
+import { demolishBuilding, placeBuilding, upgradeBuilding } from './buildings';
 import { addTarget } from './growth';
+import { evolve } from './tiers';
+import { dirBetween } from './grid';
+import { cutKey, linkCells, relabelComponent, unlinkCells } from './network';
 import type { Command, MoldId, World } from './types';
 
 /** Queue a command; it is applied at the start of the next tick (also while paused). */
@@ -52,6 +55,41 @@ export function applyCommand(world: World, cmd: Command): void {
       const res = placeBuilding(world, cmd.mold, cmd.building, cmd.cell);
       if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
       return;
+    }
+    case 'upgradeBuilding': {
+      const res = upgradeBuilding(world, cmd.mold, cmd.cell);
+      if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
+    case 'evolve': {
+      const res = evolve(world, cmd.mold);
+      if (!res.ok) reject(world, cmd.mold, res.reason);
+      return;
+    }
+    case 'demolishBuilding': {
+      const res = demolishBuilding(world, cmd.mold, cmd.cell);
+      if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
+    case 'toggleLink': {
+      const { a, b } = cmd;
+      const k = dirBetween(world.width, a, b);
+      const owned = (c: number): boolean => c >= 0 && c < world.owner.length && world.owner[c] === mold.id;
+      if (k < 0 || !owned(a) || !owned(b)) return reject(world, cmd.mold, 'no-vein', a);
+      const key = cutKey(world, a, b);
+      if ((world.edges[a] as number) & (1 << k)) {
+        // cut: the cells stay, but the two sides are separate pieces; one with no core or food starves and dies off
+        unlinkCells(world, a, b);
+        world.cuts.add(key);
+        relabelComponent(world, world.component[a] as number);
+        return;
+      }
+      if (world.cuts.has(key)) {
+        world.cuts.delete(key);
+        linkCells(world, a, b);
+        return;
+      }
+      return reject(world, cmd.mold, 'no-vein', a);
     }
     case 'setAllocation': {
       const v = Math.min(1, Math.max(0, cmd.value));
