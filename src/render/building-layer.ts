@@ -35,6 +35,9 @@ export interface BuildingStyle {
   t?: number;
   /** 0..1 how full a store's piece is, for how far it swells and how brightly it glows */
   fill?: number;
+  /** a factory's level (1 up to maxLevel), shown as extra bulbs and pips */
+  level?: number;
+  maxLevel?: number;
 }
 
 /** a remembered or ghosted building holds still */
@@ -181,10 +184,23 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
     g.moveTo(x + Math.cos(0.1) * r * 0.8, y + Math.sin(0.1) * r * 0.8).arc(x, y, r * 0.8, 0.1, 1.5).stroke({ width: r * 0.24, color: shade, alpha: 0.8 * alpha, cap: 'round' });
     g.moveTo(x + Math.cos(3.3) * r * 0.7, y + Math.sin(3.3) * r * 0.7).arc(x, y, r * 0.7, 3.3, 4.7).stroke({ width: 1.8, color: style.stale ? 0xdadad2 : AMBER_LIGHT, alpha, cap: 'round' });
   };
+  const level = style.level ?? 1;
+  // each level above the first grows another small bulb out of the back of the cluster
+  if (level >= 2) bulb(cx - 3.6 * S, cy - 5.4 * S, 3.4 * S * breathe);
+  if (level >= 3) bulb(cx + 4.4 * S, cy - 5 * S, 3.1 * S * breathe);
   bulb(cx - 8.6 * S, cy + 1.6 * S, 5 * S * breathe);
   bulb(cx + 8.8 * S, cy + 2.2 * S, 4.5 * S * breathe);
   const topR = 6.2 * S * breathe;
   bulb(cx, cy - 0.6 * S, topR);
+  // level pips under the cluster: filled for each level reached, hollow for the rest
+  if (!style.stale) {
+    const max = style.maxLevel ?? 3;
+    for (let i = 0; i < max; i++) {
+      const px = cx + (i - (max - 1) / 2) * 4.4 * S;
+      const on = i < level;
+      g.circle(px, cy + 9.6 * S, 1.5 * S).fill({ color: on ? AMBER_GLOW : 0x2c2b22, alpha: (on ? 1 : 0.6) * alpha }).stroke({ width: 1.4, color: ink, alpha });
+    }
+  }
   // owner's color: a small spore budding off the big bulb (no stalk, which would read as a fuse)
   if (!style.stale) g.circle(cx + topR * 0.62, cy - 0.6 * S - topR * 0.8, 2.2 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
 }
@@ -319,6 +335,7 @@ export class BuildingLayer {
       drawBuilding(this.rim, r.type, x, y, 0, { stale: true });
       drawBuilding(this.g, r.type, x, y, 0, { stale: true });
     }
+    const maxLevel = world.balance.buildings.storehouse.maxLevel;
     for (const b of world.buildings) {
       if (!shown(b)) continue;
       const [x, y] = cellCenter(b.cell, world.width);
@@ -335,8 +352,8 @@ export class BuildingLayer {
       }
       const comp = b.type === 'storehouse' ? world.components.get(world.component[b.cell] as number) : undefined;
       const fill = comp ? Math.min(1, comp.pool / capOf(world, comp)) : 0;
-      drawBuilding(this.rim, b.type, x, y, color, { idle, t: timeSeconds, fill });
-      drawBuilding(this.g, b.type, x, y, color, { idle, t: timeSeconds, fill });
+      drawBuilding(this.rim, b.type, x, y, color, { idle, t: timeSeconds, fill, level: b.level, maxLevel });
+      drawBuilding(this.g, b.type, x, y, color, { idle, t: timeSeconds, fill, level: b.level, maxLevel });
     }
   }
 }

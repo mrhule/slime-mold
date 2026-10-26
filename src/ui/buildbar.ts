@@ -1,15 +1,15 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { storehouse: 'Store House', booster: 'Booster Factory', harvester: 'Harvester' };
-const SHORT: Record<BuildingType, string> = { storehouse: 'Store', booster: 'Booster', harvester: 'Harvest' };
+const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvester' };
+const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvest' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
-  storehouse: 'Raises how many nutrients its vein can hold, and goo pools on the vein pay into it. Pools only pay with a store house on their vein.',
+  storehouse: 'Keeps nearby veins alive and growing fast, holds more nutrients, and goo pools on the vein pay into it. Veins out of reach of a factory or your core fade and die. Click one to upgrade its range.',
   booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { t: 'storehouse', b: 'booster', m: 'harvester' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'booster', m: 'harvester' };
 
 const ICONS: Record<BuildingType, string> = {
   storehouse: '',

@@ -134,7 +134,9 @@ export interface Building {
   placedTick: number;
   /** harvester only: the food source it speeds up, otherwise -1 */
   target: number;
-  /** store house only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
+  /** factory only: 1 when placed, up to maxLevel; each level adds reach */
+  level: number;
+  /** factory only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
   boosting: boolean;
   /** true once its cell is gone; the entry stays so ids do not shift */
   destroyed: boolean;
@@ -156,7 +158,9 @@ export type Command =
   | { type: 'setAllocation'; mold: MoldId; value: number }
   | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex }
   /** cut the vein between two adjacent cells of the mold, or rejoin one it cut earlier */
-  | { type: 'toggleLink'; mold: MoldId; a: CellIndex; b: CellIndex };
+  | { type: 'toggleLink'; mold: MoldId; a: CellIndex; b: CellIndex }
+  /** raise the factory on a cell one level: more reach, paid from its piece */
+  | { type: 'upgradeBuilding'; mold: MoldId; cell: CellIndex };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -169,7 +173,10 @@ export type PlaceReason =
   | 'cant-afford'
   | 'no-food-nearby'
   | 'food-too-small'
-  | 'already-harvested';
+  | 'already-harvested'
+  | 'no-building'
+  | 'not-upgradable'
+  | 'max-level';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -181,6 +188,7 @@ export type SimEvent =
   | { type: 'moldEliminated'; mold: MoldId }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
+  | { type: 'buildingUpgraded'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex; level: number }
   | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'storeFull'; componentId: number }
   | { type: 'capLost'; componentId: number; amount: number }

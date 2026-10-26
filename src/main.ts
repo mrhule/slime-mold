@@ -249,7 +249,16 @@ async function main(): Promise<void> {
       const near = run.world.buildings.find(
         (b) => b.type === 'storehouse' && !b.destroyed && b.moldId === PLAYER && Math.abs((b.cell % w) - (under % w)) <= 2 && Math.abs(Math.floor(b.cell / w) - Math.floor(under / w)) <= 2,
       );
-      if (near) inspect = near.cell;
+      if (near) {
+        inspect = near.cell;
+        const spec = run.world.balance.buildings.storehouse;
+        const cost = spec.upgradeCost[near.level - 1];
+        const comp = run.world.components.get(run.world.component[near.cell] as number);
+        if (pointer) {
+          if (cost === undefined || near.level >= spec.maxLevel) buildBar.showHint(`Factory level ${near.level}: fully upgraded`, pointer.x, pointer.y, true);
+          else buildBar.showHint(`Factory level ${near.level}: click to upgrade for ${cost} (reach +${spec.reachPerLevel})`, pointer.x, pointer.y, !!comp && comp.pool >= cost);
+        }
+      }
     }
 
     renderer.update(run.world, dt, ghost, inspect);

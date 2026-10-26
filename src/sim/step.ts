@@ -9,6 +9,7 @@ import { solveFlow } from './flow';
 import { tickFood } from './food';
 import { tickGrowth } from './growth';
 import { connectPieces } from './connect';
+import { fadeStrays } from './fade';
 import { decayOrphans } from './network';
 import { tickUpkeep } from './upkeep';
 import { TICK_DT } from './types';
@@ -47,6 +48,7 @@ export function step(world: World): void {
   if (world.tick % world.balance.flowEvery === 0) {
     recomputeSupply(world);
     recomputeFeed(world);
+    fadeStrays(world);
   }
   tickDrops(world);
   tickIncome(world);

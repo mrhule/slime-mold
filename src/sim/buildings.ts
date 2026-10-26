@@ -77,6 +77,7 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     cell,
     placedTick: world.tick,
     target: type === 'harvester' ? (harvestTarget(world, cell) as FoodSource).id : -1,
+    level: 1,
     boosting: false,
     destroyed: false,
   };
@@ -88,6 +89,31 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     clampPools(world); // records the higher cap
     recomputeSupply(world);
   }
+  return { ok: true };
+}
+
+/** how far along the veins a factory reaches: its base reach plus a step for each level above the first */
+export function reachOf(world: Readonly<World>, b: Readonly<Building> | undefined): number {
+  const spec = world.balance.buildings.storehouse;
+  return spec.reach + ((b?.level ?? 1) - 1) * spec.reachPerLevel;
+}
+
+/** Raise a factory one level, paying from its piece; more reach (and a wider boost) at once. */
+export function upgradeBuilding(world: World, moldId: MoldId, cell: CellIndex): PlaceResult {
+  const b = buildingOn(world, cell);
+  if (!b) return { ok: false, reason: 'no-building' };
+  if (b.moldId !== moldId) return { ok: false, reason: 'not-your-cell' };
+  if (b.type !== 'storehouse') return { ok: false, reason: 'not-upgradable' };
+  const spec = world.balance.buildings.storehouse;
+  if (b.level >= spec.maxLevel) return { ok: false, reason: 'max-level' };
+  const cost = spec.upgradeCost[b.level - 1] ?? Infinity;
+  const comp = world.components.get(world.component[cell] as number);
+  if (!comp || comp.pool < cost) return { ok: false, reason: 'cant-afford' };
+  comp.pool -= cost;
+  b.level++;
+  world.events.push({ type: 'buildingUpgraded', id: b.id, building: b.type, mold: moldId, cell, level: b.level });
+  recomputeSupply(world);
+  recomputeFeed(world);
   return { ok: true };
 }
 
@@ -209,7 +235,7 @@ export function clampPools(world: World): void {
 /** The cells a store house at `start` boosts for growth and harvest, with their bonus (FR-020). */
 export function storeCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
   const spec = world.balance.buildings.storehouse;
-  return veinCover(world, start, spec.reach, spec.bonus);
+  return veinCover(world, start, reachOf(world, buildingOn(world, start)), spec.bonus);
 }
 
 /** What the placement ghost shows: the verdict plus, for valid spots, what it would do (003). */
@@ -272,9 +298,32 @@ export function recomputeFeed(world: World): void {
     }
   };
   world.feed.fill(trickle);
-  for (const mold of world.molds) if (mold.status === 'alive') fill(veinCover(world, mold.core, coreReach, 1));
-  const reach = world.balance.buildings.storehouse.reach;
-  for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed && b.boosting) fill(veinCover(world, b.cell, reach, 1));
+  // the core and every cell over food supply their own veins, all at once: one search from every source
+  const w = world.width;
+  const dist = new Int32Array(world.owner.length).fill(-1);
+  const queue: CellIndex[] = [];
+  const seed = (c: CellIndex): void => {
+    if (dist[c] === 0) return;
+    dist[c] = 0;
+    queue.push(c);
+  };
+  for (const mold of world.molds) if (mold.status === 'alive') seed(mold.core);
+  for (const comp of world.components.values()) for (const s of comp.sources) if (world.owner[s] !== 0) seed(s);
+  for (let head = 0; head < queue.length; head++) {
+    const c = queue[head] as CellIndex;
+    const d = dist[c] as number;
+    world.feed[c] = Math.max(world.feed[c] as number, trickle + (1 - trickle) * (1 - d / coreReach));
+    if (d + 1 >= coreReach) continue;
+    const bits = world.edges[c] as number;
+    for (let k = 0; k < 8; k++) {
+      if (!(bits & (1 << k))) continue;
+      const n = c + (DX[k] as number) + (DY[k] as number) * w;
+      if (dist[n] !== -1) continue;
+      dist[n] = d + 1;
+      queue.push(n);
+    }
+  }
+  for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed && b.boosting) fill(veinCover(world, b.cell, reachOf(world, b), 1));
 }
 
 /**

@@ -31,6 +31,7 @@ export function withStoreHouse(world: World, moldId: number, cell: number): void
     cell,
     placedTick: world.tick,
     target: -1,
+    level: 1,
     boosting: false,
     destroyed: false,
   });

@@ -61,6 +61,12 @@ export interface StoreHouseSpec extends BuildingSpec {
   drain: number;
   /** below this stock the boost stops; it resumes at 1.25x this */
   lowStock: number;
+  /** most levels a factory can reach (it is placed at level 1) */
+  maxLevel: number;
+  /** extra reach, in cells, for each level above the first */
+  reachPerLevel: number;
+  /** nutrients to go from level n to n + 1, at index n - 1 */
+  upgradeCost: number[];
 }
 
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
@@ -147,8 +153,8 @@ export interface BalanceConfig {
   /** one entry per building type (002) */
   buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
 
-  /** how far supply carries along the veins: from the core and from each working store house, in cells, and the growth speed left past the end (0.25 = a quarter) */
-  feed: { coreReach: number; trickle: number };
+  /** how far supply carries along the veins: from the core and from each working factory, in cells; the growth speed left past the end (0.5 = half); and how many seconds a vein out of every reach takes to fade and die */
+  feed: { coreReach: number; trickle: number; fadeSeconds: number };
 
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
@@ -248,12 +254,12 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
+    storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 
-  feed: { coreReach: 40, trickle: 0.5 },
+  feed: { coreReach: 40, trickle: 0.5, fadeSeconds: 180 },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

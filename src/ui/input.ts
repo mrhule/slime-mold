@@ -159,7 +159,25 @@ export class InputController {
       if (allowed && !keepPlacing) this.placing = null;
       return;
     }
+    const factory = this.factoryAt(sx, sy);
+    if (factory !== null) {
+      this.send({ type: 'upgradeBuilding', mold: PLAYER, cell: factory });
+      return;
+    }
     this.send({ type: 'setTarget', mold: PLAYER, cell });
+  }
+
+  /** the cell of the player's factory under a screen point (its art is bigger than its cell), or null */
+  private factoryAt(sx: number, sy: number): number | null {
+    const sim = this.getWorld();
+    const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
+    for (const b of sim.buildings) {
+      if (b.destroyed || b.type !== 'storehouse' || b.moldId !== PLAYER) continue;
+      const bx = (b.cell % sim.width) * CELL + CELL / 2;
+      const by = Math.floor(b.cell / sim.width) * CELL + CELL / 2;
+      if (Math.hypot(bx - wx, by - wy) <= 14) return b.cell;
+    }
+    return null;
   }
 
   /** cancel the growth target whose marker is nearest to a screen point, if one is within `radius` */

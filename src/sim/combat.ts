@@ -1,4 +1,5 @@
 import { DX, DY, neighbor } from './grid';
+import { isStray } from './fade';
 import { addCell, removeCellAndSplit } from './network';
 import { recomputeBoost } from './buildings';
 import { moldOf, moldsInOrder } from './world';
@@ -34,7 +35,7 @@ export function scanFronts(world: World): void {
       } else {
         world.enemyAdj[cell] = 0;
         const bio = world.biomass[cell] as number;
-        if (bio < 1 && !comp.orphaned && cell !== comp.starveCell) world.biomass[cell] = Math.min(1, bio + regen);
+        if (bio < 1 && !comp.orphaned && cell !== comp.starveCell && !isStray(world, cell)) world.biomass[cell] = Math.min(1, bio + regen);
       }
     }
   }
