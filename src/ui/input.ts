@@ -5,6 +5,7 @@ import { CELL } from '../render/units';
 import type { BuildingType, Command, World } from '../sim/types';
 import { BUILD_HOTKEYS } from './buildbar';
 import { GestureRecognizer } from './gestures';
+import { snapPlacement, snapRadius } from './snap';
 import type { Gesture } from './gestures';
 
 const PLAYER = 1;
@@ -68,6 +69,14 @@ export class InputController {
   private screenPos(e: PointerEvent | WheelEvent): [number, number] {
     const r = this.canvas.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
+  }
+
+  /** the cell a building would go on for a point on screen: snapped to the nearest allowed vein cell */
+  private placementCellAt(sx: number, sy: number): number | null {
+    const cell = this.cellAt(sx, sy);
+    if (cell === null || !this.placing) return cell;
+    const radius = snapRadius(CELL * this.renderer.camera.zoom);
+    return snapPlacement(this.getWorld(), PLAYER, this.placing, cell, radius);
   }
 
   private cellAt(sx: number, sy: number): number | null {
@@ -134,7 +143,7 @@ export class InputController {
 
   /** the left click (or a tap): place a building, select a farm, or set a growth target */
   private primary(sx: number, sy: number, keepPlacing: boolean): void {
-    const cell = this.cellAt(sx, sy);
+    const cell = this.placing ? this.placementCellAt(sx, sy) : this.cellAt(sx, sy);
     if (cell === null) return;
     if (this.placing) {
       // always send, so a refusal comes back from the sim as a toast; stay in the mode if it will be refused
@@ -174,7 +183,7 @@ export class InputController {
     if (!this.actions.canAct()) return;
     const cam = this.renderer.camera;
     if (g.kind === 'tap') {
-      const cell = this.placing ? this.cellAt(g.x, g.y) : null;
+      const cell = this.placing ? this.placementCellAt(g.x, g.y) : null;
       if (this.placing) {
         // choosing a spot by touch only previews it; Confirm sends the command (FR-007)
         if (cell !== null) this.pending = cell;
@@ -192,7 +201,7 @@ export class InputController {
       return;
     }
     this.pointer = { x: sx, y: sy };
-    this.hoverCell = this.placing ? this.cellAt(sx, sy) : null;
+    this.hoverCell = this.placing ? this.placementCellAt(sx, sy) : null;
     if (this.dragging) {
       this.renderer.camera.pan(-(e.clientX - this.lastDrag.x), -(e.clientY - this.lastDrag.y));
       this.lastDrag = { x: e.clientX, y: e.clientY };
@@ -288,7 +297,7 @@ export class InputController {
     this.pending = null;
     this.placing = this.placing === type ? null : type;
     if (!this.placing) this.hoverCell = null;
-    else if (this.pointer) this.hoverCell = this.cellAt(this.pointer.x, this.pointer.y);
+    else if (this.pointer) this.hoverCell = this.placementCellAt(this.pointer.x, this.pointer.y);
   }
 
   /** cursor position in screen pixels, or null when it is off the canvas */

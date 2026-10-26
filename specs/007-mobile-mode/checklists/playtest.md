@@ -45,3 +45,9 @@ Run on a real phone in landscape (or Chrome device mode), with Touch mode Auto o
 - [ ] The Fight chip opens a big slider; it closes when you let go or tap the map
 - [ ] The map between the bars is clearly larger than with the first touch layout
 - [ ] Build icons are recognisable; tapping one shows its name and cost, then the placement bar
+
+## Placement snapping
+
+- [ ] With a building chosen, a tap (or the mouse) a little off the vein lands the preview on the nearest allowed vein cell
+- [ ] A farm snaps to fertile ground on your vein, a harvester to a cell beside big food
+- [ ] With nothing allowed nearby, the preview stays where you tapped and says why

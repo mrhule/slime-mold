@@ -153,3 +153,5 @@ Nothing in `src/sim/` changes in this feature.
 - US3 and US4: 60 files, 401 tests. Added a Menu button to the round buttons: the pause menu (and Settings) is otherwise only reachable with Esc. iOS only counts touchend or click as an audio unlock gesture, so the unlock listeners now include those.
 - US2: 58 files, 398 tests (the new determinism test sends the same placement by mouse and by touch and compares the state hash).
 - US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.
+
+- Placement snapping (after phone testing): a chosen spot snaps to the nearest cell where the building is allowed, within about 36 screen pixels (2 to 8 cells), falling back to your nearest free vein cell so the reason shows. It applies to mouse and touch alike; only your own cells are ever returned.
