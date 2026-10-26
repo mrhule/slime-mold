@@ -1,6 +1,8 @@
 import { Application, Container } from 'pixi.js';
 import type { World } from '../sim/types';
 import { BuildingLayer } from './building-layer';
+import { Sprite } from 'pixi.js';
+import { art } from './art';
 import { Camera } from './camera';
 import { FilmLayer } from './film-layer';
 import { FogLayer } from './fog-layer';
@@ -18,6 +20,9 @@ import { CELL } from './units';
  * Owns the PixiJS stage and the ordered layers (terrain, film, food, veins, fx). It only ever
  * reads the world (Constitution I): nothing here writes sim state.
  */
+/** how much bigger than the screen the vignette image is drawn */
+const VIGNETTE_OVERSCAN = 1.35;
+
 export class GameRenderer {
   readonly camera: Camera;
   readonly world = new Container();
@@ -33,10 +38,19 @@ export class GameRenderer {
   /** the optional print texture (A9); null when the filter could not be built */
   readonly print = PrintFilter.create();
   private printOn = false;
+  private vignette: Sprite | null = null;
 
   constructor(readonly app: Application, sim: Readonly<World>) {
     this.camera = new Camera(sim.width * CELL, sim.height * CELL);
     this.app.stage.addChild(this.world);
+    const painted = art();
+    if (painted) {
+      // dark, hand-inked corners over the map, under the interface
+      this.vignette = new Sprite(painted.vignette);
+      this.vignette.alpha = 0.7;
+      this.vignette.eventMode = 'none';
+      this.app.stage.addChild(this.vignette);
+    }
     this.build(sim);
     this.resize();
   }
@@ -78,6 +92,12 @@ export class GameRenderer {
 
   resize(): void {
     this.camera.setView(this.app.screen.width, this.app.screen.height);
+    if (this.vignette && (Math.abs(this.vignette.width - this.app.screen.width * VIGNETTE_OVERSCAN) > 0.5 || Math.abs(this.vignette.height - this.app.screen.height * VIGNETTE_OVERSCAN) > 0.5)) {
+      // larger than the screen, so only the corners are dark and the middle stays clear
+      this.vignette.width = this.app.screen.width * VIGNETTE_OVERSCAN;
+      this.vignette.height = this.app.screen.height * VIGNETTE_OVERSCAN;
+      this.vignette.position.set(-(this.vignette.width - this.app.screen.width) / 2, -(this.vignette.height - this.app.screen.height) / 2);
+    }
   }
 
   /** world position of the player's core, for the "H" shortcut */

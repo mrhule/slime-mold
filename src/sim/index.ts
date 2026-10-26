@@ -10,8 +10,9 @@ import { deriveSeed } from './rng';
 import { createWorld } from './world';
 import type { DifficultyProfile, World } from './types';
 
-export { boosterCover, canPlace, capOf, drainStoreHouses, placePreview, demolishBuilding, reachOf, upgradeSpec, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding, veinCover, workingStoreHouses } from './buildings';
+export { boosterCover, canPlace, countBuildings, capOf, drainStoreHouses, placePreview, demolishBuilding, reachOf, upgradeSpec, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding, veinCover, workingStoreHouses } from './buildings';
 export { enqueue, pendingAllocation } from './commands';
+export { knownFoodLeft } from './food';
 export { stateHash } from './hash';
 export { readHud } from './hud';
 export { step } from './step';
@@ -26,6 +27,8 @@ export interface CreateRoundOptions {
   roundNumber: number;
   balance?: BalanceConfig;
   difficulty?: DifficultyProfile;
+  /** screen shape (width over height) to shape the map to; omitted keeps the standard 4:3 map */
+  aspect?: number;
   /** number of rival molds; defaults to the difficulty profile's rival count */
   rivals?: number;
 }
@@ -33,7 +36,7 @@ export interface CreateRoundOptions {
 /** Build a fresh round: generate a valid map and place the player's and the rivals' molds. */
 export function createRound(opts: CreateRoundOptions): World {
   const balance = opts.balance ?? defaultBalance;
-  const difficulty = opts.difficulty ?? difficultyFor(opts.roundNumber, balance);
+  const difficulty = opts.difficulty ?? difficultyFor(opts.roundNumber, balance, opts.aspect);
   const rivals = opts.rivals ?? difficulty.rivalCount;
   const seed = deriveSeed(opts.runSeed, opts.roundNumber);
 

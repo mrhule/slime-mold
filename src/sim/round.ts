@@ -1,4 +1,5 @@
 import { moldOf } from './world';
+import { TICK_DT } from './types';
 import type { MoldId, RoundOutcome, World } from './types';
 
 /**
@@ -15,6 +16,16 @@ export function mapControl(world: Readonly<World>, moldId: MoldId): number {
  * eliminated or the player holds `victoryControl` of the map. Defeat is checked first, so if
  * both happen in the same tick the player loses. Once decided, the outcome sticks.
  */
+/**
+ * The map control that wins the round right now. It starts at `victoryControl`; once a round has run
+ * past `victoryEase.startSeconds` it eases down, so a stalemate always ends one way or the other.
+ */
+export function winThreshold(world: Readonly<World>): number {
+  const { victoryControl, victoryEase: e } = world.balance;
+  const late = Math.max(0, world.tick * TICK_DT - e.startSeconds);
+  return Math.max(Math.min(victoryControl, e.floor), victoryControl - (late / 60) * e.perMinute);
+}
+
 export function evaluateOutcome(world: World): void {
   if (world.outcome !== 'playing') return;
   const player = world.molds[0];
@@ -29,7 +40,7 @@ export function evaluateOutcome(world: World): void {
     world.victoryReason = 'eliminated-all';
     return;
   }
-  if (mapControl(world, player.id) >= world.balance.victoryControl) {
+  if (mapControl(world, player.id) >= winThreshold(world)) {
     world.outcome = 'victory';
     world.victoryReason = 'map-control';
   }

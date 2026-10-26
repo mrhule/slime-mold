@@ -11,20 +11,20 @@ describe('difficultyFor (R14)', () => {
 
     const r5 = difficultyFor(5);
     expect(r5.rivalCount).toBe(3);
-    expect(r5.mapWidth).toBe(211);
-    expect(r5.mapHeight).toBe(158);
+    expect(r5.mapWidth).toBe(198);
+    expect(r5.mapHeight).toBe(149);
     expect(r5.foodDensity).toBeCloseTo(0.72);
-    expect(r5.rivalAggression).toBeCloseTo(0.52);
-    expect(r5.rivalStartNutrients).toBeCloseTo(3);
+    expect(r5.rivalAggression).toBeCloseTo(0.44);
+    expect(r5.rivalStartNutrients).toBeCloseTo(2);
     expect(r5.aiThinkInterval).toBeCloseTo(2);
 
     const r10 = difficultyFor(10);
     expect(r10.rivalCount).toBe(5);
-    expect(r10.mapWidth).toBe(275);
-    expect(r10.mapHeight).toBe(206);
+    expect(r10.mapWidth).toBe(246);
+    expect(r10.mapHeight).toBe(185);
     expect(r10.foodDensity).toBeCloseTo(0.37);
-    expect(r10.rivalAggression).toBeCloseTo(0.9);
-    expect(r10.rivalStartNutrients).toBeCloseTo(5.5);
+    expect(r10.rivalAggression).toBeCloseTo(0.74);
+    expect(r10.rivalStartNutrients).toBeCloseTo(3.25);
     expect(r10.aiThinkInterval).toBeCloseTo(0.8);
   });
 
@@ -70,6 +70,17 @@ describe('difficultyFor (R14)', () => {
     expect(difficultyFor(5).rivalBuildReserve).toBe(420);
     expect(difficultyFor(10).rivalBuildReserve).toBe(70);
     expect(difficultyFor(40).rivalBuildReserve).toBe(60);
+  });
+
+  it('shapes the map to a screen aspect without changing its cell count', () => {
+    for (const n of [1, 5, 10]) {
+      const std = difficultyFor(n);
+      const wide = difficultyFor(n, undefined, 2.1);
+      expect(wide.mapWidth / wide.mapHeight).toBeCloseTo(2.1, 1);
+      expect(Math.abs(wide.mapWidth * wide.mapHeight - std.mapWidth * std.mapHeight) / (std.mapWidth * std.mapHeight)).toBeLessThan(0.02);
+    }
+    expect(difficultyFor(1, undefined, 5).mapWidth / difficultyFor(1, undefined, 5).mapHeight).toBeCloseTo(2.4, 1);
+    expect(difficultyFor(1, undefined, Number.NaN)).toEqual(difficultyFor(1));
   });
 
   it('treats a non-positive or fractional round as round 1 or the floor', () => {

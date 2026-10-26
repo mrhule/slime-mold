@@ -223,6 +223,7 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
       const grant = Math.min(tip.rate * dt, comp.pool);
       if (grant > 1e-9) {
         comp.pool -= grant;
+        mold.flowTick.growth += grant;
         // a store house on this vein makes each delivered nutrient go further (S8)
         const boost = world.supply[head] as number;
         // and the farther the head is from supply along the veins, the less of it arrives (feed)
@@ -255,7 +256,9 @@ const SPUR_CUSHION = 30;
 
 function pay(world: World, from: CellIndex, cell: CellIndex): void {
   const comp = world.components.get(world.component[from] as number) as Component;
-  comp.pool = Math.max(0, comp.pool - stepCostOf(world, cell));
+  const spent = Math.min(comp.pool, stepCostOf(world, cell));
+  comp.pool -= spent;
+  moldOf(world, comp.moldId).flowTick.growth += spent;
 }
 
 /** can a spur cell go here: open, unowned, and no corner cutting through obstacles */

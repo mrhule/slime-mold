@@ -78,6 +78,9 @@ export interface Mold {
   /** per-tick accumulators feeding netIncome */
   incomeTick: number;
   upkeepTick: number;
+  /** where nutrients came from and went, per tick and smoothed per second, for the HUD */
+  flowTick: NutrientFlow;
+  flow: NutrientFlow;
   /** owned cells touching an enemy cell, rebuilt every tick */
   frontCells: CellIndex[];
   /** smoothed biomass per second lost on fronts, and the per-tick accumulator */
@@ -246,12 +249,33 @@ export interface BuildOption {
   minTier: number;
 }
 
+/** nutrients per second (or per tick while accumulating) by where they came from or went */
+export interface NutrientFlow {
+  income: number;
+  /** upkeep owed for veins, whether or not the stock could pay it */
+  veins: number;
+  /** upkeep owed for buildings */
+  buildings: number;
+  /** spent pushing veins outward */
+  growth: number;
+  /** spent on the fight at the fronts */
+  fight: number;
+}
+
+export const emptyFlow = (): NutrientFlow => ({ income: 0, veins: 0, buildings: 0, growth: 0, fight: 0 });
+
 export interface HudModel {
   round: number;
   storedNutrients: number;
   netIncome: number;
+  /** smoothed income and each kind of spending, per second */
+  flow: NutrientFlow;
+  /** some piece cannot pay its upkeep, so its veins are dying back */
+  starving: boolean;
   allocation: number;
   mapControl: number;
+  /** the control that wins right now: it eases down in a long round */
+  winControl: number;
   growthStarved: boolean;
   targets: HudTarget[];
   build: BuildOption[];

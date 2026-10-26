@@ -13,7 +13,7 @@ import { fadeStrays } from './fade';
 import { decayOrphans } from './network';
 import { tickUpkeep } from './upkeep';
 import { TICK_DT } from './types';
-import type { Component, World } from './types';
+import type { Component, NutrientFlow, World } from './types';
 
 /** EMA time constant for the HUD's net income (seconds). */
 const INCOME_SMOOTHING = 2;
@@ -35,6 +35,12 @@ function settleNetIncome(world: World): void {
   for (const mold of world.molds) {
     const net = (mold.incomeTick - mold.upkeepTick) / TICK_DT;
     mold.netIncome += (net - mold.netIncome) * k;
+    const tick = mold.flowTick;
+    tick.income = mold.incomeTick;
+    for (const key of Object.keys(tick) as (keyof NutrientFlow)[]) {
+      mold.flow[key] += (tick[key] / TICK_DT - mold.flow[key]) * k;
+      tick[key] = 0;
+    }
     mold.incomeTick = 0;
     mold.upkeepTick = 0;
   }

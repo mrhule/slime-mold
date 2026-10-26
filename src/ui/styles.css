@@ -24,7 +24,9 @@ html, body {
 #game { position: fixed; inset: 0; }
 #game canvas { display: block; }
 
-#ui { position: fixed; inset: 0; pointer-events: none; }
+/* --map-left, --map-right and --map-bottom (set from main.ts) are the empty window around the map; the desktop
+   panels move into that margin beside the map when it is wide enough, and sit at the window edge when it is not */
+#ui { position: fixed; inset: 0; pointer-events: none; --map-left: 0px; --map-right: 0px; --map-bottom: 0px; }
 #ui > * { pointer-events: auto; }
 
 .panel {
@@ -39,7 +41,7 @@ html, body {
 .hud {
   position: absolute;
   top: 16px;
-  left: 16px;
+  left: max(16px, calc(var(--map-left) - 250px - 38px));
   width: 250px;
   padding: 10px 14px 12px;
   transform: rotate(-1deg);
@@ -79,7 +81,13 @@ html, body {
   font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
+.hud .value.pos { color: #2c7a31; }
+.hud .value.out { color: #b8411f; }
 .hud .value.neg { color: var(--danger); }
+/* the bottom line of the ledger: tinted and heavier so a glance tells whether the economy is healthy */
+.hud .row.net { background: rgba(44, 122, 49, 0.14); border-top-width: 3px; margin: 0 -6px; padding: 2px 6px; }
+.hud .row.net .label, .hud .row.net .value { font-weight: 900; }
+.hud .row.net:has(.value.neg) { background: rgba(224, 67, 42, 0.16); }
 
 .burst {
   margin: 8px -4px 2px;
@@ -106,11 +114,29 @@ html, body {
   font-size: 13px;
   line-height: 1.2;
 }
-.hud .warn[hidden] { display: none; }
+.hud .warn[hidden], .hud .row[hidden] { display: none; }
+
+/* the guided first round: a prompt card above the build bar */
+.coach {
+  position: absolute;
+  left: 50%;
+  bottom: 128px;
+  transform: translateX(-50%) rotate(-0.4deg);
+  width: min(460px, calc(100vw - 32px));
+  padding: 8px 14px 10px;
+  background: #fff6dc;
+}
+.coach[hidden] { display: none; }
+.coach-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.coach-step { font-family: var(--display); font-size: 15px; letter-spacing: 1px; text-transform: uppercase; color: #8a5a00; }
+.coach-skip { font: inherit; font-size: 12px; font-weight: 700; background: none; border: 0; text-decoration: underline; cursor: pointer; color: var(--ink); padding: 4px; }
+.coach-text { font-weight: 700; font-size: 15px; line-height: 1.3; }
+.touch .coach { bottom: auto; top: 70px; width: min(420px, calc(100vw - 372px)); }
+.touch .coach-skip { min-height: 36px; min-width: 44px; }
 
 .mute-btn {
   position: absolute;
-  right: 16px;
+  right: max(16px, calc(var(--map-right) - 52px - 12px));
   bottom: 16px;
   width: 52px;
   height: 44px;
@@ -172,7 +198,7 @@ html, body {
 /* Build bar (002): comic buttons along the bottom */
 .buildbar {
   position: absolute;
-  bottom: 18px;
+  bottom: max(18px, calc(var(--map-bottom) - 96px - 14px));
   left: 50%;
   transform: translateX(-50%) rotate(0.6deg);
   display: flex;

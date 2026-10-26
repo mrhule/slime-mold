@@ -3,7 +3,7 @@ import { hash2 } from '../sim/noise';
 import { neighbor } from '../sim/grid';
 import type { World } from '../sim/types';
 import { INK_RGB, moldColor, moldPattern, rgbUnit } from './palette';
-import { bandOf, jointU, litSide, pulseCount, style } from './style';
+import { jointU, litSide, pulseCount, style, veinHalfWidth } from './style';
 import type { QualityLevel } from './style';
 import { CELL } from './units';
 import vertex from './shaders/vein.vert?raw';
@@ -37,8 +37,6 @@ export class VeinLayer {
   private readonly molds = new Map<number, MoldMesh>();
   private lastBuild = -1;
   private halfWidth: Float32Array;
-  /** the width band each edge slot had at the last rebuild, for hysteresis (A10); allocated once per round */
-  private readonly bands: Uint8Array;
   private jitterX: Float32Array;
   private jitterY: Float32Array;
 
@@ -47,7 +45,6 @@ export class VeinLayer {
     this.shadows.filters = [new AlphaFilter({ alpha: style.shadow.veinAlpha })];
     this.container.addChild(this.shadows, this.meshes);
     this.halfWidth = new Float32Array(n);
-    this.bands = new Uint8Array(n * 4);
     this.jitterX = new Float32Array(n);
     this.jitterY = new Float32Array(n);
     for (let i = 0; i < n; i++) {
@@ -118,10 +115,8 @@ export class VeinLayer {
         const v = neighbor(w, h, c, k);
         if (!visible(v)) continue;
         const slot = c * 4 + k;
-        // three hard width bands from conductivity, with hysteresis so a value at a threshold does not flicker
-        const band = bandOf(world.conductivity[slot] as number, this.bands[slot] as 0 | 1 | 2);
-        this.bands[slot] = band;
-        const half = style.veinBands.halfWidth[band] as number;
+        // width follows conductivity, which follows traffic: thick arteries, hair-thin idle tendrils
+        const half = veinHalfWidth(world.conductivity[slot] as number);
         const flow = world.edgeFlow[slot] as number;
         // the flow attribute carries the pulse count, signed by direction
         edgeList.push({ a: c, b: v, half, flow: Math.sign(flow) * pulseCount(Math.abs(flow)), phase: hash2(c, v, world.seed) });

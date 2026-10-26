@@ -3,6 +3,8 @@ import { hash2, valueNoise } from '../sim/noise';
 import { Terrain } from '../sim/types';
 import type { World } from '../sim/types';
 import { CELL } from './units';
+import { FLOOR_TILE_WORLD_PX, art } from './art';
+import type { Art, ArtSprite } from './art';
 import { INK, MAP, rgb } from './palette';
 import { style } from './style';
 
@@ -39,8 +41,10 @@ export function bakeTerrain(world: Readonly<World>): Sprite {
   const img = ctx.createImageData(pw, ph);
   const rough = occupancy(world, (i) => world.terrain[i] === Terrain.Rough, pw, ph);
   const glass = occupancy(world, (i) => world.terrain[i] === Terrain.Obstacle, pw, ph);
-  paintGround(img, rough, glass, pw, ph);
+  const painted = art();
+  paintGround(img, rough, glass, pw, ph, painted);
   ctx.putImageData(img, 0, 0);
+  if (painted) paintProps(world, ctx, painted);
 
   paintWall(world, ctx);
   paintScratches(world, ctx, pw, ph);
@@ -95,7 +99,7 @@ function boxBlur(a: Float32Array, tmp: Float32Array, w: number, h: number, r: nu
   }
 }
 
-function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, pw: number, ph: number): void {
+function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, pw: number, ph: number, painted: Art | null): void {
   const data = img.data;
   const bands: Rgb[] = [rgb(MAP.dark), rgb(MAP.mid), rgb(MAP.base)];
   const roughC = rgb(MAP.rough);
@@ -104,6 +108,8 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
   const glassDarkC = rgb(MAP.glassDark);
   const glassLightC = rgb(MAP.glassLight);
   const ink = rgb(INK);
+  const floor = painted ? new FloorSampler(painted, pw, ph) : null;
+  const out: Rgb = [0, 0, 0];
 
   const at = (f: Float32Array, x: number, y: number): number => {
     const xx = x < 0 ? 0 : x >= pw ? pw - 1 : x;
@@ -121,6 +127,10 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
       let r = bands[0]![0] + (bands[1]![0] - bands[0]![0]) * lo + (bands[2]![0] - bands[1]![0]) * hi;
       let g = bands[0]![1] + (bands[1]![1] - bands[0]![1]) * lo + (bands[2]![1] - bands[1]![1]) * hi;
       let b = bands[0]![2] + (bands[1]![2] - bands[0]![2]) * lo + (bands[2]![2] - bands[1]![2]) * hi;
+      if (floor) {
+        floor.sample(floor.open, x, y, out);
+        [r, g, b] = out;
+      }
 
       const mixIn = (c: Rgb, a: number): void => {
         r += (c[0] - r) * a;
@@ -135,10 +145,13 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
       const rv = (rough[i] as number) + wobble;
       if (rv > EDGE - 0.05) {
         const inside = smooth(EDGE - 0.02, EDGE + 0.02, rv);
-        mixIn(roughC, inside);
+        if (floor) {
+          floor.sample(floor.rough, x, y, out);
+          mixIn(out, inside);
+        } else mixIn(roughC, inside);
         const phase = (((x * 0.8 + y) % 7) + 7) % 7;
         const line = 1 - smooth(0.5, 1.3, Math.abs(phase - 3.5) * 0.6 + 0.0);
-        mixIn(roughInk, inside * smooth(EDGE + 0.1, EDGE + 0.2, rv) * line * 0.7);
+        if (!floor) mixIn(roughInk, inside * smooth(EDGE + 0.1, EDGE + 0.2, rv) * line * 0.7);
         const rim = smooth(EDGE - 0.02, EDGE + 0.02, rv) * (1 - smooth(EDGE + 0.06, EDGE + 0.1, rv));
         mixIn(roughInk, rim * 0.45);
       }
@@ -218,4 +231,128 @@ function paintScratches(world: Readonly<World>, ctx: CanvasRenderingContext2D, p
   }
   ctx.stroke();
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Samples a tiled floor image without visible seams: each pixel blends four copies of the tile, shifted by half
+ * a tile, weighted so the copy whose seam is nearest contributes nothing there. The blend softens contrast a
+ * little in return, which keeps the floor quiet behind the veins.
+ */
+class FloorSampler {
+  readonly open: ImageData;
+  readonly rough: ImageData;
+  private readonly t: number;
+  private readonly scale: number;
+  private readonly wx: Float32Array;
+  private readonly wy: Float32Array;
+
+  constructor(painted: Art, pw: number, ph: number) {
+    this.open = painted.open;
+    this.rough = painted.rough;
+    this.t = painted.tile;
+    // the tile covers FLOOR_TILE_WORLD_PX world pixels, so one texel is this many canvas pixels
+    this.scale = painted.tile / FLOOR_TILE_WORLD_PX;
+    const weights = (n: number): Float32Array => {
+      const a = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const u = ((i * this.scale) % this.t) / this.t;
+        a[i] = Math.sin(Math.PI * u) ** 2;
+      }
+      return a;
+    };
+    this.wx = weights(pw);
+    this.wy = weights(ph);
+  }
+
+  sample(img: ImageData, x: number, y: number, out: Rgb): void {
+    const t = this.t;
+    const half = t >> 1;
+    const u = Math.floor(x * this.scale) % t;
+    const v = Math.floor(y * this.scale) % t;
+    const u2 = (u + half) % t;
+    const v2 = (v + half) % t;
+    const a = this.wx[x] as number;
+    const b = this.wy[y] as number;
+    const d = img.data;
+    const i00 = (v * t + u) * 4;
+    const i10 = (v * t + u2) * 4;
+    const i01 = (v2 * t + u) * 4;
+    const i11 = (v2 * t + u2) * 4;
+    const w00 = a * b;
+    const w10 = (1 - a) * b;
+    const w01 = a * (1 - b);
+    const w11 = (1 - a) * (1 - b);
+    out[0] = (d[i00] as number) * w00 + (d[i10] as number) * w10 + (d[i01] as number) * w01 + (d[i11] as number) * w11;
+    out[1] = (d[i00 + 1] as number) * w00 + (d[i10 + 1] as number) * w10 + (d[i01 + 1] as number) * w01 + (d[i11 + 1] as number) * w11;
+    out[2] = (d[i00 + 2] as number) * w00 + (d[i10 + 2] as number) * w10 + (d[i01 + 2] as number) * w01 + (d[i11 + 2] as number) * w11;
+  }
+}
+
+const isObstacle = (world: Readonly<World>, cell: number): boolean => world.terrain[cell] === Terrain.Obstacle;
+const isFloor = (world: Readonly<World>, cell: number): boolean => world.terrain[cell] === Terrain.Open || world.terrain[cell] === Terrain.Rough;
+
+/** a sprite drawn centred on (cx, cy) so its longest side is `size` world pixels */
+function stamp(ctx: CanvasRenderingContext2D, sprite: ArtSprite, cx: number, cy: number, size: number, angle = 0, alpha = 1): void {
+  const k = size / Math.max(sprite.w, sprite.h);
+  const w = sprite.w * k;
+  const h = sprite.h * k;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(cx, cy);
+  if (angle) ctx.rotate(angle);
+  ctx.drawImage(sprite.image, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
+/**
+ * The painted extras, drawn into the terrain canvas: small litter and twigs scattered on open ground, then
+ * piles of rocks laid over every obstacle so the blocked cells read as boulders. The plain obstacle body stays
+ * underneath, so a gap between rocks looks like shadow rather than open floor.
+ */
+function paintProps(world: Readonly<World>, ctx: CanvasRenderingContext2D, painted: Art): void {
+  const w = world.width;
+  const h = world.height;
+  const litter = painted.sprites.litter ?? [];
+  const twigs = painted.sprites.twigs ?? [];
+  const rocks = [...(painted.sprites.rocks ?? []), ...(painted.sprites['rocks-moss'] ?? [])];
+
+  for (let cy = 2; cy < h - 2; cy++) {
+    for (let cx = 2; cx < w - 2; cx++) {
+      const cell = cy * w + cx;
+      if (!isFloor(world, cell)) continue;
+      const roll = hash2(cx, cy, world.seed + 71);
+      const x = (cx + hash2(cx, cy, world.seed + 72)) * CELL;
+      const y = (cy + hash2(cx, cy, world.seed + 73)) * CELL;
+      const angle = (hash2(cx, cy, world.seed + 74) - 0.5) * Math.PI * 2;
+      if (roll < 1 / 90 && litter.length > 0) {
+        stamp(ctx, litter[Math.floor(hash2(cx, cy, world.seed + 75) * litter.length)] as ArtSprite, x, y, 12 + hash2(cx, cy, world.seed + 76) * 8, angle, 0.9);
+      } else if (roll > 1 - 1 / 260 && twigs.length > 0) {
+        stamp(ctx, twigs[Math.floor(hash2(cx, cy, world.seed + 77) * twigs.length)] as ArtSprite, x, y, 26 + hash2(cx, cy, world.seed + 78) * 26, angle, 0.85);
+      }
+    }
+  }
+
+  if (rocks.length === 0) return;
+  // cover each obstacle cell with a rock: raster order, each rock marking the cells it hides
+  const covered = new Uint8Array(w * h);
+  const placed: { x: number; y: number; size: number; sprite: ArtSprite }[] = [];
+  for (let cy = 0; cy < h; cy++) {
+    for (let cx = 0; cx < w; cx++) {
+      const cell = cy * w + cx;
+      if (!isObstacle(world, cell) || covered[cell]) continue;
+      const radius = 1.6 + hash2(cx, cy, world.seed + 81) * 1.6; // in cells
+      const mx = cx + radius * 0.55;
+      const my = cy + radius * 0.55;
+      for (let yy = Math.floor(my - radius); yy <= Math.ceil(my + radius); yy++) {
+        for (let xx = Math.floor(mx - radius); xx <= Math.ceil(mx + radius); xx++) {
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          if ((xx - mx) ** 2 + (yy - my) ** 2 <= radius * radius) covered[yy * w + xx] = 1;
+        }
+      }
+      placed.push({ x: (mx + 0.5 + (hash2(cx, cy, world.seed + 83) - 0.5) * 1.1) * CELL, y: (my + 0.5 + (hash2(cx, cy, world.seed + 84) - 0.5) * 1.1) * CELL, size: radius * 2.3 * CELL, sprite: rocks[Math.floor(hash2(cx, cy, world.seed + 82) * rocks.length)] as ArtSprite });
+    }
+  }
+  // lower rocks in front, so piles overlap the way they would seen from above and to the side
+  placed.sort((a, b) => a.y - b.y);
+  for (const r of placed) stamp(ctx, r.sprite, r.x, r.y, r.size);
 }

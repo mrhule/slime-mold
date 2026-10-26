@@ -7,11 +7,12 @@ export const style = {
   /** unit vector pointing toward the light (upper left) */
   light: { x: -0.6, y: -0.8 },
   /** vein half-widths by band, and the conductivity thresholds (with hysteresis) between bands */
-  veinBands: { halfWidth: [1.2, 2.2, 3.4], up: [1.2, 3.0], down: [0.9, 2.4] },
+  /** vein half-width in world px: thin tendrils when idle up to thick arteries at `ref` conductivity and above */
+  veinWidth: { min: 1.1, max: 4.8, ref: 8 },
   /** outline padding on the lit and shadow sides of a vein; shifted second stroke for Graphics outlines */
   outline: { padLit: 1.0, padShade: 2.4, strokeShift: [1.0, 1.2] },
   shadow: { veinOffset: [2.5, 3.5], veinAlpha: 0.35, groundOffset: [3, 4], groundAlpha: 0.3 },
-  pulse: { minFlow: 0.05, lightFlow: 0.5, heavyFlow: 2.0, speed: 1.6 },
+  pulse: { minFlow: 0.05, lightFlow: 0.5, heavyFlow: 2.0, speed: 2.0 },
   shake: { max: 6, k: 1.2, decaySeconds: 0.25 },
   splats: { maxPerFrame: 12, lifeSeconds: 0.5 },
   /** the auto quality governor: drop after dropSeconds under dropFps, rise after raiseSeconds over raiseFps */
@@ -39,15 +40,14 @@ export function jointU(dx: number, dy: number): number {
 }
 
 /**
- * The width band of a vein edge from its conductivity (A10): 0 thin, 1 medium, 2 thick. The up and
- * down thresholds differ, so a value hovering at a threshold keeps its previous band instead of
- * flickering; `previous` is that band from the last rebuild.
+ * Half-width of a vein edge from its conductivity, which follows the traffic it carries: idle veins
+ * are hair-thin and busy ones thick. A square-root curve keeps the thin end readable. Bad input
+ * (NaN, negative) gives the thinnest width.
  */
-export function bandOf(conductivity: number, previous: 0 | 1 | 2): 0 | 1 | 2 {
-  const { up, down } = style.veinBands;
-  if (previous === 0) return conductivity >= up[1] ? 2 : conductivity >= up[0] ? 1 : 0;
-  if (previous === 1) return conductivity >= up[1] ? 2 : conductivity < down[0] ? 0 : 1;
-  return conductivity < down[0] ? 0 : conductivity < down[1] ? 1 : 2;
+export function veinHalfWidth(conductivity: number): number {
+  const { min, max, ref } = style.veinWidth;
+  const t = conductivity > 0 ? Math.min(1, Math.sqrt(conductivity / ref)) : 0;
+  return min + (max - min) * t;
 }
 
 /**

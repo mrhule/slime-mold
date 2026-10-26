@@ -9,10 +9,14 @@ import { FixedStepLoop } from './game/loop';
 import { Run } from './game/run';
 import { visibleDeaths } from './game/frame-events';
 import { createStorage, safeLocalStorage } from './game/storage';
+import { Tutorial } from './game/tutorial';
+import { loadArt } from './render/art';
 import { GameRenderer } from './render/renderer';
-import { createRound, enqueue, pendingAllocation, placePreview, readHud, roundOutcome, step, upgradeSpec } from './sim';
+import { createRound, countBuildings, enqueue, knownFoodLeft, pendingAllocation, placePreview, readHud, roundOutcome, step, upgradeSpec } from './sim';
+import { TICK_DT } from './sim';
 import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
+import { Coach } from './ui/coach';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
 import { InputController } from './ui/input';
@@ -39,7 +43,13 @@ async function main(): Promise<void> {
     startRound: dev && Number.isFinite(roundParam) && roundParam >= 1 ? Math.floor(roundParam) : 1,
     storage: createStorage(),
     newSeed: freshSeed,
-    createWorld: (runSeed, roundNumber) => createRound({ runSeed, roundNumber }),
+    // on a touch device the map takes the screen's shape rather than being cropped by it
+    createWorld: (runSeed, roundNumber) => {
+      const touch = resolveTouch(loadSettings(safeLocalStorage()).touchMode, detectTouch());
+      const long = Math.max(window.innerWidth, window.innerHeight);
+      const short = Math.max(1, Math.min(window.innerWidth, window.innerHeight));
+      return createRound({ runSeed, roundNumber, ...(touch ? { aspect: long / short } : {}) });
+    },
   });
 
   const app = new Application();
@@ -49,12 +59,19 @@ async function main(): Promise<void> {
   (document.getElementById('game') as HTMLElement).appendChild(app.canvas);
   const ui = document.getElementById('ui') as HTMLElement;
 
+  await loadArt(); // the painted look; the game draws its plain procedural look if this fails
   const renderer = new GameRenderer(app, run.world);
   let builtVersion = run.worldVersion;
   const frameEvents: SimEvent[] = [];
   let tickMs = 0;
   let ticksPerFrame = 0;
   let fps = 60;
+  // ticks at which the player lost a cell to a rival, for the "front collapsing" warning
+  const losses: number[] = [];
+  let lastFrontAlert = -Infinity;
+  const FRONT_WINDOW_TICKS = 200; // 10 s
+  const FRONT_LOSS_CELLS = 6;
+  const FRONT_ALERT_GAP_TICKS = 600; // at most one warning every 30 s
 
   const loop = new FixedStepLoop(() => {
     const t0 = performance.now();
@@ -117,9 +134,23 @@ async function main(): Promise<void> {
       renderer.camera.centerOn(x, y);
     },
   });
+  const tutorial = new Tutorial(store);
+  let tutorialRound = 1;
+  const startTutorial = (): void => {
+    tutorialRound = run.world.roundNumber;
+    tutorial.start(run.world.tick * TICK_DT);
+  };
+  const coach = new Coach(ui, () => tutorial.finish());
   const buildBar = new BuildBar(ui, (type) => input.togglePlacing(type));
   const screens = new Screens(ui, {
-    start: () => run.start(),
+    start: () => {
+      run.start();
+      if (!tutorial.seen && run.world.roundNumber === 1) startTutorial();
+    },
+    tutorial: () => {
+      run.closeMenu();
+      startTutorial();
+    },
     resume: () => run.resume(),
     closeMenu: () => run.closeMenu(),
     restartRun: () => run.newRun(),
@@ -127,6 +158,22 @@ async function main(): Promise<void> {
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
   }, { get: () => settings, set: (change) => applySettings(change), printAvailable: renderer.print !== null });
+  // how much empty window lies around the map, so the panels can sit beside it instead of on it
+  let uiMargins = '';
+  const fitUiToMap = (): void => {
+    const cam = renderer.camera;
+    const [x0, y0] = cam.worldToScreen(0, 0);
+    const [x1, y1] = cam.worldToScreen(cam.worldW, cam.worldH);
+    const left = Math.max(0, Math.round(x0));
+    const right = Math.max(0, Math.round(cam.viewW - x1));
+    const bottom = Math.max(0, Math.round(cam.viewH - y1));
+    const margins = `${left} ${right} ${bottom}`;
+    if (margins === uiMargins) return;
+    uiMargins = margins;
+    ui.style.setProperty('--map-left', `${left}px`);
+    ui.style.setProperty('--map-right', `${right}px`);
+    ui.style.setProperty('--map-bottom', `${bottom}px`);
+  };
   const touchOn = (): boolean => resolveTouch(settings.touchMode, detectedTouch);
   // portrait on a touch device shows a rotate message and pauses; turning back resumes only that pause
   const portrait = typeof matchMedia === 'function' ? matchMedia('(orientation: portrait)') : null;
@@ -214,6 +261,7 @@ async function main(): Promise<void> {
     // is checked against the real window every frame and resized when they differ
     if (app.screen.width !== window.innerWidth || app.screen.height !== window.innerHeight) app.renderer.resize(window.innerWidth, window.innerHeight);
     renderer.resize();
+    fitUiToMap();
 
     // placement preview: ask the sim whether it would allow the building under the cursor
     let ghost: { cell: number; ok: boolean; type: BuildingType } | null = null;
@@ -268,18 +316,58 @@ async function main(): Promise<void> {
       }
     }
 
+    // hovering food says how much of it is left (food in the fog shows what was last seen)
+    if (under !== null && pointer && !input.demolishArmed) {
+      const sid = run.world.foodSourceId[under] as number;
+      const src = sid >= 0 ? run.world.foodSources[sid] : undefined;
+      if (src && !src.depleted && !run.world.buildings.some((b) => !b.destroyed && b.moldId === PLAYER && Math.abs((b.cell % run.world.width) - (under % run.world.width)) <= 2 && Math.abs(Math.floor(b.cell / run.world.width) - Math.floor(under / run.world.width)) <= 2)) {
+        const name = FOOD_NAMES[src.type] ?? 'Food';
+        if (run.world.balance.foodTypes[src.type].infinite) {
+          buildBar.showHint(`${name}: never runs out`, pointer.x, pointer.y, true);
+        } else {
+          const left = knownFoodLeft(run.world, src);
+          if (left) buildBar.showHint(`${name}: ${Math.round(left.amount)} of ${Math.round(src.total)} nutrients left${left.fresh ? '' : ' (last seen)'}`, pointer.x, pointer.y, true);
+        }
+      }
+    }
+
     renderer.update(run.world, dt, ghost, inspect);
     const model = readHud(run.world, PLAYER);
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });
+    // the guided first round: prompts follow what the player has done, and stay out of the menus
+    let tutorialStep: ReturnType<Tutorial['update']> = null;
+    if (tutorial.running && run.world.roundNumber !== tutorialRound) tutorial.finish();
+    if (tutorial.running && (run.state === 'playing' || (run.state === 'paused' && run.pauseReason !== 'menu'))) {
+      const me = run.world.molds[PLAYER - 1];
+      tutorialStep = tutorial.update({
+        round: run.world.roundNumber,
+        seconds: model.elapsedSeconds,
+        targets: me?.targets.length ?? 0,
+        cells: me?.cellCount ?? 0,
+        factories: countBuildings(run.world, PLAYER, 'storehouse'),
+        gathered: me?.stats.nutrientsGathered ?? 0,
+        rivalSeen: model.rivals.some((r) => r.visibleCells !== null),
+      });
+    }
+    if (tutorialStep) coach.show(tutorialStep.text(touchOn(), Math.round(model.winControl * 100)), tutorial.stepNumber, tutorial.stepCount);
+    else coach.hide();
     buildBar.update(model.build, input.placing);
-    buildBar.highlight(model.pools.waiting > 0 && input.placing !== 'storehouse' ? 'storehouse' : null);
+    buildBar.highlight((model.pools.waiting > 0 || tutorialStep?.id === 'factory') && input.placing !== 'storehouse' ? 'storehouse' : null);
+
+    // a front that keeps losing cells gets a warning that says what to do about it
+    while (losses.length > 0 && (losses[0] as number) < run.world.tick - FRONT_WINDOW_TICKS) losses.shift();
+    if (losses.length >= FRONT_LOSS_CELLS && run.world.tick - lastFrontAlert > FRONT_ALERT_GAP_TICKS) {
+      lastFrontAlert = run.world.tick;
+      hud.toast('Your front is collapsing! Send more to the fight (E) or build a Booster (B)', 4);
+    }
 
     for (const e of frameEvents) {
       if (e.type === 'commandRejected' && e.mold === PLAYER) {
         hud.reject(e.reason);
         if (e.cell !== undefined) renderer.fx.addRejectPing(e.cell, run.world.width);
       }
+      if (e.type === 'cellDied' && e.mold === PLAYER && e.by > 0) losses.push(run.world.tick);
       if (e.type === 'capLost') hud.toast('Stock lost!', 2.5);
       if (e.type === 'dropWarning') hud.toast(`${FOOD_NAMES[e.foodType] ?? 'Food'} incoming!`, 2.5);
       if (e.type === 'dropLanded') {

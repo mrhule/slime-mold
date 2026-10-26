@@ -42,9 +42,13 @@ export class Hud {
         <div class="row"><span class="label">Round</span><span class="value" data-hud="round">1</span></div>
         <div class="row"><span class="label">Time</span><span class="value" data-hud="time">0:00</span></div>
         <div class="row" title="Nutrients stored across your whole mold, against how much your pieces can hold. Build factories to hold more."><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
-        <div class="row" title="Income minus upkeep, per second"><span class="label">Income</span><span class="value" data-hud="income">+0.0/s</span></div>
-        <div class="row" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
-        <div class="meter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-goal"></div></div>
+        <div class="row flow" title="Nutrients arriving per second: your core, food you have eaten, and goo pools with a store house"><span class="label">Income</span><span class="value pos" data-hud="inflow">+0.0/s</span></div>
+        <div class="row flow" data-hud="upkeepRow" title="Upkeep owed per second: every vein cell and building costs a little to keep alive"><span class="label">Upkeep</span><span class="value out" data-hud="upkeep">-0.0/s</span></div>
+        <div class="row flow" data-hud="growthRow" hidden title="Nutrients spent per second pushing your veins outward"><span class="label">Growing</span><span class="value out" data-hud="growth">-0.0/s</span></div>
+        <div class="row flow" data-hud="fightRow" hidden title="Nutrients spent per second fighting at the fronts"><span class="label">Fighting</span><span class="value out" data-hud="fight">-0.0/s</span></div>
+        <div class="row net" title="Income minus everything you spend, per second. Below zero and your stock drains."><span class="label">Net</span><span class="value pos" data-hud="income">+0.0/s</span></div>
+        <div class="row" data-hud="controlRow" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
+        <div class="meter" data-hud="controlMeter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-goal"></div></div>
         <div class="clock" role="group" aria-label="Game speed">
           <button type="button" data-speed="pause" title="Pause (Space)">❚❚</button>
           <button type="button" data-speed="1" title="Normal speed (1)">1x</button>
@@ -58,6 +62,8 @@ export class Hud {
         <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
         <button type="button" class="evolve" data-hud="evolve" hidden title="Spend a fixed amount of nutrients to evolve and unlock new buildings (V). The price does not grow with your factories.">Evolve</button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
+        <div class="warn easing" data-hud="easing" hidden></div>
+        <div class="warn" data-hud="dying" hidden>VEINS DYING BACK: upkeep is more than your stock can pay. Eat food, build a Factory on a goo pool, or stop growing.</div>
         <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
         <div class="hint kbd-only">Click the map to grow there. Right-click a marker to cancel, or a vein to cut it.</div>
@@ -74,7 +80,7 @@ export class Hud {
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve']) this.el[k] = q(k);
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
     this.slider = q('alloc') as HTMLInputElement;
@@ -128,11 +134,29 @@ export class Hud {
     evolveBtn.hidden = t.current >= t.max;
     evolveBtn.classList.toggle('ready', t.ready);
     evolveBtn.textContent = t.ready ? `Evolve to tier ${t.current + 1} (V): costs ${Math.round(t.cost)}` : `Evolve: needs ${Math.round(t.cost)} nutrients`;
-    const sign = hud.netIncome >= 0 ? '+' : '';
-    this.el.income!.textContent = `${sign}${hud.netIncome.toFixed(1)}/s`;
-    this.el.income!.classList.toggle('neg', hud.netIncome < 0);
+    const f = hud.flow;
+    const upkeep = f.veins + f.buildings;
+    const net = f.income - upkeep - f.growth - f.fight;
+    this.el.inflow!.textContent = `+${f.income.toFixed(1)}/s`;
+    this.el.upkeep!.textContent = `-${upkeep.toFixed(1)}/s`;
+    this.el.upkeep!.classList.toggle('neg', hud.starving);
+    (this.el.upkeepRow as HTMLElement).title = `Upkeep owed per second: veins ${f.veins.toFixed(1)}, buildings ${f.buildings.toFixed(1)}`;
+    (this.el.growthRow as HTMLElement).hidden = f.growth < 0.05;
+    this.el.growth!.textContent = `-${f.growth.toFixed(1)}/s`;
+    (this.el.fightRow as HTMLElement).hidden = f.fight < 0.05;
+    this.el.fight!.textContent = `-${f.fight.toFixed(1)}/s`;
+    this.el.income!.textContent = `${net >= 0 ? '+' : '-'}${Math.abs(net).toFixed(1)}/s`;
+    this.el.income!.classList.toggle('neg', net < 0);
+    this.el.income!.classList.toggle('pos', net >= 0);
+    this.el.dying!.hidden = !hud.starving;
     this.el.control!.textContent = `${Math.round(hud.mapControl * 100)}%`;
-    (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / this.winControl) * 100)}%`;
+    (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / hud.winControl) * 100)}%`;
+    const goal = `${Math.round(hud.winControl * 100)}%`;
+    (this.el.controlRow as HTMLElement).title = `Share of the map you hold. Win at ${goal}, or eliminate every rival.`;
+    (this.el.controlMeter as HTMLElement).title = `Win at ${goal}`;
+    const eased = hud.winControl < this.winControl - 1e-6;
+    this.el.easing!.hidden = !eased;
+    if (eased) this.el.easing!.textContent = `The dish is drying out: you now win at ${goal} control.`;
     this.el.starved!.hidden = !hud.growthStarved;
     const waiting = hud.pools.waiting;
     this.el.unlinked!.hidden = waiting === 0;

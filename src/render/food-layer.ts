@@ -1,5 +1,6 @@
-import { Container, Graphics } from 'pixi.js';
-import { workingStoreHouses } from '../sim/index';
+import { Container, Graphics, Sprite } from 'pixi.js';
+import { art } from './art';
+import { knownFoodLeft, workingStoreHouses } from '../sim/index';
 import { hash2 } from '../sim/noise';
 import type { FoodSource, World } from '../sim/types';
 import { drawUnlinked } from './building-layer';
@@ -8,6 +9,14 @@ import { style } from './style';
 import { CELL } from './units';
 
 const GOO_LIP = 0x24351c;
+
+/** which painted food drawing each type uses (the order of the generated sheet) */
+const FOOD_SPRITE: Partial<Record<FoodSource['type'], number>> = { oatFlake: 0, breadCrumb: 1, sugarCube: 2, fruitSlice: 3 };
+
+/** the remaining-nutrients bar under each food item */
+const METER_H = 6;
+const METER_MIN_W = 22;
+const METER_STEPS = 24;
 
 /** what the player can see of a goo pool: who holds most of it, and whether it is paying or waiting */
 interface PoolState {
@@ -59,34 +68,24 @@ export class FoodLayer {
   private readonly poolG = new Graphics();
   private readonly poolRim = new Graphics();
   private lastKey = '';
+  /** painted food and pools, one sprite per source, when the art has loaded */
+  private readonly foodSprites = new Map<number, Sprite>();
+  private readonly poolSprites = new Map<number, Sprite>();
+  private readonly spriteLayer = new Container();
+  private readonly poolSpriteLayer = new Container();
 
   constructor() {
     this.rim.tint = INK;
     this.rim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
-    this.container.addChild(this.rim, this.g);
+    this.container.addChild(this.spriteLayer, this.rim, this.g);
     this.poolRim.tint = INK;
     this.poolRim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
-    this.poolContainer.addChild(this.poolRim, this.poolG);
+    this.poolContainer.addChild(this.poolSpriteLayer, this.poolRim, this.poolG);
   }
 
   update(world: Readonly<World>): void {
     // redraw only when some amount changed visibly
-    const vision = world.molds[0]?.vision;
-    const memFood = world.molds[0]?.memFood;
-    const known = (f: FoodSource): number | null => {
-      if (!vision || !memFood) return f.remaining;
-      let amount = 0;
-      let seen = false;
-      for (let y = f.y; y < f.y + f.h; y++) {
-        for (let x = f.x; x < f.x + f.w; x++) {
-          const c = y * world.width + x;
-          const v = vision[c] as number;
-          if (v > 0) seen = true;
-          amount += v === 2 ? (world.food[c] as number) : v === 1 ? (memFood[c] as number) : 0;
-        }
-      }
-      return seen ? amount : null;
-    };
+    const known = (f: FoodSource): number | null => knownFoodLeft(world, f)?.amount ?? null;
     const amounts = new Map<number, number>();
     let key = '';
     const pools = new Map<number, PoolState>();
@@ -103,7 +102,7 @@ export class FoodLayer {
         continue;
       }
       amounts.set(f.id, a);
-      key += Math.round(Math.sqrt(a / f.total) * 12) + ',';
+      key += `${Math.round(Math.sqrt(a / f.total) * 12)}.${Math.round((a / f.total) * METER_STEPS)},`;
     }
     if (key === this.lastKey) return;
     this.lastKey = key;
@@ -115,16 +114,70 @@ export class FoodLayer {
     for (const f of world.foodSources) {
       const st = pools.get(f.id);
       if (st) {
-        this.drawGoo(this.poolRim, f, st, world.tick);
-        this.drawGoo(this.poolG, f, st, world.tick);
+        const painted = this.paintPool(f);
+        this.drawGoo(this.poolRim, f, st, world.tick, !painted);
+        this.drawGoo(this.poolG, f, st, world.tick, !painted);
         if (st.waiting) drawUnlinked(this.poolG, (f.x + f.w / 2) * CELL, f.y * CELL - 2);
         continue;
       }
       const a = amounts.get(f.id);
-      if (a === undefined) continue;
-      this.draw(this.rim, f, a);
-      this.draw(g, f, a);
+      const sprite = this.foodSprites.get(f.id);
+      if (a === undefined) {
+        if (sprite) sprite.visible = false;
+        continue;
+      }
+      if (!this.paintFood(f, a)) {
+        this.draw(this.rim, f, a);
+        this.draw(g, f, a);
+      }
+      this.drawMeter(g, f, a);
     }
+  }
+
+  /** show this item as its painted sprite, shrinking as it is eaten; false when there is no art for it */
+  private paintFood(f: FoodSource, remaining: number): boolean {
+    const list = art()?.sprites.food;
+    const picture = list?.[FOOD_SPRITE[f.type] ?? -1];
+    if (!picture) return false;
+    let sprite = this.foodSprites.get(f.id);
+    if (!sprite) {
+      sprite = new Sprite(picture.texture);
+      sprite.anchor.set(0.5);
+      this.spriteLayer.addChild(sprite);
+      this.foodSprites.set(f.id, sprite);
+    }
+    const amount = Math.sqrt(Math.max(0, remaining) / f.total);
+    const fit = Math.min((f.w * CELL * 1.15) / picture.w, (f.h * CELL * 1.15) / picture.h) * (0.55 + 0.45 * amount);
+    sprite.scale.set(fit);
+    sprite.position.set((f.x + f.w / 2) * CELL, (f.y + f.h / 2) * CELL);
+    sprite.visible = true;
+    return true;
+  }
+
+  /** a goo pool as its painted sprite; the owner ring and the waiting mark are still drawn over it */
+  private paintPool(f: FoodSource): boolean {
+    const picture = art()?.sprites.goo?.[0];
+    if (!picture) return false;
+    let sprite = this.poolSprites.get(f.id);
+    if (!sprite) {
+      sprite = new Sprite(picture.texture);
+      sprite.anchor.set(0.5);
+      this.poolSpriteLayer.addChild(sprite);
+      this.poolSprites.set(f.id, sprite);
+    }
+    sprite.scale.set(Math.min((f.w * CELL * 1.3) / picture.w, (f.h * CELL * 1.3) / picture.h));
+    sprite.position.set((f.x + f.w / 2) * CELL, (f.y + f.h / 2) * CELL);
+    return true;
+  }
+
+  /** a slim bar under an item showing how much of its nutrients are left; it empties as the item is eaten */
+  private drawMeter(g: Graphics, f: FoodSource, remaining: number): void {
+    const frac = Math.min(1, Math.max(0, remaining / f.total));
+    const w = Math.max(f.w * CELL, METER_MIN_W);
+    const x = (f.x + f.w / 2) * CELL - w / 2;
+    const y = (f.y + f.h) * CELL + 3;
+    g.rect(x, y, w, METER_H).fill({ color: INK, alpha: 0.75 }).stroke({ width: 1.5, color: INK });
+    if (frac > 0) g.rect(x + 1, y + 1, (w - 2) * frac, METER_H - 2).fill(FOOD[f.type].light);
   }
 
   /**
@@ -132,12 +185,13 @@ export class FoodLayer {
    * A pool a mold holds gets a ring in that mold's colour, pulsing while it pays; a pool the player holds
    * that waits for a store house carries the broken-chain mark.
    */
-  private drawGoo(g: Graphics, f: FoodSource, st: PoolState, tick: number): void {
+  private drawGoo(g: Graphics, f: FoodSource, st: PoolState, tick: number, withBody = true): void {
     const pal = FOOD.goo;
     const cx = (f.x + f.w / 2) * CELL;
     const cy = (f.y + f.h / 2) * CELL;
     const rx = (f.w * CELL) / 2 - 1;
     const ry = (f.h * CELL) / 2 - 1;
+    if (withBody) {
     // hard offset shadow, dark lip, deep slime, lit surface, glossy highlight
     g.ellipse(cx + style.shadow.groundOffset[0], cy + style.shadow.groundOffset[1] + 2, rx, ry).fill({ color: INK, alpha: style.shadow.groundAlpha * 1.6 });
     g.ellipse(cx, cy, rx, ry).fill(GOO_LIP).stroke({ width: 3, color: INK });
@@ -151,6 +205,7 @@ export class FoodLayer {
       const by = cy + (hash2(f.id, k, 6) - 0.5) * ry * 0.9;
       const r = 1 + 3.2 * Math.sqrt(t);
       g.circle(bx, by, r).fill({ color: pal.light, alpha: 0.85 * (1 - t) }).stroke({ width: 1.3, color: INK, alpha: 0.7 * (1 - t) });
+    }
     }
     if (st.owner > 0) {
       const color = moldColor(st.color ?? 0);

@@ -13,10 +13,14 @@ import type { CellIndex, Component, World } from './types';
 export function tickUpkeep(world: World): void {
   const rate = world.balance.upkeepPerCell * TICK_DT;
   for (const comp of [...world.components.values()]) {
-    const due = rate * comp.cells.length + buildingUpkeep(world, comp.id) * TICK_DT;
+    const buildingsDue = buildingUpkeep(world, comp.id) * TICK_DT;
+    const due = rate * comp.cells.length + buildingsDue;
     const paid = Math.min(due, comp.pool);
     comp.pool -= paid;
-    moldOf(world, comp.moldId).upkeepTick += paid;
+    const mold = moldOf(world, comp.moldId);
+    mold.upkeepTick += paid;
+    mold.flowTick.veins += due - buildingsDue;
+    mold.flowTick.buildings += buildingsDue;
     comp.unpaid = paid < due - 1e-12;
     if (comp.unpaid) starve(world, comp);
     else recover(world, comp);

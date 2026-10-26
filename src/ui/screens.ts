@@ -10,6 +10,8 @@ export interface ScreenActions {
   quitToTitle(): void;
   nextRound(): void;
   newRun(): void;
+  /** play the guided first-round tips again */
+  tutorial(): void;
 }
 
 /** how the menu reads and changes the player's settings (saved by the caller) */
@@ -132,6 +134,7 @@ export class Screens {
     return `<div class="screen"><div class="panel big">
       <h2>Paused</h2>
       <button class="btn" data-act="closeMenu">Resume</button>
+      <button class="btn" data-act="tutorial">How to play</button>
       <button class="btn" data-act="restartRun">Restart run</button>
       <button class="btn" data-act="quitToTitle">Quit to title</button>
       ${this.settingsSection()}

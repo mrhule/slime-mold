@@ -150,3 +150,6 @@ vite.config.ts.timestamp-*
 
 # Slime Mold
 *.tsbuildinfo
+
+# raw generated art (large); tools/process-art.mjs turns it into public/art
+art-source/

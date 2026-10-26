@@ -62,6 +62,7 @@ export function tickCombat(world: World): void {
       const comp = world.components.get(world.component[cell] as number) as Component;
       const grant = Math.min((world.pressure[cell] as number) * dt, comp.pool);
       comp.pool -= grant;
+      moldOf(world, comp.moldId).flowTick.fight += grant;
       // a booster factory in range makes this cell hit harder (FR-010)
       const eff = (grant / dt + b.basePressure) * (world.boost[cell] as number);
       sc.eff[cell] = eff;
@@ -128,6 +129,7 @@ export function tickCombat(world: World): void {
     const cost = b.cellBuildCost * (terrain === 1 ? b.terrainCost.rough : b.terrainCost.open);
     if ((terrain === 0 || terrain === 1) && comp.pool >= cost) {
       comp.pool -= cost;
+      moldOf(world, comp.moldId).flowTick.fight += cost;
       addCell(world, k.attackerId, k.cell, k.from);
     }
   }

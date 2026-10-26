@@ -1,6 +1,6 @@
 import { capOf, countBuildings } from './buildings';
 import { poolCounts, poolIncome } from './food';
-import { mapControl } from './round';
+import { mapControl, winThreshold } from './round';
 import { evolveStatus } from './tiers';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -54,8 +54,11 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     round: world.roundNumber,
     storedNutrients: storedNutrients(world, moldId),
     netIncome: mold.netIncome,
+    flow: { ...mold.flow },
+    starving: [...world.components.values()].some((c) => c.moldId === moldId && c.unpaid),
     allocation: mold.allocation,
     mapControl: mapControl(world, moldId),
+    winControl: winThreshold(world),
     growthStarved: mold.targets.some((t) => t.state === 'starved'),
     targets: mold.targets.map((t) => ({ id: t.id, cell: t.cell, state: t.state })),
     build: buildOptions(world, moldId),

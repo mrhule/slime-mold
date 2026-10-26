@@ -24,8 +24,8 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
   Settings are saved in your browser.
 - Quality is **Auto** by default: it drops to **Low** (no flow pulses or vein shadows, fewer splats)
   when the frame rate stays low and returns when it recovers. You can pin High or Low.
-- Veins are lit from the upper left and drawn in three width bands with a heavier line on the
-  shadow side; flow pulses run along fed veins, fights throw ink splats and shake the screen
+- Veins are lit from the upper left and drawn with a heavier line on the
+  shadow side and a width that grows with the traffic they carry; nutrient beads run along fed veins, fights throw ink splats and shake the screen
   (only fights you can see). **Print texture** (off by default, High quality only) adds a halftone
   dot screen, grain and a slight colour offset.
 

@@ -156,6 +156,8 @@ export interface BalanceConfig {
 
   // rounds
   victoryControl: number;
+  /** a round that drags on eases the control needed to win: after `startSeconds` it falls `perMinute` a minute, down to `floor` */
+  victoryEase: { startSeconds: number; perMinute: number; floor: number };
   defaultAllocation: number;
 
   // AI (R8)
@@ -263,6 +265,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   starterFood: 3,
 
   victoryControl: 0.75,
+  victoryEase: { startSeconds: 420, perMinute: 0.025, floor: 0.5 },
   defaultAllocation: 0.3,
 
   aiCommandsPerThink: 3,
@@ -299,14 +302,14 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     capW: 320,
     capH: 240,
     rivalsMax: 5,
-    mapGrowth: 0.08,
+    mapGrowth: 0.06,
     mapScaleMax: 2.0,
     foodDecay: 0.07,
     foodMin: 0.35,
     aggressionBase: 0.2,
-    aggressionStep: 0.08,
+    aggressionStep: 0.06,
     aggressionMax: 0.9,
-    startNutrientsStep: 0.5,
+    startNutrientsStep: 0.25,
     thinkBase: 3.0,
     thinkStep: 0.25,
     thinkMin: 0.8,

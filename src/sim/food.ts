@@ -64,6 +64,29 @@ export function foodCells(world: World, src: FoodSource): CellIndex[] {
   return out;
 }
 
+/**
+ * How much of a food item the player knows about: what is in sight now plus what was last seen on the
+ * rest of its footprint. Null when no part of it has ever been seen. `fresh` is false when none of it
+ * is in sight at the moment, so the number may be out of date.
+ */
+export function knownFoodLeft(world: Readonly<World>, src: FoodSource): { amount: number; fresh: boolean } | null {
+  const mold = world.molds[0];
+  if (!mold) return { amount: src.remaining, fresh: true };
+  let amount = 0;
+  let seen = false;
+  let fresh = false;
+  for (let y = src.y; y < src.y + src.h; y++) {
+    for (let x = src.x; x < src.x + src.w; x++) {
+      const c = y * world.width + x;
+      const v = mold.vision[c] as number;
+      if (v > 0) seen = true;
+      if (v === 2) fresh = true;
+      amount += v === 2 ? (world.food[c] as number) : v === 1 ? (mold.memFood[c] as number) : 0;
+    }
+  }
+  return seen ? { amount, fresh } : null;
+}
+
 /** Absorb nutrients from every food cell a mold holds, and retire used-up food. */
 export function tickFood(world: World): void {
   const piecesWithStore = new Map<number, boolean>();

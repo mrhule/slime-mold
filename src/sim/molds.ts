@@ -1,6 +1,6 @@
 import { DX, DY, cellAt, cellX, cellY } from './grid';
 import { addCell } from './network';
-import { Terrain } from './types';
+import { Terrain, emptyFlow } from './types';
 import type { CellIndex, Mold, World } from './types';
 
 /**
@@ -32,6 +32,8 @@ export function addMold(
     netIncome: 0,
     incomeTick: 0,
     upkeepTick: 0,
+    flowTick: emptyFlow(),
+    flow: emptyFlow(),
     frontCells: [],
     frontLoss: 0,
     lossTick: 0,
