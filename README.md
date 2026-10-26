@@ -6,6 +6,17 @@ on fighting, and beat the rival molds. Each round is a new map and gets harder.
 
 Drawn in a comic, cel-shaded style: heavy ink outlines, flat color bands, hatching and grit.
 
+## On a phone
+
+Open the game on a touch device held sideways (it asks you to rotate in portrait). It switches to a touch
+layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
+
+- **Tap** the map to grow there; **drag** to look around; **pinch** to zoom; **press and hold** a marker to
+  cancel it. The round buttons at the top right open the menu, jump to your core and clear all targets.
+- **Build:** pick a building, tap a spot to preview it, then press **Build** (or Cancel). Tap your own farm
+  to change its output.
+- Touch mode starts on Low quality to save battery; you can raise it in Settings.
+
 ## Sound, music and look
 
 - Sound effects and generated music start after your first click or key press (browsers block audio

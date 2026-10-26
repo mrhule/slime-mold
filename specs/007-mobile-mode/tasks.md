@@ -84,11 +84,11 @@ Nothing in `src/sim/` changes in this feature.
 
 **Independent Test**: quickstart 6, 7 and 8 on a short landscape phone.
 
-- [ ] T018 [US3] Add the `.touch` layout to `src/ui/styles.css`: compact HUD strip on the left, build bar as a right-edge column of 56 px buttons, farm panel and touch bar at the bottom, toasts at the top centre, every control at least 44 by 44 px, safe-area insets, nothing covering the middle of the map (FR-010, SC-003)
-- [ ] T019 [P] [US3] Create `src/ui/tap-hints.ts`: in touch mode a tap on an element with a `title` inside the HUD and build bar shows the text as a toast for 3 s without blocking the action (M7); tests in `tests/unit/ui/tap-hints.test.ts`
-- [ ] T020 [US3] Rotate overlay: add the portrait message markup and CSS (`.touch` plus `@media (orientation: portrait)`), and in `src/main.ts` pause through the existing auto-pause on portrait and resume only that pause on landscape (M8, FR-012)
-- [ ] T021 [US3] Make the title, pause, round-end and Settings screens fit and scroll with a finger on a short screen (`src/ui/screens.ts`, `src/ui/styles.css`), hiding the keyboard-only hints in touch mode (FR-016)
-- [ ] T022 [US3] Playtest checklist (US3 section): controls hit accurately, map mostly visible, hints on tap, rotate and resume, every menu button reachable
+- [X] T018 [US3] Add the `.touch` layout to `src/ui/styles.css`: compact HUD strip on the left, build bar as a right-edge column of 56 px buttons, farm panel and touch bar at the bottom, toasts at the top centre, every control at least 44 by 44 px, safe-area insets, nothing covering the middle of the map (FR-010, SC-003)
+- [X] T019 [P] [US3] Create `src/ui/tap-hints.ts`: in touch mode a tap on an element with a `title` inside the HUD and build bar shows the text as a toast for 3 s without blocking the action (M7); tests in `tests/unit/ui/tap-hints.test.ts`
+- [X] T020 [US3] Rotate overlay: add the portrait message markup and CSS (`.touch` plus `@media (orientation: portrait)`), and in `src/main.ts` pause through the existing auto-pause on portrait and resume only that pause on landscape (M8, FR-012)
+- [X] T021 [US3] Make the title, pause, round-end and Settings screens fit and scroll with a finger on a short screen (`src/ui/screens.ts`, `src/ui/styles.css`), hiding the keyboard-only hints in touch mode (FR-016)
+- [X] T022 [US3] Playtest checklist (US3 section): controls hit accurately, map mostly visible, hints on tap, rotate and resume, every menu button reachable
 
 **Checkpoint**: layout is comfortable on a phone.
 
@@ -100,11 +100,11 @@ Nothing in `src/sim/` changes in this feature.
 
 **Independent Test**: quickstart 9 and 10.
 
-- [ ] T023 [US4] `index.html` and `src/ui/styles.css`: viewport meta without user scaling and with `viewport-fit=cover`; in touch mode `touch-action: none` on the canvas, `overscroll-behavior: none`, `user-select: none`, `-webkit-touch-callout: none`, menus keep `touch-action: pan-y` (M5, FR-013)
-- [ ] T024 [US4] In `src/main.ts` load settings with a `low` quality default when touch mode is active, and pass an explicit resolution of 1 to `app.init` in touch mode (M9, FR-015); desktop options unchanged
-- [ ] T025 [P] [US4] Make the audio unlock listener `passive` and confirm the first tap both unlocks sound and acts normally (M10, FR-014)
-- [ ] T026 [P] [US4] Tests: settings default quality is low under touch with nothing saved and the saved value wins; touch-mode Auto/On/Off resolution including a laptop (fine pointer, hover) staying off (extend T002 and T003 tests)
-- [ ] T027 [US4] Playtest checklist (US4 section): fresh settings start Low; five minutes with no zoom, scroll or refresh; sound after the first tap; Settings switch both ways
+- [X] T023 [US4] `index.html` and `src/ui/styles.css`: viewport meta without user scaling and with `viewport-fit=cover`; in touch mode `touch-action: none` on the canvas, `overscroll-behavior: none`, `user-select: none`, `-webkit-touch-callout: none`, menus keep `touch-action: pan-y` (M5, FR-013)
+- [X] T024 [US4] In `src/main.ts` load settings with a `low` quality default when touch mode is active, and pass an explicit resolution of 1 to `app.init` in touch mode (M9, FR-015); desktop options unchanged
+- [X] T025 [P] [US4] Make the audio unlock listener `passive` and confirm the first tap both unlocks sound and acts normally (M10, FR-014)
+- [X] T026 [P] [US4] Tests: settings default quality is low under touch with nothing saved and the saved value wins; touch-mode Auto/On/Off resolution including a laptop (fine pointer, hover) staying off (extend T002 and T003 tests)
+- [X] T027 [US4] Playtest checklist (US4 section): fresh settings start Low; five minutes with no zoom, scroll or refresh; sound after the first tap; Settings switch both ways
 
 **Checkpoint**: all four stories work.
 
@@ -113,9 +113,9 @@ Nothing in `src/sim/` changes in this feature.
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [ ] T028 [P] Performance check on a real phone in a late round: record the frame rate with `?debug` in the playtest checklist (SC-004); if under 30 fps tune the Low level or the resolution cap
-- [ ] T029 [P] Update `README.md`: Mobile section (landscape, gestures, Touch mode setting, Low by default) and the live link
+- [X] T029 [P] Update `README.md`: Mobile section (landscape, gestures, Touch mode setting, Low by default) and the live link
 - [ ] T030 Run every scenario in [quickstart.md](quickstart.md) and complete the playtest checklist; fix what is found (the manual half of Constitution IV)
-- [ ] T031 Final validation: `npm run typecheck`, `npm run build`, `npm test`, and `git diff <branch point> -- src/sim` is empty; confirm the desktop screenshot is unchanged with touch mode off (SC-007)
+- [X] T031 Final validation: `npm run typecheck`, `npm run build`, `npm test`, and `git diff <branch point> -- src/sim` is empty; confirm the desktop screenshot is unchanged with touch mode off (SC-007)
 
 ---
 
@@ -140,5 +140,6 @@ Nothing in `src/sim/` changes in this feature.
 ## Implementation notes
 
 - Baseline (T001): 55 files, 367 tests passing. After US1: 58 files, 392 tests; typecheck and build pass.
+- US3 and US4: 60 files, 401 tests. Added a Menu button to the round buttons: the pause menu (and Settings) is otherwise only reachable with Esc. iOS only counts touchend or click as an audio unlock gesture, so the unlock listeners now include those.
 - US2: 58 files, 398 tests (the new determinism test sends the same placement by mouse and by touch and compares the state hash).
 - US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.

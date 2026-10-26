@@ -6,6 +6,8 @@
 export interface TouchBarActions {
   onClearTargets(): void;
   onHome(): void;
+  /** the pause menu (Esc on a keyboard), which also holds Settings */
+  onMenu(): void;
   onConfirmPlacement(): void;
   onCancelPlacement(): void;
 }
@@ -28,6 +30,7 @@ export class TouchBar {
     parent.insertAdjacentHTML(
       'beforeend',
       `<div class="touch-bar">
+        <button type="button" class="round" data-touch="menu" aria-label="Menu and settings" title="Menu and settings">&#9776;</button>
         <button type="button" class="round" data-touch="home" aria-label="Go to my core" title="Go to my core">&#8962;</button>
         <button type="button" class="round" data-touch="clear" aria-label="Clear all growth targets" title="Clear all growth targets">&#10005;</button>
       </div>
@@ -42,6 +45,7 @@ export class TouchBar {
       const btn = (e.target as HTMLElement).closest('button[data-touch]') as HTMLElement | null;
       if (!btn) return;
       if (btn.dataset.touch === 'home') actions.onHome();
+      else if (btn.dataset.touch === 'menu') actions.onMenu();
       else actions.onClearTargets();
     });
     this.placement = parent.querySelector('.placement-bar') as HTMLElement;

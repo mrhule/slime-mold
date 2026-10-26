@@ -21,6 +21,7 @@ import { FOOD_NAMES, reasonText } from './ui/messages';
 import { shakeImpulse } from './render/style';
 import { QualityGovernor } from './render/quality';
 import { Screens } from './ui/screens';
+import { installTapHints } from './ui/tap-hints';
 import { TouchBar } from './ui/touch-bar';
 import { applyTouchClass, detectTouch, resolveTouch } from './ui/touch-mode';
 
@@ -44,7 +45,9 @@ async function main(): Promise<void> {
   });
 
   const app = new Application();
-  await app.init({ resizeTo: window, background: 0x14110f, antialias: true, preference: 'webgl' });
+  // touch devices draw one pixel per CSS pixel (never the phone's native density) to save battery and heat
+  const touchAtStart = resolveTouch(loadSettings(safeLocalStorage()).touchMode, detectTouch());
+  await app.init({ resizeTo: window, background: 0x14110f, antialias: true, preference: 'webgl', ...(touchAtStart ? { resolution: 1, autoDensity: false } : {}) });
   (document.getElementById('game') as HTMLElement).appendChild(app.canvas);
   const ui = document.getElementById('ui') as HTMLElement;
 
@@ -75,16 +78,15 @@ async function main(): Promise<void> {
   engine.setTracks(trackUrls); // the files in public/music; none means the generated loop
   const director = new Director();
   engine.setSettings(settings);
-  const unlockAudio = (): void => {
+  // iOS only counts a finished tap (touchend or click) as a user gesture, so those unlock too; the
+  // listeners come off once a tap or key press has found audio available
+  const unlockEvents = ['pointerdown', 'touchend', 'click', 'keydown'] as const;
+  const unlockAudio = (e: Event): void => {
     engine.unlock();
     engine.startMusic();
-    if (engine.available) {
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-    }
+    if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
   };
-  window.addEventListener('pointerdown', unlockAudio);
-  window.addEventListener('keydown', unlockAudio);
+  for (const t of unlockEvents) window.addEventListener(t, unlockAudio, { passive: true });
 
   const send = (cmd: Command): void => enqueue(run.world, cmd);
   let applySettings: (change: Partial<Settings>) => void = () => {};
@@ -108,6 +110,7 @@ async function main(): Promise<void> {
     onClearTargets: () => send({ type: 'clearTargets', mold: PLAYER }),
     onConfirmPlacement: () => input.confirmPlacement(),
     onCancelPlacement: () => input.cancelPlacement(),
+    onMenu: () => (run.state === 'paused' && run.pauseReason === 'menu' ? run.closeMenu() : run.openMenu()),
     onHome: () => {
       const [x, y] = renderer.coreWorldPosition(run.world);
       renderer.camera.centerOn(x, y);
@@ -124,10 +127,32 @@ async function main(): Promise<void> {
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
   }, { get: () => settings, set: (change) => applySettings(change), printAvailable: renderer.print !== null });
+  const touchOn = (): boolean => resolveTouch(settings.touchMode, detectedTouch);
+  // portrait on a touch device shows a rotate message and pauses; turning back resumes only that pause
+  const portrait = typeof matchMedia === 'function' ? matchMedia('(orientation: portrait)') : null;
+  let pausedByPortrait = false;
+  const orientation = (): void => {
+    if (portrait?.matches && touchOn()) {
+      if (run.state === 'playing') {
+        run.pause('focus');
+        pausedByPortrait = true;
+      }
+    } else if (pausedByPortrait) {
+      pausedByPortrait = false;
+      if (run.state === 'paused' && run.pauseReason === 'focus') run.resume();
+    }
+  };
+  portrait?.addEventListener?.('change', orientation);
+  ui.insertAdjacentHTML('beforeend', '<div class="rotate-hint"><div class="panel big"><h2>Rotate your phone</h2><div class="phone" aria-hidden="true">&#128241;</div><p>Slime Mold plays in landscape.</p></div></div>');
+  installTapHints(ui, () => touchOn(), (text) => hud.toast(text, 3));
+  document.addEventListener('contextmenu', (e) => {
+    if (touchOn()) e.preventDefault();
+  });
   const touchMode = (): void => {
-    const on = resolveTouch(settings.touchMode, detectedTouch);
+    const on = touchOn();
     applyTouchClass(on);
     input.setTouch(on);
+    orientation();
   };
   const reduceMotion = (): void => {
     touchMode();

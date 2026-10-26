@@ -19,3 +19,22 @@ Run on a real phone in landscape (or Chrome device mode), with Touch mode Auto o
 - [ ] Dragging the map keeps the chosen spot; tapping elsewhere moves it
 - [ ] Ten placements in a row: none built by accident
 - [ ] Tapping your own farm opens the output panel (below the round buttons) with big minus and plus buttons; tapping empty ground closes it
+
+## US3 Layout for thumbs
+
+- [ ] HUD strip, build bar column and round buttons are all easy to hit with a thumb; none covers the middle of the map
+- [ ] The round buttons (menu, home, clear all) and the mute button do not overlap anything on your phone
+- [ ] Tapping a HUD row or a build button shows its hint for a few seconds
+- [ ] The menu button (top right) opens the pause menu with Settings; every button in it is reachable and the panel scrolls if tall
+- [ ] Portrait shows "Rotate your phone" and pauses; turning back resumes (and stays paused if you had paused)
+
+## US4 Lighter graphics and a steady page
+
+- [ ] A fresh profile starts on Low quality; changing Quality in Settings is kept after a reload
+- [ ] Five minutes of play: no page zoom, scroll, bounce, pull-to-refresh or text selection
+- [ ] Music and sound start after the first tap (including on iPhone)
+- [ ] Touch mode Auto / On / Off in Settings each behave; a laptop with a mouse stays in desktop mode on Auto
+
+## Polish: performance (T028)
+
+- [ ] Late-round frame rate on the phone with `?debug` (needs the dev server or a dev build): at least 30 fps

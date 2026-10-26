@@ -73,8 +73,8 @@ export class Screens {
     if (run.state === 'roundEnd') return this.roundEnd(run);
     if (run.state === 'paused') {
       if (run.pauseReason === 'menu') return this.menu();
-      if (run.pauseReason === 'focus') return '<div class="screen focus-overlay"><div class="panel big"><h2>Paused</h2><p>Click to resume</p></div></div>';
-      return '<div class="banner">Paused — Space to resume. You can still give orders.</div>';
+      if (run.pauseReason === 'focus') return '<div class="screen focus-overlay"><div class="panel big"><h2>Paused</h2><p><span class="kbd-only">Click</span><span class="touch-only">Tap</span> to resume</p></div></div>';
+      return '<div class="banner">Paused — <span class="kbd-only">Space</span><span class="touch-only">tap ❚❚</span> to resume. You can still give orders.</div>';
     }
     return '';
   }
@@ -90,7 +90,12 @@ export class Screens {
       <p>Grow your mold across the map. Eat, build, and beat the rival molds.</p>
       ${best}
       <button class="btn" data-act="start">Start</button>
-      <ul class="keys">
+      <ul class="keys touch-only">
+        <li><b>Tap</b> the map to grow there &middot; <b>press and hold</b> a marker to cancel</li>
+        <li><b>Drag</b> to look around &middot; <b>pinch</b> to zoom</li>
+        <li>Pick a building, tap a spot, then <b>Build</b></li>
+      </ul>
+      <ul class="keys kbd-only">
         <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel</li>
         <li><b>Q / E</b> or the slider: send nutrients to growth or to the fight</li>
         <li><b>F</b> build a farm &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
