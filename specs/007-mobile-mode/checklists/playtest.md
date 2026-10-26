@@ -38,3 +38,10 @@ Run on a real phone in landscape (or Chrome device mode), with Touch mode Auto o
 ## Polish: performance (T028)
 
 - [ ] Late-round frame rate on the phone with `?debug` (needs the dev server or a dev build): at least 30 fps
+
+## US3 compact HUD (T035)
+
+- [ ] Stats bar along the top, clock and Fight chip bottom left, build block (2 x 2 icons) bottom right, menu / home / clear / mute top right: nothing overlaps on your phone
+- [ ] The Fight chip opens a big slider; it closes when you let go or tap the map
+- [ ] The map between the bars is clearly larger than with the first touch layout
+- [ ] Build icons are recognisable; tapping one shows its name and cost, then the placement bar

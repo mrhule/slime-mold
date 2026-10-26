@@ -54,6 +54,7 @@ export class Hud {
           <span class="slider-labels"><span>Growth</span><span>Fight</span></span>
           <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus fight" />
         </label>
+        <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
         <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
@@ -71,10 +72,23 @@ export class Hud {
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'control', 'controlFill', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip']) this.el[k] = q(k);
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.slider = q('alloc') as HTMLInputElement;
     this.speedButtons = [...root.querySelectorAll<HTMLButtonElement>('.clock button')];
+
+    // touch mode: the slider is hidden behind a chip that shows the split and opens a big slider, which
+    // closes when released or when the player taps anywhere else
+    const hudEl = root.querySelector('.hud') as HTMLElement;
+    const chip = this.el.chip as HTMLElement;
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hudEl.classList.toggle('alloc-open');
+    });
+    this.slider.addEventListener('change', () => hudEl.classList.remove('alloc-open'));
+    document.addEventListener('click', (e) => {
+      if (!(e.target as HTMLElement).closest('.slider')) hudEl.classList.remove('alloc-open');
+    });
 
     this.slider.addEventListener('pointerdown', () => (this.sliderActive = true));
     window.addEventListener('pointerup', () => (this.sliderActive = false));
@@ -116,6 +130,7 @@ export class Hud {
     this.el.unlinked!.hidden = unlinked === 0;
     if (unlinked > 0) this.el.unlinked!.textContent = `${unlinked} ${unlinked === 1 ? 'farm is' : 'farms are'} not paying: build a Store House (T) on their vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
+    this.el.chip!.textContent = `Fight ${Math.round(hud.allocation * 100)}%`;
     for (const b of this.speedButtons) {
       const v = b.dataset.speed;
       b.classList.toggle('on', v === 'pause' ? clock.paused : !clock.paused && Number(v) === clock.speed);

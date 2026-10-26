@@ -119,6 +119,15 @@ Nothing in `src/sim/` changes in this feature.
 
 ---
 
+## Phase 8: Compact HUD (after phone testing showed the first touch layout covered too much)
+
+- [X] T032 [US3] Update spec.md (US3 scenarios 5 and 6, FR-011a, SC-003a) and this task list
+- [X] T033 [US3] Add a Growth / Fight chip to `src/ui/hud.ts`: in touch mode the slider is hidden and a chip showing the split opens it as a large slider that closes on release or on a tap elsewhere
+- [X] T034 [US3] Rework the `.touch` layout in `src/ui/styles.css`: thin stats bar along the top, clock and chip group at the bottom left, icon-only build column on the right, corner cluster for menu, home, clear all and mute; toasts, banner, farm panel and placement bar re-placed to avoid them
+- [X] T035 [US3] Check at phone size in the browser pane (nothing overlaps, every control at least 44 px) and add to the playtest checklist
+
+---
+
 ## Dependencies & Execution Order
 
 - **Phase 2** blocks everything (T002, T003, T004 are parallel; T005 needs T002 and T003).
@@ -140,6 +149,7 @@ Nothing in `src/sim/` changes in this feature.
 ## Implementation notes
 
 - Baseline (T001): 55 files, 367 tests passing. After US1: 58 files, 392 tests; typecheck and build pass.
+- Compact HUD (T032-T035): the first touch layout covered too much of a phone screen, so the stats became a top bar, the clock and a Growth / Fight chip a bottom-left group, and the buildings a 2 x 2 icon block. Checked in the browser pane at 700 x 300 px.
 - US3 and US4: 60 files, 401 tests. Added a Menu button to the round buttons: the pause menu (and Settings) is otherwise only reachable with Esc. iOS only counts touchend or click as an audio unlock gesture, so the unlock listeners now include those.
 - US2: 58 files, 398 tests (the new determinism test sends the same placement by mouse and by touch and compares the state hash).
 - US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.

@@ -616,3 +616,114 @@ html.touch, .touch body {
 .touch .keys { margin-top: 6px; font-size: 12px; line-height: 1.3; }
 .touch .btn { margin-top: 6px; font-size: 24px; padding: 4px 12px 2px; }
 .touch .toast { font-size: 15px; line-height: 1.25; letter-spacing: 0; padding: 6px 12px 5px; max-width: min(340px, calc(100vw - 460px)); text-transform: none; }
+
+/* ---- Compact touch HUD (007 T034): stats bar on top, clock group bottom left, icon build column ---- */
+.alloc-chip { display: none; }
+
+/* the stats bar: one thin row along the top, clear of the corner cluster on the right */
+.touch .hud {
+  position: fixed;
+  top: 6px;
+  left: 6px;
+  width: auto;
+  max-width: calc(100vw - 252px);
+  display: flex;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 4px 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.touch .hud .row { display: block; border-top: 0; padding: 0; white-space: nowrap; }
+.touch .hud .row .label { display: block; font-size: 10px; line-height: 1; letter-spacing: 0.5px; }
+.touch .hud .row .value { display: block; font-size: 15px; line-height: 1.15; }
+.touch .hud .row:first-of-type { display: none; }
+.touch .hud .meter { width: 54px; height: 10px; margin: 0; border-width: 2px; flex: none; }
+.touch .hud .meter-goal { top: -3px; bottom: -3px; }
+.touch .hud .rivals { margin: 0; display: flex; gap: 4px; }
+.touch .hud .burst, .touch .hud .warn { position: fixed; top: 56px; left: 6px; max-width: 260px; margin: 0; }
+
+/* the clock and the Growth / Fight chip: a small group at the bottom left */
+.touch .hud .clock {
+  position: fixed;
+  left: 6px;
+  bottom: 6px;
+  margin: 0;
+  gap: 4px;
+  padding: 4px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.touch .hud .clock button { flex: none; width: 44px; min-height: 44px; padding: 0; font-size: 16px; }
+.touch .hud .alloc-chip {
+  position: fixed;
+  left: 214px;
+  bottom: 6px;
+  display: block;
+  min-height: 56px;
+  padding: 0 12px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font: 17px/1 var(--display);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.touch .hud .alloc-chip:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.touch .hud .slider { display: none; }
+.touch .hud.alloc-open .slider {
+  display: block;
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  width: min(56vw, 400px);
+  margin: 0;
+  padding: 8px 14px 10px;
+  background: var(--paper);
+  border: 4px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  z-index: 8;
+}
+.touch .hud.alloc-open .slider input[type='range'] { height: 36px; }
+.touch .hud.alloc-open .slider input[type='range']::-webkit-slider-thumb { width: 34px; height: 44px; }
+
+/* the build bar: a narrow column of icon buttons on the right edge, name and cost in the placement hint */
+.touch .buildbar { right: 6px; bottom: 6px; gap: 6px; padding: 5px; }
+.touch .buildbar button {
+  min-width: 62px;
+  min-height: 56px;
+  padding: 2px 4px;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  row-gap: 0;
+}
+.touch .buildbar button svg { grid-row: auto; width: 34px; height: 30px; }
+.touch .buildbar button .name { display: none; }
+.touch .buildbar button .cost { font-size: 12px; line-height: 1.1; }
+.touch .buildbar button .cost::before { content: ''; }
+.touch .buildbar button .count { grid-column: auto; justify-self: center; margin: 0; font-size: 10px; line-height: 1; opacity: 0.75; }
+
+/* the corner cluster: mute, menu, home and clear all in one row at the top right */
+.touch .touch-bar { top: 6px; right: 6px; gap: 6px; }
+.touch .touch-bar .round { width: 46px; height: 46px; font-size: 22px; }
+.touch .mute-btn { top: 6px; bottom: auto; right: 180px; width: 46px; height: 46px; }
+
+/* things that used to sit at the top or bottom move clear of the bars */
+.touch .toast { top: 60px; max-width: min(340px, calc(100vw - 340px)); }
+.touch .banner { top: 60px; }
+.touch .farm-panel { top: 60px; right: 84px; }
+.touch .placement-bar:not([hidden]) { left: 300px; right: 84px; bottom: 6px; transform: none; max-width: none; padding: 6px 8px; gap: 8px; }
+.touch .placement-bar button { min-width: 72px; min-height: 48px; font-size: 18px; }
+.touch .placement-text { min-width: 0; flex: 1; font-size: 14px; }
+
+/* build bar as a 2 x 2 block of icon buttons so it fits any short screen, and the round number is dropped */
+.touch .hud .row:nth-child(2) { display: none; }
+.touch .buildbar { display: grid; grid-template-columns: repeat(2, 60px); gap: 5px; padding: 5px; }
+.touch .buildbar button { min-width: 0; min-height: 56px; padding: 1px 2px; }
+.touch .buildbar button svg { width: 30px; height: 26px; }
+.touch .farm-panel { right: 148px; }
+.touch .placement-bar:not([hidden]) { right: 148px; }

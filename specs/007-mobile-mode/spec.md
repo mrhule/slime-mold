@@ -103,6 +103,12 @@ behaves.
    was (or stays paused if the player had paused).
 4. **Given** the title, pause, round-end and Settings screens, **When** viewed on a short phone screen,
    **Then** every button is reachable.
+5. **Given** a phone-sized landscape screen, **When** the round is shown, **Then** the stats sit in one thin
+   bar along the top, the clock buttons and the Growth / Fight control in a small group at the bottom
+   left, and the buildings as icon buttons in a narrow column at the right, so that together they cover
+   no more than about a quarter of the screen.
+6. **Given** the Growth / Fight control, **When** the player taps its button, **Then** a large slider opens
+   and closes again when released or when they tap elsewhere.
 
 ---
 
@@ -178,6 +184,9 @@ mode on both a phone and a desktop.
 - **FR-010**: Touch controls MUST be large enough to hit accurately with a thumb, MUST sit so most of
   the map stays visible on a short landscape screen, and MUST NOT depend on hover.
 - **FR-011**: Hover hints MUST be shown on tap in touch mode.
+- **FR-011a**: In touch mode the interface MUST use a compact layout (a thin stats bar, a small clock and
+  Growth / Fight group, icon-only build buttons) that leaves most of the screen to the map, with every
+  control still at least 44 by 44 CSS pixels.
 - **FR-012**: In portrait the game MUST show a "rotate your phone" message in place of play, pause the
   game clock, and resume when the phone is rotated back.
 - **FR-013**: While in touch mode the page MUST NOT zoom, scroll, bounce, pull to refresh, or select
@@ -215,6 +224,8 @@ mode on both a phone and a desktop.
 - **SC-002**: In a playtest of 10 placements on a phone, none are built by accident, and at least 9 of
   10 intended placements succeed on the first attempt.
 - **SC-003**: Every on-screen control measures at least 44 by 44 CSS pixels in touch mode.
+- **SC-003a**: On a phone-sized landscape screen the interface covers no more than about a quarter of the
+  screen, leaving the middle of the map clear.
 - **SC-004**: On a typical recent phone in a late-round scene, the game holds at least 30 frames per
   second on the default settings without the player changing anything.
 - **SC-005**: No page zoom, scroll, bounce or pull-to-refresh occurs in 5 minutes of play on a phone.
