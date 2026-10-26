@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultBalance } from '../../../src/config/balance';
 import { applyCommand } from '../../../src/sim/commands';
-import { demolishBuilding, placeBuilding, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding } from '../../../src/sim/buildings';
+import { capOf, demolishBuilding, placeBuilding, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding } from '../../../src/sim/buildings';
 import { fadeStrays } from '../../../src/sim/fade';
 import { addMold } from '../../../src/sim/molds';
 import { addCell } from '../../../src/sim/network';
@@ -168,5 +168,69 @@ describe('demolishing a building', () => {
     expect(demolishBuilding(world, mold.id, cells[3] as number)).toEqual({ ok: false, reason: 'no-building' });
     placeBuilding(world, mold.id, 'storehouse', cells[10] as number);
     expect(demolishBuilding(world, 2, cells[10] as number)).toEqual({ ok: false, reason: 'not-your-cell' });
+  });
+});
+
+describe('evolving and the relay', () => {
+  function setup() {
+    const world = createOpenWorld(110, 30, quiet);
+    const mold = addMold(world, 'player', cellOf(world, 5, 15), 400);
+    const cells: number[] = [];
+    let prev = mold.core;
+    for (let x = 6; x < 60; x++) {
+      const c = cellOf(world, x, 15);
+      if (world.owner[c] !== mold.id) addCell(world, mold.id, c, prev);
+      cells.push(c);
+      prev = c;
+    }
+    const comp = world.components.get(world.component[mold.core] as number) as Component;
+    return { world, mold, comp, cells };
+  }
+  const tiers = defaultBalance.tiers;
+
+  it('a relay is locked at tier 1', () => {
+    const { world, mold, comp, cells } = setup();
+    comp.pool = 200;
+    expect(placeBuilding(world, mold.id, 'relay', cells[10] as number)).toEqual({ ok: false, reason: 'locked' });
+  });
+
+  it('evolving needs a nearly full stock, spends a share of the cap, and unlocks the relay', () => {
+    const { world, mold, comp, cells } = setup();
+    const cap = capOf(world, comp);
+    comp.pool = cap * (tiers.fullShare - 0.05);
+    applyCommand(world, { type: 'evolve', mold: mold.id });
+    expect(mold.tier).toBe(1);
+    expect(world.events.some((e) => e.type === 'commandRejected' && e.reason === 'not-full')).toBe(true);
+    comp.pool = cap;
+    applyCommand(world, { type: 'evolve', mold: mold.id });
+    expect(mold.tier).toBe(2);
+    expect(comp.pool).toBeCloseTo(cap * (1 - tiers.costShare), 6);
+    expect(placeBuilding(world, mold.id, 'relay', cells[10] as number)).toEqual({ ok: true });
+  });
+
+  it('stops at the top tier', () => {
+    const { world, mold, comp } = setup();
+    mold.tier = tiers.max;
+    comp.pool = capOf(world, comp);
+    applyCommand(world, { type: 'evolve', mold: mold.id });
+    expect(world.events.some((e) => e.type === 'commandRejected' && e.reason === 'max-tier')).toBe(true);
+  });
+
+  it('a relay keeps far veins in reach with no stock, and stops when its piece cannot pay upkeep', () => {
+    const { world, mold, comp, cells } = setup();
+    mold.tier = 2;
+    comp.pool = 100;
+    const relay = defaultBalance.buildings.relay;
+    const far = cells[50] as number;
+    recomputeFeed(world);
+    const without = world.feed[far] as number;
+    placeBuilding(world, mold.id, 'relay', cells[48] as number);
+    recomputeFeed(world);
+    expect(world.feed[far]!).toBeGreaterThan(without);
+    expect(world.feed[cells[48] as number]).toBeCloseTo(1, 6);
+    expect(relay.reach).toBeGreaterThan(0);
+    comp.unpaid = true;
+    recomputeFeed(world);
+    expect(world.feed[far]).toBeCloseTo(without, 6);
   });
 });

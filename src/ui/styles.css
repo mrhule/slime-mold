@@ -769,3 +769,23 @@ html.touch, .touch body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* evolving: a button under the clock that lights up once the stock is nearly full */
+.hud .evolve {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  padding: 3px 4px 1px;
+  background: #e9e2c6;
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.hud .evolve[hidden] { display: none; }
+.hud .evolve.ready { background: var(--accent); opacity: 1; animation: hint-pulse 0.9s ease-in-out infinite alternate; }
+.buildbar button.locked { filter: grayscale(1); opacity: 0.55; }

@@ -58,6 +58,7 @@ export function canPlace(world: Readonly<World>, moldId: MoldId, type: BuildingT
     if (harvested(world, moldId, target.id)) return { ok: false, reason: 'already-harvested' };
   }
   const spec = world.balance.buildings[type];
+  if (mold.tier < (spec.minTier ?? 1)) return { ok: false, reason: 'locked' };
   if (countBuildings(world, moldId, type) >= spec.limit) return { ok: false, reason: 'limit-reached' };
   const comp = world.components.get(world.component[cell] as number);
   if (!comp || comp.pool < spec.cost) return { ok: false, reason: 'cant-afford' };
@@ -356,7 +357,15 @@ export function recomputeFeed(world: World): void {
     }
   }
   for (const b of world.buildings) {
-    if (b.type !== 'storehouse' || b.destroyed || !b.boosting) continue;
+    if (b.destroyed) continue;
+    if (b.type === 'relay') {
+      // a relay carries supply as long as its piece can pay upkeep; it needs no stock
+      const relayReach = world.balance.buildings.relay.reach;
+      const comp = world.components.get(world.component[b.cell] as number);
+      if (comp && !comp.unpaid) for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * relayReach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * relayReach, relayReach));
+      continue;
+    }
+    if (b.type !== 'storehouse' || !b.boosting) continue;
     const reach = reachOf(world, b);
     // veinCover tapers 1 -> 0 over its reach, so ask for one and a half reaches and turn each value back into a distance
     for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * reach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * reach, reach));

@@ -28,6 +28,13 @@ export interface BuildingSpec {
   upkeep: number;
   /** most a single mold may have */
   limit: number;
+  /** the tier a mold must have evolved to before it can build this (1 or missing: from the start) */
+  minTier?: number;
+}
+
+export interface RelaySpec extends BuildingSpec {
+  /** how far along the veins it carries supply, in cells (the same falloff as a factory's reach) */
+  reach: number;
 }
 
 export interface BoosterSpec extends BuildingSpec {
@@ -151,7 +158,10 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
+  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec; relay: RelaySpec };
+
+  /** evolving: the highest tier, the share of the stock cap that must be held to evolve, and the share it costs */
+  tiers: { max: number; fullShare: number; costShare: number };
 
   /**
    * how far supply carries along the veins: from the core and from each working factory, in cells (a
@@ -263,6 +273,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   buildings: {
     storehouse: { cost: 25, upkeep: 0.2, limit: 6, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
+    relay: { cost: 15, upkeep: 0.1, limit: 6, minTier: 2, reach: 16 },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
@@ -270,6 +281,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   feed: { coreReach: 40, trickle: 0.5, floor: 0.04, graceSeconds: 30, fadeSeconds: 60 },
 
   demolishRefund: 0.5,
+
+  tiers: { max: 2, fullShare: 0.9, costShare: 0.7 },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

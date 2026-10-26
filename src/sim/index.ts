@@ -74,3 +74,4 @@ export function createRound(opts: CreateRoundOptions): World {
   return world;
 }
 export { cutCells, cutKey } from './network';
+export { evolve, evolveStatus } from './tiers';

@@ -1,5 +1,6 @@
 import { demolishBuilding, placeBuilding, upgradeBuilding } from './buildings';
 import { addTarget } from './growth';
+import { evolve } from './tiers';
 import { dirBetween } from './grid';
 import { cutKey, linkCells, relabelComponent, unlinkCells } from './network';
 import type { Command, MoldId, World } from './types';
@@ -58,6 +59,11 @@ export function applyCommand(world: World, cmd: Command): void {
     case 'upgradeBuilding': {
       const res = upgradeBuilding(world, cmd.mold, cmd.cell);
       if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
+    case 'evolve': {
+      const res = evolve(world, cmd.mold);
+      if (!res.ok) reject(world, cmd.mold, res.reason);
       return;
     }
     case 'demolishBuilding': {

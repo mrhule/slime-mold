@@ -1,20 +1,22 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvester' };
-const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvest' };
+const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvester', relay: 'Relay' };
+const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvest', relay: 'Relay' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
   storehouse: 'Keeps nearby veins alive and growing fast, holds more nutrients, and goo pools on the vein pay into it. Veins out of reach of a factory or your core fade and die. Click one to upgrade its range.',
   booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
+  relay: 'Carries supply along its vein like a small factory, but stores nothing. Keeps far veins alive and growing. Unlocked by evolving.',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'booster', m: 'harvester' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'booster', m: 'harvester', r: 'relay' };
 
 const ICONS: Record<BuildingType, string> = {
   storehouse: '',
   booster: '',
   harvester: '',
+  relay: '',
 };
 
 // the same shapes as the map art: a pulse node, a digestor and a sac, drawn flat (the map ones move)
@@ -64,6 +66,23 @@ const STOREHOUSE_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hi
     <path d="M14.5 12 A8 8 0 0 1 20 8" fill="none" stroke="#ffe9a0" stroke-width="1.8" stroke-linecap="round"/>
   </svg>`;
 
+const RELAY_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="33" rx="13" ry="3" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-linecap="round" fill="none">
+      <path d="M21 19 L8 8 M21 19 L34 8 M21 19 L8 30 M21 19 L34 30" stroke-width="4.6"/>
+      <path d="M21 19 L8 8 M21 19 L34 8 M21 19 L8 30 M21 19 L34 30" stroke="#4fc9c1" stroke-width="2"/>
+    </g>
+    <g stroke="#14110f" stroke-width="2">
+      <circle cx="8" cy="8" r="3" fill="#cffaf4"/>
+      <circle cx="34" cy="8" r="3" fill="#cffaf4"/>
+      <circle cx="8" cy="30" r="3" fill="#cffaf4"/>
+      <circle cx="34" cy="30" r="3" fill="#cffaf4"/>
+      <circle cx="21" cy="19" r="7" fill="#4fc9c1"/>
+    </g>
+    <circle cx="21" cy="19" r="2.4" fill="#f2c744" stroke="#14110f" stroke-width="1.6"/>
+  </svg>`;
+
+ICONS.relay = RELAY_ICON;
 ICONS.storehouse = STOREHOUSE_ICON;
 ICONS.booster = BOOSTER_ICON;
 ICONS.harvester = HARVESTER_ICON;
@@ -119,8 +138,10 @@ export class BuildBar {
       (btn.querySelector('[data-f="count"]') as HTMLElement).textContent = `${opt.count}/${opt.limit}`;
       btn.classList.toggle('selected', selected === opt.type);
       const full = opt.count >= opt.limit;
-      btn.classList.toggle('disabled', !opt.affordable || full);
-      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
+      btn.classList.toggle('disabled', !opt.affordable || full || opt.locked);
+      btn.classList.toggle('locked', opt.locked);
+      btn.hidden = opt.locked && opt.minTier > 2; // far-off buildings stay out of sight
+      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${opt.upkeep}/s upkeep. Costs ${opt.cost}.${opt.locked ? ` Locked: evolve to tier ${opt.minTier} (V).` : full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
     }
   }
 

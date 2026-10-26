@@ -24,6 +24,7 @@ export function addMold(
     pattern: id - 1,
     core,
     allocation: world.balance.defaultAllocation,
+    tier: 1,
     targets: [],
     status: 'alive',
     cellCount: 0,

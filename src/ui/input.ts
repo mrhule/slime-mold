@@ -336,6 +336,10 @@ export class InputController {
       this.togglePlacing(building);
       return;
     }
+    if (k === 'v') {
+      this.send({ type: 'evolve', mold: PLAYER });
+      return;
+    }
     if (k === ' ') {
       e.preventDefault();
       this.actions.togglePause();

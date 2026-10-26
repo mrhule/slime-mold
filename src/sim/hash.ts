@@ -47,6 +47,7 @@ export function stateHash(world: World): number {
   for (const m of world.molds) {
     h.num(m.id);
     h.num(m.allocation);
+    h.num(m.tier);
     h.num(m.cellCount);
     h.num(m.core);
     h.num(m.status === 'alive' ? 1 : 0);

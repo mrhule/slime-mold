@@ -17,7 +17,6 @@ import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
 import { InputController } from './ui/input';
 import { FOOD_NAMES, reasonText } from './ui/messages';
-import { shakeImpulse } from './render/style';
 import { QualityGovernor } from './render/quality';
 import { Screens } from './ui/screens';
 import { installTapHints } from './ui/tap-hints';
@@ -98,6 +97,7 @@ async function main(): Promise<void> {
       onSpeed: (s) => run.setSpeed(s),
       onAllocation: (value) => send({ type: 'setAllocation', mold: PLAYER, value }),
       onToggleMute: () => applySettings({ muted: !settings.muted }),
+      onEvolve: () => send({ type: 'evolve', mold: PLAYER }),
     },
     run.world.balance.victoryControl,
   );
@@ -306,14 +306,12 @@ async function main(): Promise<void> {
       for (const request of requests) engine.play(request);
     }
 
-    // fights you can see: ink splats for each visible death and a shake scaled by how many (A13)
+    // fights you can see: ink splats for each visible death (the screen itself no longer shakes)
     const deaths = visibleDeaths(run.world, frameEvents, PLAYER);
     for (const d of deaths) {
       const dying = run.world.molds[d.mold - 1];
       if (dying) renderer.fx.addSplat(d.cell, run.world.width, dying.color, dying.pattern);
     }
-    renderer.camera.addShake(shakeImpulse(deaths.length));
-    renderer.camera.tickShake(dt);
     frameEvents.length = 0;
 
     const extra = run.world.molds

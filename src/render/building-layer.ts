@@ -9,6 +9,9 @@ import { CELL } from './units';
 
 const STALE_GREY = 0x8a8a84;
 const UNLINKED = 0xf2a01e;
+const RELAY = 0x4fc9c1;
+const RELAY_SHADE = 0x23807b;
+const RELAY_LIGHT = 0xcffaf4;
 const AMBER = 0xe8a21e;
 const AMBER_SHADE = 0xa8620c;
 const AMBER_LIGHT = 0xffe9a0;
@@ -150,6 +153,38 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
 }
 
 /**
+ * An inked relay: a small teal bulb with four whiskers ending in beads that light up one after the
+ * other, passing supply outward along the vein. Smaller than a factory, and it stores nothing.
+ */
+export function drawRelay(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
+  const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
+  const ink = style.ghost ?? INK;
+  const S = 1.3;
+  const w = style.ghost !== undefined ? 2.5 : 3;
+  const t = style.t ?? 0;
+  const body = style.stale ? STALE_GREY : RELAY;
+  const shade = style.stale ? STALE_GREY : RELAY_SHADE;
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 7 * S, 9.5 * S, 3.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  const whiskers: [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  const draw = (): void => {
+    for (const [dx, dy] of whiskers) g.moveTo(cx, cy).quadraticCurveTo(cx + dx * 4 * S, cy + dy * 7 * S, cx + dx * 8.4 * S, cy + dy * 6.4 * S);
+  };
+  draw();
+  g.stroke({ width: 4.6, color: ink, alpha, cap: 'round' });
+  draw();
+  g.stroke({ width: 2, color: body, alpha, cap: 'round' });
+  whiskers.forEach(([dx, dy], i) => {
+    const glow = still(style) ? 0 : Math.max(0, Math.sin(t * 3.4 - i * 1.1)) ** 3;
+    g.circle(cx + dx * 8.4 * S, cy + dy * 6.4 * S, (1.7 + 0.7 * glow) * S).fill({ color: style.stale ? STALE_GREY : glow > 0.35 ? 0xffffff : RELAY_LIGHT, alpha }).stroke({ width: 1.8, color: ink, alpha });
+  });
+  g.circle(cx, cy, 4.6 * S).fill({ color: body, alpha }).stroke({ width: w, color: ink, alpha });
+  g.moveTo(cx + Math.cos(0.2) * 3.6 * S, cy + Math.sin(0.2) * 3.6 * S).arc(cx, cy, 3.6 * S, 0.2, 1.5).stroke({ width: 1.8, color: shade, alpha: 0.85 * alpha, cap: 'round' });
+  g.moveTo(cx + Math.cos(3.4) * 3.2 * S, cy + Math.sin(3.4) * 3.2 * S).arc(cx, cy, 3.2 * S, 3.4, 4.6).stroke({ width: 1.6, color: style.stale ? 0xdadad2 : RELAY_LIGHT, alpha, cap: 'round' });
+  // the owner's color as the bright nub in the middle
+  if (!style.stale) g.circle(cx, cy, 1.7 * S).fill({ color: flag, alpha }).stroke({ width: 1.5, color: ink, alpha });
+}
+
+/**
  * An inked sac: a low, wide cluster of three amber bulbs held by root tendrils. It swells and glows
  * brighter as its piece fills with nutrients, and breathes a little, so a full store looks full.
  */
@@ -208,6 +243,7 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
 /** draw any building by type */
 export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: number, color: number, style: BuildingStyle = {}): void {
   if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
+  else if (type === 'relay') drawRelay(g, cx, cy, color, style);
   else if (type === 'booster') drawBooster(g, cx, cy, color, style);
   else drawHarvester(g, cx, cy, color, style);
 }

@@ -13,11 +13,11 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | 'goo';
 
-export type BuildingType = 'booster' | 'harvester' | 'storehouse';
+export type BuildingType = 'booster' | 'harvester' | 'storehouse' | 'relay';
 
 /** what `Mold.memBuilding` stores for each building type (0 = none) */
-export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3 };
-export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse'];
+export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3, relay: 4 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse', 'relay'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -67,6 +67,8 @@ export interface Mold {
   core: CellIndex;
   /** 0 = all growth, 1 = all fight */
   allocation: number;
+  /** 1 at the start; evolving raises it and unlocks buildings with a higher minTier */
+  tier: number;
   targets: GrowthTarget[];
   status: 'alive' | 'eliminated';
   cellCount: number;
@@ -162,7 +164,9 @@ export type Command =
   /** raise the factory on a cell one level: more reach, paid from its piece */
   | { type: 'upgradeBuilding'; mold: MoldId; cell: CellIndex }
   /** tear down the mold's building on a cell, getting part of its cost back */
-  | { type: 'demolishBuilding'; mold: MoldId; cell: CellIndex };
+  | { type: 'demolishBuilding'; mold: MoldId; cell: CellIndex }
+  /** spend most of a full stock to move up a tier */
+  | { type: 'evolve'; mold: MoldId };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -178,7 +182,8 @@ export type PlaceReason =
   | 'already-harvested'
   | 'no-building'
   | 'not-upgradable'
-  | 'max-level';
+  | 'max-level'
+  | 'locked';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -190,6 +195,7 @@ export type SimEvent =
   | { type: 'moldEliminated'; mold: MoldId }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
+  | { type: 'moldEvolved'; mold: MoldId; tier: number }
   | { type: 'buildingUpgraded'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex; level: number }
   | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'storeFull'; componentId: number }
@@ -234,6 +240,10 @@ export interface BuildOption {
   limit: number;
   /** some piece of the mold holds at least `cost` */
   affordable: boolean;
+  /** the mold has not evolved far enough to build this yet */
+  locked: boolean;
+  /** the tier that unlocks it */
+  minTier: number;
 }
 
 export interface HudModel {
@@ -249,6 +259,8 @@ export interface HudModel {
   poolIncome: number;
   /** stored nutrients against the caps of the mold's pieces (003) */
   stock: { total: number; cap: number; full: boolean };
+  /** evolving: the mold's tier, the top tier, whether the stock is full enough now, and what the next step costs */
+  tier: { current: number; max: number; ready: boolean; needed: number; cost: number };
   /** goo pools the mold holds a ring cell of, and how many of those wait for a store house on their piece (008) */
   pools: { held: number; waiting: number };
   rivals: {

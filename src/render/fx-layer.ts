@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import { cutCells } from '../sim/index';
-import { boosterCover, storeCover } from '../sim/index';
+import { boosterCover, storeCover, veinCover } from '../sim/index';
 import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -231,12 +231,12 @@ export class FxLayer {
     const slot = Math.floor(world.tick / 10);
     const live = new Set<number>();
     for (const b of world.buildings) {
-      if (b.destroyed || (b.type === 'storehouse' ? !b.boosting : b.type !== 'booster')) continue;
+      if (b.destroyed || b.type === 'harvester' || (b.type === 'storehouse' && !b.boosting)) continue;
       if (b.moldId !== 1 && vision && vision[b.cell] !== 2) continue;
       live.add(b.id);
       let entry = this.storeFlows.get(b.id);
       if (!entry || entry.slot !== slot) {
-        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : storeCover(world, b.cell);
+        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, world.balance.buildings.relay.reach, 1) : storeCover(world, b.cell);
         entry = { slot, cover, steps: homewardSteps(world.width, cover) };
         this.storeFlows.set(b.id, entry);
       }
