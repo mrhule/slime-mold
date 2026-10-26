@@ -210,6 +210,9 @@ async function main(): Promise<void> {
     loop.speed = run.loopSpeed;
     ticksPerFrame = loop.advance(dt);
     input.update(dt);
+    // phones report a stale window height after a rotation or when the address bar moves, so the canvas
+    // is checked against the real window every frame and resized when they differ
+    if (app.screen.width !== window.innerWidth || app.screen.height !== window.innerHeight) app.renderer.resize(window.innerWidth, window.innerHeight);
     renderer.resize();
 
     // placement preview: ask the sim whether it would allow the building under the cursor
