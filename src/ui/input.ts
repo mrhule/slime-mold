@@ -4,12 +4,15 @@ import { canPlace, pendingAllocation, pendingFarmLevel } from '../sim';
 import { CELL } from '../render/units';
 import type { BuildingType, Command, World } from '../sim/types';
 import { BUILD_HOTKEYS } from './buildbar';
+import { GestureRecognizer } from './gestures';
+import type { Gesture } from './gestures';
 
 const PLAYER = 1;
 const KEY_PAN_SPEED = 700; // screen px per second
 const EDGE_PAN_SPEED = 520;
 const EDGE_PX = 8;
 const MARKER_HIT_PX = 16;
+const TOUCH_MARKER_HIT_PX = 28;
 
 export interface InputActions {
   /** false on the title and round-end screens, where the map ignores input */
@@ -34,6 +37,8 @@ export class InputController {
   /** id of the own farm whose output panel is open, or null */
   selectedFarm: number | null = null;
   private dragging = false;
+  private touch = false;
+  private readonly gestures = new GestureRecognizer((g) => this.onGesture(g));
   private lastDrag = { x: 0, y: 0 };
 
   constructor(
@@ -46,6 +51,7 @@ export class InputController {
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', () => this.gestures.cancel());
     canvas.addEventListener('pointerleave', () => {
       this.pointer = null;
       this.hoverCell = null;
@@ -72,7 +78,30 @@ export class InputController {
     return y * sim.width + x;
   }
 
+  /** switch the touch controls on or off; the mouse and keyboard paths are unchanged either way */
+  setTouch(on: boolean): void {
+    this.touch = on;
+    this.canvas.style.touchAction = on ? 'none' : '';
+    if (!on) this.gestures.cancel();
+  }
+
+  private touchEvent(e: PointerEvent): boolean {
+    return this.touch && e.pointerType !== 'mouse';
+  }
+
   private readonly onPointerDown = (e: PointerEvent): void => {
+    if (this.touchEvent(e)) {
+      if (!this.actions.canAct()) return;
+      const [tx, ty] = this.screenPos(e);
+      try {
+        this.canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* a pointer that is already gone */
+      }
+      this.gestures.down(e.pointerId, tx, ty, e.timeStamp);
+      e.preventDefault();
+      return;
+    }
     if (!this.actions.canAct()) return;
     const [sx, sy] = this.screenPos(e);
     if (e.button === 1) {
@@ -82,24 +111,7 @@ export class InputController {
       return;
     }
     if (e.button === 0) {
-      const cell = this.cellAt(sx, sy);
-      if (cell === null) return;
-      if (this.placing) {
-        // always send, so a refusal comes back from the sim as a toast; stay in the mode if it will be refused
-        const allowed = canPlace(this.getWorld(), PLAYER, this.placing, cell).ok;
-        this.send({ type: 'placeBuilding', mold: PLAYER, building: this.placing, cell });
-        if (allowed && !e.shiftKey) this.placing = null;
-      } else {
-        const sim = this.getWorld();
-        const id = sim.buildingAt[cell] as number;
-        const b = id >= 0 ? sim.buildings[id] : undefined;
-        if (b && !b.destroyed && b.type === 'farm' && b.moldId === PLAYER) {
-          this.selectedFarm = b.id; // open its panel instead of growing there
-          return;
-        }
-        this.selectedFarm = null;
-        this.send({ type: 'setTarget', mold: PLAYER, cell });
-      }
+      this.primary(sx, sy, e.shiftKey);
       return;
     }
     if (e.button === 2) {
@@ -111,22 +123,63 @@ export class InputController {
         this.send({ type: 'clearTargets', mold: PLAYER });
         return;
       }
-      const sim = this.getWorld();
-      const mold = sim.molds[PLAYER - 1];
-      if (!mold) return;
-      let best: { id: number; d: number } | null = null;
-      for (const t of mold.targets) {
-        const [mx, my] = FxLayer.markerPosition(t.cell, sim.width);
-        const [px, py] = this.renderer.camera.worldToScreen(mx, my);
-        const d = Math.hypot(px - sx, py - sy);
-        if (d <= MARKER_HIT_PX && (!best || d < best.d)) best = { id: t.id, d };
-      }
-      if (best) this.send({ type: 'cancelTarget', mold: PLAYER, targetId: best.id });
+      this.cancelNear(sx, sy, MARKER_HIT_PX);
     }
   };
 
+  /** the left click (or a tap): place a building, select a farm, or set a growth target */
+  private primary(sx: number, sy: number, keepPlacing: boolean): void {
+    const cell = this.cellAt(sx, sy);
+    if (cell === null) return;
+    if (this.placing) {
+      // always send, so a refusal comes back from the sim as a toast; stay in the mode if it will be refused
+      const allowed = canPlace(this.getWorld(), PLAYER, this.placing, cell).ok;
+      this.send({ type: 'placeBuilding', mold: PLAYER, building: this.placing, cell });
+      if (allowed && !keepPlacing) this.placing = null;
+      return;
+    }
+    const sim = this.getWorld();
+    const id = sim.buildingAt[cell] as number;
+    const b = id >= 0 ? sim.buildings[id] : undefined;
+    if (b && !b.destroyed && b.type === 'farm' && b.moldId === PLAYER) {
+      this.selectedFarm = b.id; // open its panel instead of growing there
+      return;
+    }
+    this.selectedFarm = null;
+    this.send({ type: 'setTarget', mold: PLAYER, cell });
+  }
+
+  /** cancel the growth target whose marker is nearest to a screen point, if one is within `radius` */
+  private cancelNear(sx: number, sy: number, radius: number): void {
+    const sim = this.getWorld();
+    const mold = sim.molds[PLAYER - 1];
+    if (!mold) return;
+    let best: { id: number; d: number } | null = null;
+    for (const t of mold.targets) {
+      const [mx, my] = FxLayer.markerPosition(t.cell, sim.width);
+      const [px, py] = this.renderer.camera.worldToScreen(mx, my);
+      const d = Math.hypot(px - sx, py - sy);
+      if (d <= radius && (!best || d < best.d)) best = { id: t.id, d };
+    }
+    if (best) this.send({ type: 'cancelTarget', mold: PLAYER, targetId: best.id });
+  }
+
+  /** what a recognized touch gesture does; the same commands the mouse sends, plus local camera moves */
+  private onGesture(g: Gesture): void {
+    if (!this.actions.canAct()) return;
+    const cam = this.renderer.camera;
+    if (g.kind === 'tap') this.primary(g.x, g.y, false);
+    else if (g.kind === 'longpress') this.cancelNear(g.x, g.y, TOUCH_MARKER_HIT_PX);
+    else if (g.kind === 'pan') cam.pan(-g.dx, -g.dy);
+    else cam.zoomAt(g.x, g.y, g.factor);
+  }
+
   private readonly onPointerMove = (e: PointerEvent): void => {
     const [sx, sy] = this.screenPos(e);
+    if (this.touchEvent(e)) {
+      this.gestures.move(e.pointerId, sx, sy);
+      return;
+    }
     this.pointer = { x: sx, y: sy };
     this.hoverCell = this.placing ? this.cellAt(sx, sy) : null;
     if (this.dragging) {
@@ -136,6 +189,10 @@ export class InputController {
   };
 
   private readonly onPointerUp = (e: PointerEvent): void => {
+    if (this.touchEvent(e)) {
+      this.gestures.up(e.pointerId, e.timeStamp);
+      return;
+    }
     if (e.button === 1) this.dragging = false;
   };
 
@@ -210,6 +267,7 @@ export class InputController {
   /** keyboard and screen-edge panning; call once per frame */
   update(dtSeconds: number): void {
     const cam = this.renderer.camera;
+    if (this.touch) this.gestures.tick(performance.now());
     let dx = 0;
     let dy = 0;
     if (this.keys.has('a') || this.keys.has('arrowleft')) dx -= 1;
@@ -217,7 +275,7 @@ export class InputController {
     if (this.keys.has('w') || this.keys.has('arrowup')) dy -= 1;
     if (this.keys.has('s') || this.keys.has('arrowdown')) dy += 1;
     if (dx !== 0 || dy !== 0) cam.pan(dx * KEY_PAN_SPEED * dtSeconds, dy * KEY_PAN_SPEED * dtSeconds);
-    if (this.pointer && !this.dragging) {
+    if (this.pointer && !this.dragging && !this.touch) {
       const { x, y } = this.pointer;
       let ex = 0;
       let ey = 0;

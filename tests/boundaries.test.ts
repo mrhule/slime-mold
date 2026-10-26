@@ -97,4 +97,11 @@ describe('import boundaries (Constitution I, II)', () => {
       }
     }
   });
+
+  it('the touch helpers (gestures, touch-mode) are pure: they import nothing', () => {
+    for (const name of ['gestures', 'touch-mode']) {
+      const f = join(root, 'src', 'ui', name + '.ts');
+      expect(importsOf(strip(readFileSync(f, 'utf8'))), name).toEqual([]);
+    }
+  });
 });

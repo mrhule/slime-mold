@@ -448,3 +448,30 @@ html, body {
   .buildbar { left: auto; right: 14px; transform: rotate(0.6deg); }
   .toast { bottom: 96px; }
 }
+
+/* Touch (007): controls react at once, with no double-tap zoom delay */
+button, input[type='range'], select { touch-action: manipulation; }
+
+.touch-bar { display: none; }
+.touch .touch-bar {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 5;
+}
+.touch-bar .round {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper, #fff6dc);
+  color: var(--ink);
+  font: 24px/1 'Bangers', Impact, sans-serif;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.touch-bar .round:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.touch .hud .clock button,
+.touch .farm-panel .dial button { min-width: 44px; min-height: 44px; }

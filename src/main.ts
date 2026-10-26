@@ -21,6 +21,8 @@ import { FOOD_NAMES, reasonText } from './ui/messages';
 import { shakeImpulse } from './render/style';
 import { QualityGovernor } from './render/quality';
 import { Screens } from './ui/screens';
+import { TouchBar } from './ui/touch-bar';
+import { applyTouchClass, detectTouch, resolveTouch } from './ui/touch-mode';
 
 const PLAYER = 1;
 
@@ -65,7 +67,10 @@ async function main(): Promise<void> {
   // sound: settings are loaded once, changes apply at once and are saved; the engine starts on the
   // first click or key press (browser autoplay rules) and does nothing if audio is unavailable
   const store = safeLocalStorage();
+  // touch-first devices start on Low quality; a saved Quality choice still wins
+  const detectedTouch = detectTouch();
   let settings: Settings = loadSettings(store);
+  if (resolveTouch(settings.touchMode, detectedTouch)) settings = loadSettings(store, { quality: 'low' });
   const engine = new AudioEngine();
   engine.setTracks(trackUrls); // the files in public/music; none means the generated loop
   const director = new Director();
@@ -99,6 +104,13 @@ async function main(): Promise<void> {
     setSpeed: (s) => run.setSpeed(s),
     escape: () => (run.state === 'paused' && run.pauseReason === 'menu' ? run.closeMenu() : run.openMenu()),
   });
+  new TouchBar(ui, {
+    onClearTargets: () => send({ type: 'clearTargets', mold: PLAYER }),
+    onHome: () => {
+      const [x, y] = renderer.coreWorldPosition(run.world);
+      renderer.camera.centerOn(x, y);
+    },
+  });
   const buildBar = new BuildBar(ui, (type) => input.togglePlacing(type));
   const farmPanel = new FarmPanel(ui, (delta) => input.nudgeFarm(delta));
   const screens = new Screens(ui, {
@@ -110,7 +122,13 @@ async function main(): Promise<void> {
     nextRound: () => run.nextRound(),
     newRun: () => run.newRun(),
   }, { get: () => settings, set: (change) => applySettings(change), printAvailable: renderer.print !== null });
+  const touchMode = (): void => {
+    const on = resolveTouch(settings.touchMode, detectedTouch);
+    applyTouchClass(on);
+    input.setTouch(on);
+  };
   const reduceMotion = (): void => {
+    touchMode();
     renderer.camera.reduceMotion = settings.reduceMotion;
     renderer.setPrintTexture(settings.printTexture);
     document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);

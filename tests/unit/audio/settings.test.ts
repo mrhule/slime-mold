@@ -44,7 +44,7 @@ describe('settings (contracts/settings.md, A15)', () => {
 
   it('round-trips a saved value', () => {
     const { store, data } = memory();
-    const s: Settings = { muted: true, sfxVolume: 0.3, musicVolume: 0.9, reduceMotion: true, quality: 'low', printTexture: true };
+    const s: Settings = { muted: true, sfxVolume: 0.3, musicVolume: 0.9, reduceMotion: true, quality: 'low', printTexture: true, touchMode: 'on' };
     saveSettings(s, store);
     expect(data.has(SETTINGS_KEY)).toBe(true);
     expect(loadSettings(store)).toEqual(s);
@@ -53,5 +53,19 @@ describe('settings (contracts/settings.md, A15)', () => {
   it('does not throw when saving to a store that throws, or to no store', () => {
     expect(() => saveSettings(base, { getItem: () => null, setItem: () => { throw new Error('quota'); } })).not.toThrow();
     expect(() => saveSettings(base, null)).not.toThrow();
+  });
+});
+
+describe('touch mode setting (007)', () => {
+  it('defaults to auto and rejects unknown values', () => {
+    expect(defaultSettings().touchMode).toBe('auto');
+    expect(loadSettings(memory(JSON.stringify({ touchMode: 'maybe' })).store).touchMode).toBe('auto');
+    expect(loadSettings(memory(JSON.stringify({ touchMode: 'on' })).store).touchMode).toBe('on');
+  });
+
+  it('default overrides apply when nothing is saved, and a saved value still wins', () => {
+    expect(loadSettings(memory().store, { quality: 'low' }).quality).toBe('low');
+    expect(loadSettings(memory(JSON.stringify({ quality: 'high' })).store, { quality: 'low' }).quality).toBe('high');
+    expect(loadSettings(memory(JSON.stringify({ muted: true })).store, { quality: 'low' }).quality).toBe('low');
   });
 });

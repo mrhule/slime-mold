@@ -27,7 +27,7 @@ Nothing in `src/sim/` changes in this feature.
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm branch `007-mobile-mode` and a green baseline (`npm run typecheck`, `npm test`); note the test count under Implementation notes at the end of this file
+- [X] T001 Confirm branch `007-mobile-mode` and a green baseline (`npm run typecheck`, `npm test`); note the test count under Implementation notes at the end of this file
 
 ---
 
@@ -35,11 +35,11 @@ Nothing in `src/sim/` changes in this feature.
 
 **Purpose**: Mode detection, the setting, and the gesture recognizer every story uses
 
-- [ ] T002 [P] Add `touchMode: 'auto' | 'on' | 'off'` (default `auto`, invalid values fall back) to `src/audio/settings.ts`, and let `loadSettings(store, defaults?)` take default overrides that a saved value still beats (M9); extend `tests/unit/audio/settings.test.ts`
-- [ ] T003 [P] Create `src/ui/touch-mode.ts`: `detectTouch(matchMedia)` (coarse pointer and no hover), `resolveTouch(setting, detected)`, and `applyTouchClass(on)` toggling `touch` on `<html>` (M1); tests in `tests/unit/ui/touch-mode.test.ts`
-- [ ] T004 [P] Create `src/ui/gestures.ts`: the pure recognizer with injected time (tap, pan, pinch, long press; thresholds in M2; a pan or pinch never ends as a tap; extra fingers cancel cleanly); tests in `tests/unit/ui/gestures.test.ts` covering every edge case in the spec
-- [ ] T005 Add the Touch mode row (Auto / On / Off) to the Settings section in `src/ui/screens.ts` and wire it in `src/main.ts` so changing it toggles the root class and tells the input controller at once (FR-002)
-- [ ] T006 [P] Add boundary checks in `tests/boundaries.test.ts` that `src/ui/gestures.ts` and `src/ui/touch-mode.ts` import nothing from `src/sim` internals or render
+- [X] T002 [P] Add `touchMode: 'auto' | 'on' | 'off'` (default `auto`, invalid values fall back) to `src/audio/settings.ts`, and let `loadSettings(store, defaults?)` take default overrides that a saved value still beats (M9); extend `tests/unit/audio/settings.test.ts`
+- [X] T003 [P] Create `src/ui/touch-mode.ts`: `detectTouch(matchMedia)` (coarse pointer and no hover), `resolveTouch(setting, detected)`, and `applyTouchClass(on)` toggling `touch` on `<html>` (M1); tests in `tests/unit/ui/touch-mode.test.ts`
+- [X] T004 [P] Create `src/ui/gestures.ts`: the pure recognizer with injected time (tap, pan, pinch, long press; thresholds in M2; a pan or pinch never ends as a tap; extra fingers cancel cleanly); tests in `tests/unit/ui/gestures.test.ts` covering every edge case in the spec
+- [X] T005 Add the Touch mode row (Auto / On / Off) to the Settings section in `src/ui/screens.ts` and wire it in `src/main.ts` so changing it toggles the root class and tells the input controller at once (FR-002)
+- [X] T006 [P] Add boundary checks in `tests/boundaries.test.ts` that `src/ui/gestures.ts` and `src/ui/touch-mode.ts` import nothing from `src/sim` internals or render
 
 **Checkpoint**: touch mode can be switched on a desktop; the recognizer is tested.
 
@@ -51,11 +51,11 @@ Nothing in `src/sim/` changes in this feature.
 
 **Independent Test**: with Touch mode On in a touch emulator, play a round by finger only (quickstart 2 and 3).
 
-- [ ] T007 [US1] Add a touch path to `src/ui/input.ts`: when touch mode is on, pointer events with `pointerType` touch or pen go through the recognizer; tap sets a target or selects an own farm exactly as a click does; pan calls `camera.pan`; pinch calls `camera.zoomAt`; long press near a marker (28 px) sends `cancelTarget`; no edge panning in touch mode; mouse behavior untouched when off (FR-003 to FR-005, FR-017)
-- [ ] T008 [US1] Create `src/ui/touch-bar.ts` with Clear all (`clearTargets`) and Home (centre on the core) round buttons shown only in touch mode, and mount it from `src/main.ts` (FR-005, FR-006)
-- [ ] T009 [P] [US1] Tests in `tests/unit/ui/input-touch.test.ts` with a fake canvas, renderer and world: tap sets a target, a pan then release sets none, a pinch zooms within limits, a long press cancels the nearest target and does nothing elsewhere, tap on own farm selects it, desktop mouse mapping unchanged
-- [ ] T010 [US1] Make the HUD pause and speed buttons, the Growth / Fight slider and the farm dial work reliably with `pointerdown` from touch (no 300 ms delay, `touch-action: manipulation` on controls) in `src/ui/hud.ts`, `src/ui/farm-panel.ts` and `src/ui/styles.css`
-- [ ] T011 [US1] Playtest checklist `specs/007-mobile-mode/checklists/playtest.md` (US1 section): finish a round by finger only; no accidental target after a pan or pinch
+- [X] T007 [US1] Add a touch path to `src/ui/input.ts`: when touch mode is on, pointer events with `pointerType` touch or pen go through the recognizer; tap sets a target or selects an own farm exactly as a click does; pan calls `camera.pan`; pinch calls `camera.zoomAt`; long press near a marker (28 px) sends `cancelTarget`; no edge panning in touch mode; mouse behavior untouched when off (FR-003 to FR-005, FR-017)
+- [X] T008 [US1] Create `src/ui/touch-bar.ts` with Clear all (`clearTargets`) and Home (centre on the core) round buttons shown only in touch mode, and mount it from `src/main.ts` (FR-005, FR-006)
+- [X] T009 [P] [US1] Tests in `tests/unit/ui/input-touch.test.ts` with a fake canvas, renderer and world: tap sets a target, a pan then release sets none, a pinch zooms within limits, a long press cancels the nearest target and does nothing elsewhere, tap on own farm selects it, desktop mouse mapping unchanged
+- [X] T010 [US1] Make the HUD pause and speed buttons, the Growth / Fight slider and the farm dial work reliably with `pointerdown` from touch (no 300 ms delay, `touch-action: manipulation` on controls) in `src/ui/hud.ts`, `src/ui/farm-panel.ts` and `src/ui/styles.css`
+- [X] T011 [US1] Playtest checklist `specs/007-mobile-mode/checklists/playtest.md` (US1 section): finish a round by finger only; no accidental target after a pan or pinch
 
 **Checkpoint**: US1 works on its own.
 
@@ -139,4 +139,5 @@ Nothing in `src/sim/` changes in this feature.
 
 ## Implementation notes
 
-(filled in during implementation)
+- Baseline (T001): 55 files, 367 tests passing. After US1: 58 files, 392 tests; typecheck and build pass.
+- US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.

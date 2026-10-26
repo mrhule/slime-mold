@@ -10,6 +10,8 @@ export interface Settings {
   reduceMotion: boolean;
   quality: 'auto' | 'high' | 'low';
   printTexture: boolean;
+  /** touch layout and controls: follow the device (auto), or force on or off (007) */
+  touchMode: 'auto' | 'on' | 'off';
 }
 
 export type SettingsStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -41,14 +43,16 @@ export function defaultSettings(): Settings {
     reduceMotion: prefersReducedMotion(),
     quality: 'auto',
     printTexture: false,
+    touchMode: 'auto',
   };
 }
 
 const volume = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
 const flag = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
 
-export function loadSettings(store: SettingsStore | null = browserStore()): Settings {
-  const base = defaultSettings();
+/** `defaults` replaces the built-in defaults (touch mode starts on Low quality); a saved value still wins */
+export function loadSettings(store: SettingsStore | null = browserStore(), defaults: Partial<Settings> = {}): Settings {
+  const base: Settings = { ...defaultSettings(), ...defaults };
   try {
     const raw = store?.getItem(SETTINGS_KEY);
     if (!raw) return base;
@@ -61,6 +65,7 @@ export function loadSettings(store: SettingsStore | null = browserStore()): Sett
       reduceMotion: flag(p.reduceMotion, base.reduceMotion),
       quality: p.quality === 'high' || p.quality === 'low' || p.quality === 'auto' ? p.quality : base.quality,
       printTexture: flag(p.printTexture, base.printTexture),
+      touchMode: p.touchMode === 'on' || p.touchMode === 'off' || p.touchMode === 'auto' ? p.touchMode : base.touchMode,
     };
   } catch {
     return base;
