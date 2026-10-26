@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { capOf } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -6,25 +7,23 @@ import { style as look } from './style';
 import { CELL } from './units';
 
 
-const BOOST_GREY = 0x7a7f84;
-const BOOST_SHADE = 0x4b4f53;
-const BOOST_LIGHT = 0xb9bec2;
-const BOLT = 0xffd23a;
-const RIG = 0x4f9aa8;
-const RIG_SHADE = 0x2f6a77;
-const RIG_LIGHT = 0xa6dbe4;
 const STALE_GREY = 0x8a8a84;
 const UNLINKED = 0xf2a01e;
-const BARN_WOOD = 0x9a6a3a;
-const BARN_LIGHT = 0xc58a4e;
-const BARN_ROOF = 0xa8432f;
-const BARN_DOOR = 0x5e3a1b;
-const TANK_SHADE = 0x8d8f80;
-const TANK_LIGHT = 0xd8d9c8;
+const AMBER = 0xe8a21e;
+const AMBER_SHADE = 0xa8620c;
+const AMBER_LIGHT = 0xffe9a0;
+const AMBER_GLOW = 0xffcf3a;
+const PULSE_BODY = 0xf5f2d2;
+const PULSE_SHADE = 0xc9c27a;
+const PULSE_CORE = 0xffee4a;
+const DIGEST = 0x9ccc2e;
+const DIGEST_SHADE = 0x5c8a1a;
+const DIGEST_LIGHT = 0xe3ff9c;
 
 /** world-space center of a cell */
 export const cellCenter = (cell: number, width: number): [number, number] => [(cell % width) * CELL + CELL / 2, Math.floor(cell / width) * CELL + CELL / 2];
 
+/** how a building is drawn: a placement ghost, a remembered one out of sight, an idle one, and the clock and fullness that drive the motion */
 export interface BuildingStyle {
   /** outline color override: used for the placement ghost */
   ghost?: number;
@@ -32,57 +31,114 @@ export interface BuildingStyle {
   stale?: boolean;
   /** a harvester whose food is used up */
   idle?: boolean;
+  /** seconds, for the beat, the swell and the kneading */
+  t?: number;
+  /** 0..1 how full a store's piece is, for how far it swells and how brightly it glows */
+  fill?: number;
 }
 
-/** An inked booster factory: a squat machine with a chimney and a lightning bolt on its front. */
+/** a remembered or ghosted building holds still */
+const still = (style: BuildingStyle): boolean => style.stale === true || style.ghost !== undefined;
+
+/**
+ * An inked pulse node: a four-pointed muscular knot with a bright core that beats like a heart
+ * (a quick double beat), so it reads as the thing that drives the veins it sits on.
+ */
 export function drawBooster(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
   const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
   const ink = style.ghost ?? INK;
   const S = 1.3;
   const w = style.ghost !== undefined ? 2.5 : 3;
-  const body = style.stale ? STALE_GREY : BOOST_GREY;
-  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6.5 * S, 10 * S, 3.6 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
-  // chimney with a smoke puff
-  g.rect(cx + 3.5 * S, cy - 9 * S, 4 * S, 9 * S).fill({ color: BOOST_SHADE, alpha }).stroke({ width: w, color: ink, alpha });
-  g.circle(cx + 6 * S, cy - 12 * S, 2.8 * S).fill({ color: 0xe8e6de, alpha }).stroke({ width: 2, color: ink, alpha });
-  // body: dark base band, lit upper band
-  g.roundRect(cx - 9 * S, cy - 4 * S, 18 * S, 11 * S, 1.5).fill({ color: BOOST_SHADE, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-  g.rect(cx - 7.5 * S, cy - 2.5 * S, 15 * S, 5 * S).fill({ color: body, alpha });
-  g.rect(cx - 7.5 * S, cy - 2.5 * S, 15 * S, 1.6 * S).fill({ color: BOOST_LIGHT, alpha });
-  g.rect(cx - 7.5 * S, cy - 2.5 * S, 1.8 * S, 5 * S).fill({ color: BOOST_LIGHT, alpha });
-  g.rect(cx + 5.7 * S, cy - 2.5 * S, 1.8 * S, 5 * S).fill({ color: BOOST_SHADE, alpha });
-  // lightning bolt
-  const bolt = [cx - 1 * S, cy - 2 * S, cx - 4 * S, cy + 2.5 * S, cx - 0.5 * S, cy + 2.2 * S, cx - 2.5 * S, cy + 6 * S, cx + 3.5 * S, cy + 0.5 * S, cx + 0.3 * S, cy + 0.8 * S, cx + 2 * S, cy - 2 * S];
-  g.poly(bolt, true).fill({ color: style.stale ? STALE_GREY : BOLT, alpha }).stroke({ width: 1.8, color: ink, alpha, join: 'miter' });
-  // owner's flag on the roof
-  if (!style.stale) g.rect(cx - 8 * S, cy - 8 * S, 5 * S, 3 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
+  const phase = (style.t ?? 0) * 5.2;
+  const beat = still(style) ? 0 : Math.max(0, Math.sin(phase)) ** 6 + 0.55 * Math.max(0, Math.sin(phase - 1.15)) ** 6;
+  const k = 1 + 0.13 * beat;
+  const body = style.stale ? STALE_GREY : PULSE_BODY;
+  const shade = style.stale ? STALE_GREY : PULSE_SHADE;
+  const core = style.stale ? STALE_GREY : PULSE_CORE;
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 8 * S, 11 * S, 3.4 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  const star = (scale: number): number[] => {
+    const pts: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      const ang = (i * Math.PI) / 4 - Math.PI / 2;
+      const r = (i % 2 === 0 ? 11 : 5.4) * S * k * scale;
+      pts.push(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r * 0.92);
+    }
+    return pts;
+  };
+  g.poly(star(1), true).fill({ color: shade, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
+  g.poly(star(0.74), true).fill({ color: body, alpha });
+  // muscle bands pulling in toward the core
+  for (let i = 0; i < 4; i++) {
+    const ang = (i * Math.PI) / 2 - Math.PI / 4;
+    g.moveTo(cx + Math.cos(ang) * 3.2 * S, cy + Math.sin(ang) * 3.2 * S).lineTo(cx + Math.cos(ang) * 6.4 * S * k, cy + Math.sin(ang) * 6.4 * S * k * 0.92);
+  }
+  g.stroke({ width: 1.4, color: ink, alpha: 0.55 * alpha, cap: 'round' });
+  // the bright core, swelling with each beat, with a ring that flashes out
+  if (beat > 0.05) g.circle(cx, cy, (4.4 + 3.6 * beat) * S).stroke({ width: 2, color: PULSE_CORE, alpha: 0.7 * beat });
+  g.circle(cx, cy, 3.4 * S * (1 + 0.3 * beat)).fill({ color: core, alpha }).stroke({ width: 2, color: ink, alpha });
+  g.circle(cx - 0.5 * S, cy - 0.6 * S, 1.3 * S).fill({ color: 0xffffff, alpha: 0.9 * alpha });
+  // owner's flag on the north tip
+  if (!style.stale) g.rect(cx - 2.5 * S, cy - 11 * S * k - 4.4 * S, 5 * S, 3 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
 }
 
-/** An inked harvester: a tripod rig with a bucket, dimmed and crossed out once its food is gone. */
+/**
+ * An inked digestor: a stalk topped by a cup with a ring of curled fingers clamped over the food.
+ * The fingers flex and bubbles rise while it works; gray and crossed out once its food is gone.
+ */
 export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
   const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : style.idle ? 0.6 : 1;
   const ink = style.ghost ?? INK;
   const S = 1.3;
   const w = style.ghost !== undefined ? 2.5 : 3;
-  const col = style.stale || style.idle ? STALE_GREY : RIG;
-  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 9.5 * S, 3.4 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
-  // tripod legs, ink first and then the colored core
-  const legs = (): void => {
-    g.moveTo(cx, cy - 9 * S).lineTo(cx - 8 * S, cy + 5 * S);
-    g.moveTo(cx, cy - 9 * S).lineTo(cx + 8 * S, cy + 5 * S);
-    g.moveTo(cx, cy - 9 * S).lineTo(cx, cy + 6 * S);
+  const t = style.t ?? 0;
+  const working = !style.stale && !style.idle && style.ghost === undefined;
+  const col = style.stale || style.idle ? STALE_GREY : DIGEST;
+  const shade = style.stale || style.idle ? STALE_GREY : DIGEST_SHADE;
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 7 * S, 9 * S, 3.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  // stalk, ink first and then the colored core
+  const stalk = (): void => {
+    g.moveTo(cx, cy + 6 * S).quadraticCurveTo(cx + 1.2 * S, cy + 1 * S, cx, cy - 5 * S);
   };
-  legs();
-  g.stroke({ width: 5.5, color: ink, alpha, cap: 'round' });
-  legs();
-  g.stroke({ width: 2.4, color: RIG_SHADE, alpha, cap: 'round' });
-  // hanging bucket on a line
-  g.moveTo(cx, cy - 9 * S).lineTo(cx, cy - 1 * S).stroke({ width: 1.8, color: ink, alpha });
-  g.poly([cx - 4 * S, cy - 1 * S, cx + 4 * S, cy - 1 * S, cx + 3 * S, cy + 4 * S, cx - 3 * S, cy + 4 * S], true).fill({ color: col, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-  g.rect(cx - 3.2 * S, cy - 0.6 * S, 6.4 * S, 1.4 * S).fill({ color: RIG_LIGHT, alpha });
-  g.poly([cx + 1.6 * S, cy - 0.4 * S, cx + 3.6 * S, cy - 0.4 * S, cx + 2.8 * S, cy + 3.9 * S, cx + 1.4 * S, cy + 3.9 * S], true).fill({ color: RIG_SHADE, alpha: 0.75 * alpha });
-  // pulley wheel in the owner's color at the top
-  g.circle(cx, cy - 9 * S, 2.4 * S).fill({ color: style.stale ? STALE_GREY : flag, alpha }).stroke({ width: 2, color: ink, alpha });
+  stalk();
+  g.stroke({ width: 6.4, color: ink, alpha, cap: 'round' });
+  stalk();
+  g.stroke({ width: 3.4, color: col, alpha, cap: 'round' });
+  // root knob in the owner's color
+  g.circle(cx, cy + 5.6 * S, 2.6 * S).fill({ color: style.stale ? STALE_GREY : flag, alpha }).stroke({ width: 2, color: ink, alpha });
+  // the cup and its dark mouth
+  g.ellipse(cx, cy - 5 * S, 6.2 * S, 2.7 * S).fill({ color: shade, alpha }).stroke({ width: w, color: ink, alpha });
+  g.ellipse(cx, cy - 5.5 * S, 4.4 * S, 1.6 * S).fill({ color: working ? 0x223a0c : 0x4a4a46, alpha });
+  // curled fingers over the top: [start x, control x, end x, flex phase]
+  const fingers: [number, number, number, number, number][] = [
+    [-6.6, -13, -3.4, 0, 11],
+    [-3.3, -6.4, -1.5, 1.3, 13],
+    [0, 0.6, 0.2, 2.6, 14],
+    [3.3, 6.4, 1.5, 3.9, 13],
+    [6.6, 13, 3.4, 5.2, 11],
+  ];
+  for (const [sx, qx, ex, ph, h] of fingers) {
+    const flex = working ? Math.sin(t * 2.4 + ph) * 1.1 * S : 0;
+    const tipX = cx + ex * S - flex * 0.4;
+    const tipY = cy - h * S + Math.abs(flex) * 0.3;
+    const path = (): void => {
+      g.moveTo(cx + sx * S, cy - 5 * S).quadraticCurveTo(cx + qx * S + flex, cy - (h + 4) * S, tipX, tipY);
+    };
+    path();
+    g.stroke({ width: 4.4, color: ink, alpha, cap: 'round' });
+    path();
+    g.stroke({ width: 2, color: col, alpha, cap: 'round' });
+    g.circle(tipX, tipY, 1.2 * S).fill({ color: working ? DIGEST_LIGHT : col, alpha }).stroke({ width: 1.6, color: ink, alpha });
+  }
+  // digestive bubbles rising from the cup
+  if (working) {
+    for (let i = 0; i < 3; i++) {
+      const f = (t * 0.55 + i / 3) % 1;
+      const bx = cx + Math.sin(i * 2.1 + t * 1.3) * 2.4 * S;
+      const by = cy - 6 * S - f * 9 * S;
+      const r = 1.1 * S * (1 - f * 0.45);
+      g.circle(bx, by, r).fill({ color: DIGEST_LIGHT, alpha: 1 - f }).stroke({ width: 1, color: ink, alpha: 0.8 * (1 - f) });
+    }
+  }
   if (style.idle) {
     g.moveTo(cx - 5 * S, cy - 4 * S).lineTo(cx + 5 * S, cy + 3 * S);
     g.moveTo(cx + 5 * S, cy - 4 * S).lineTo(cx - 5 * S, cy + 3 * S);
@@ -91,32 +147,46 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
 }
 
 /**
- * An inked store house: a squat barn with a red roof and a round steel tank beside it, so it
- * reads as "storage" and differs from the slime pool, the booster's chimney and the
- * harvester's tripod even in grayscale.
+ * An inked sac: a low, wide cluster of three amber bulbs held by root tendrils. It swells and glows
+ * brighter as its piece fills with nutrients, and breathes a little, so a full store looks full.
  */
 export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
   const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
   const ink = style.ghost ?? INK;
   const S = 1.3;
   const w = style.ghost !== undefined ? 2.5 : 3;
-  const wood = style.stale ? STALE_GREY : BARN_WOOD;
-  const roof = style.stale ? STALE_GREY : BARN_ROOF;
-  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6.5 * S, 11 * S, 3.6 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
-  // round tank on the right: a dark band under a lit stripe
-  g.roundRect(cx + 3 * S, cy - 5 * S, 8 * S, 12 * S, 3.4 * S).fill({ color: TANK_SHADE, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-  g.roundRect(cx + 4.4 * S, cy - 3.6 * S, 3 * S, 8 * S, 1.4 * S).fill({ color: TANK_LIGHT, alpha });
-  // barn body and door
-  g.rect(cx - 10 * S, cy - 3 * S, 14 * S, 10 * S).fill({ color: wood, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-  g.rect(cx - 5.5 * S, cy + 1 * S, 5 * S, 6 * S).fill({ color: BARN_DOOR, alpha }).stroke({ width: 2, color: ink, alpha });
-  g.rect(cx - 9.2 * S, cy - 2.4 * S, 1.8 * S, 9 * S).fill({ color: BARN_LIGHT, alpha: 0.8 * alpha });
-  g.rect(cx + 2.4 * S, cy - 2.4 * S, 1.2 * S, 9 * S).fill({ color: INK, alpha: 0.22 * alpha });
-  // roof
-  g.poly([cx - 12 * S, cy - 2.5 * S, cx - 3 * S, cy - 10 * S, cx + 6 * S, cy - 2.5 * S], true).fill({ color: roof, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-  g.poly([cx - 3 * S, cy - 10 * S, cx + 6 * S, cy - 2.5 * S, cx - 3 * S, cy - 2.5 * S], true).fill({ color: INK, alpha: 0.2 * alpha });
-  g.roundRect(cx + 8.6 * S, cy - 4 * S, 1.8 * S, 10 * S, 0.9 * S).fill({ color: INK, alpha: 0.2 * alpha });
-  // owner's flag on the roof peak
-  if (!style.stale) g.rect(cx - 3 * S, cy - 14 * S, 5 * S, 3 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
+  const fill = style.stale ? 0 : Math.min(1, Math.max(0, style.fill ?? 0.4));
+  const breathe = 1 + (still(style) ? 0 : 0.035 * Math.sin((style.t ?? 0) * 2.1)) + 0.12 * fill;
+  const base = style.stale ? STALE_GREY : AMBER;
+  const shade = style.stale ? STALE_GREY : AMBER_SHADE;
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 7 * S, 12.5 * S, 3.6 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  // root tendrils spreading from under the bulbs, ink first and then a dark amber core
+  const rootEnds: [number, number][] = [
+    [-5, -12],
+    [-2, -4],
+    [3, 5],
+    [6, 13],
+  ];
+  const drawRoots = (): void => {
+    for (const [x0, x1] of rootEnds) g.moveTo(cx + x0 * S, cy + 3 * S).quadraticCurveTo(cx + x1 * 0.8 * S, cy + 9 * S, cx + x1 * S, cy + 6.4 * S);
+  };
+  drawRoots();
+  g.stroke({ width: 4.6, color: ink, alpha, cap: 'round' });
+  drawRoots();
+  g.stroke({ width: 2, color: shade, alpha, cap: 'round' });
+  const bulb = (x: number, y: number, r: number): void => {
+    g.circle(x, y, r).fill({ color: base, alpha }).stroke({ width: w, color: ink, alpha });
+    if (!style.stale) g.circle(x, y + r * 0.08, r * 0.62).fill({ color: AMBER_GLOW, alpha: (0.2 + 0.65 * fill) * alpha });
+    // shaded lower-right crescent and a lit upper-left rim
+    g.moveTo(x + Math.cos(0.1) * r * 0.8, y + Math.sin(0.1) * r * 0.8).arc(x, y, r * 0.8, 0.1, 1.5).stroke({ width: r * 0.24, color: shade, alpha: 0.8 * alpha, cap: 'round' });
+    g.moveTo(x + Math.cos(3.3) * r * 0.7, y + Math.sin(3.3) * r * 0.7).arc(x, y, r * 0.7, 3.3, 4.7).stroke({ width: 1.8, color: style.stale ? 0xdadad2 : AMBER_LIGHT, alpha, cap: 'round' });
+  };
+  bulb(cx - 8.6 * S, cy + 1.6 * S, 5 * S * breathe);
+  bulb(cx + 8.8 * S, cy + 2.2 * S, 4.5 * S * breathe);
+  const topR = 6.2 * S * breathe;
+  bulb(cx, cy - 0.6 * S, topR);
+  // owner's color: a small spore budding off the big bulb (no stalk, which would read as a fuse)
+  if (!style.stale) g.circle(cx + topR * 0.62, cy - 0.6 * S - topR * 0.8, 2.2 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
 }
 
 /** draw any building by type */
@@ -214,7 +284,7 @@ export class BuildingLayer {
     this.container.addChild(this.areas, this.rim, this.g);
   }
 
-  update(world: Readonly<World>): void {
+  update(world: Readonly<World>, timeSeconds = 0): void {
     const player = world.molds[0];
     const vision = player?.vision;
     const shown = (b: Building): boolean => !b.destroyed && (b.moldId === 1 || !vision || vision[b.cell] === 2);
@@ -236,6 +306,8 @@ export class BuildingLayer {
       key += shown(b) ? `${b.id}${idle},` : 'x';
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
+    // live buildings move (a beat, a swell, kneading), so redraw about twelve times a second while any is in view
+    if (world.buildings.some(shown)) key += `f${Math.floor(timeSeconds * 12)}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
 
@@ -261,8 +333,10 @@ export class BuildingLayer {
         const len = Math.hypot(dx, dy) || 1;
         for (let d = 8; d < len - 6; d += 9) this.areas.circle(x + (dx / len) * d, y + (dy / len) * d, 1.6).fill({ color: INK, alpha: 0.7 });
       }
-      drawBuilding(this.rim, b.type, x, y, color, { idle });
-      drawBuilding(this.g, b.type, x, y, color, { idle });
+      const comp = b.type === 'storehouse' ? world.components.get(world.component[b.cell] as number) : undefined;
+      const fill = comp ? Math.min(1, comp.pool / capOf(world, comp)) : 0;
+      drawBuilding(this.rim, b.type, x, y, color, { idle, t: timeSeconds, fill });
+      drawBuilding(this.g, b.type, x, y, color, { idle, t: timeSeconds, fill });
     }
   }
 }

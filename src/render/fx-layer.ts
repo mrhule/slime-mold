@@ -316,7 +316,7 @@ export class FxLayer {
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
       if (ghost.type === 'booster') drawStoreDrops(g, world.width, homewardSteps(world.width, boosterCover(world, ghost.cell)), BOOST_DROP, timeSeconds, BOOST_BOLT);
       if (ghost.type === 'storehouse') drawStoreCover(g, world.width, storeCover(world, ghost.cell), world.balance.buildings.storehouse.bonus, color, 0.8);
-      drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color });
+      drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color, t: timeSeconds, fill: 0.5 });
     }
     this.pings = this.pings.filter((p) => (p.age += dt) < PING_SECONDS);
     for (const p of this.pings) {
