@@ -67,12 +67,12 @@ Nothing in `src/sim/` changes in this feature.
 
 **Independent Test**: place each building type, cancel one, try an invalid spot, change a farm output by finger (quickstart 4 and 5).
 
-- [ ] T012 [US2] Add `pendingPlacement` to `src/ui/input.ts` with `confirmPlacement()` and `cancelPlacement()`: in touch mode a tap while placing sets the pending cell instead of sending a command; Confirm sends the same `placeBuilding` the click sends; choosing another building, Cancel or Esc clears it; panning keeps it (M4, FR-007)
-- [ ] T013 [US2] Show the pending placement in `src/main.ts`: the ghost is drawn at the pending cell and `placePreview` text (allowed, reason, cap hint) goes to the touch bar; extend `src/ui/touch-bar.ts` with Confirm and Cancel (Confirm disabled when not allowed) placed at the bottom centre (FR-008)
-- [ ] T014 [P] [US2] Tests in `tests/unit/ui/input-touch.test.ts`: no command before Confirm, Confirm sends exactly one `placeBuilding`, Cancel and another building send none, an invalid spot disables Confirm, pan keeps the pending cell
-- [ ] T015 [P] [US2] `tests/integration/touch-determinism.test.ts`: drive one scripted game through mouse-style input and through touch-style input (taps, pending placement, confirm) and assert identical commands and the same `stateHash` (FR-018, SC-006)
-- [ ] T016 [US2] Make farm selection and the dial usable by touch: tapping elsewhere deselects, panel docks where the thumb reaches (`src/ui/farm-panel.ts`, `src/ui/styles.css`) (FR-009)
-- [ ] T017 [US2] Playtest checklist (US2 section): ten placements with no accidental builds; invalid spot reasons readable without hover
+- [X] T012 [US2] Add `pendingPlacement` to `src/ui/input.ts` with `confirmPlacement()` and `cancelPlacement()`: in touch mode a tap while placing sets the pending cell instead of sending a command; Confirm sends the same `placeBuilding` the click sends; choosing another building, Cancel or Esc clears it; panning keeps it (M4, FR-007)
+- [X] T013 [US2] Show the pending placement in `src/main.ts`: the ghost is drawn at the pending cell and `placePreview` text (allowed, reason, cap hint) goes to the touch bar; extend `src/ui/touch-bar.ts` with Confirm and Cancel (Confirm disabled when not allowed) placed at the bottom centre (FR-008)
+- [X] T014 [P] [US2] Tests in `tests/unit/ui/input-touch.test.ts`: no command before Confirm, Confirm sends exactly one `placeBuilding`, Cancel and another building send none, an invalid spot disables Confirm, pan keeps the pending cell
+- [X] T015 [P] [US2] `tests/integration/touch-determinism.test.ts`: drive one scripted game through mouse-style input and through touch-style input (taps, pending placement, confirm) and assert identical commands and the same `stateHash` (FR-018, SC-006)
+- [X] T016 [US2] Make farm selection and the dial usable by touch: tapping elsewhere deselects, panel docks where the thumb reaches (`src/ui/farm-panel.ts`, `src/ui/styles.css`) (FR-009)
+- [X] T017 [US2] Playtest checklist (US2 section): ten placements with no accidental builds; invalid spot reasons readable without hover
 
 **Checkpoint**: MVP (US1 + US2) is playable on a phone.
 
@@ -140,4 +140,5 @@ Nothing in `src/sim/` changes in this feature.
 ## Implementation notes
 
 - Baseline (T001): 55 files, 367 tests passing. After US1: 58 files, 392 tests; typecheck and build pass.
+- US2: 58 files, 398 tests (the new determinism test sends the same placement by mouse and by touch and compares the state hash).
 - US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.

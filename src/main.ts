@@ -104,8 +104,10 @@ async function main(): Promise<void> {
     setSpeed: (s) => run.setSpeed(s),
     escape: () => (run.state === 'paused' && run.pauseReason === 'menu' ? run.closeMenu() : run.openMenu()),
   });
-  new TouchBar(ui, {
+  const touchBar = new TouchBar(ui, {
     onClearTargets: () => send({ type: 'clearTargets', mold: PLAYER }),
+    onConfirmPlacement: () => input.confirmPlacement(),
+    onCancelPlacement: () => input.cancelPlacement(),
     onHome: () => {
       const [x, y] = renderer.coreWorldPosition(run.world);
       renderer.camera.centerOn(x, y);
@@ -194,9 +196,22 @@ async function main(): Promise<void> {
       ghost = { cell: input.hoverCell, ok: result.ok, type: input.placing };
       const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : preview.unlinked ? ' (no store house on this vein: it will not pay)' : '';
       buildBar.showHint(result.ok ? `Click to build${note}` : reasonText(result.reason), pointer.x, pointer.y, result.ok);
+    } else if (input.touchActive && input.placing) {
+      // touch: the chosen spot is previewed and its reason shown in the placement bar (FR-007, FR-008)
+      const cell = input.pendingCell;
+      if (cell === null) {
+        touchBar.setPlacement({ text: 'Tap the map to choose a spot', canConfirm: false, hasSpot: false });
+      } else {
+        const preview = placePreview(run.world, PLAYER, input.placing, cell);
+        ghost = { cell, ok: preview.result.ok, type: input.placing };
+        const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : preview.unlinked ? ' (no store house on this vein: it will not pay)' : '';
+        touchBar.setPlacement({ text: preview.result.ok ? `Build here?${note}` : reasonText(preview.result.reason), canConfirm: preview.result.ok, hasSpot: true });
+      }
+      buildBar.showHint(null, 0, 0, true);
     } else {
       buildBar.showHint(null, 0, 0, true);
     }
+    if (!(input.touchActive && input.placing)) touchBar.setPlacement(null);
 
     renderer.update(run.world, dt, ghost);
     const model = readHud(run.world, PLAYER);

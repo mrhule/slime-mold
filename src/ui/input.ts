@@ -38,6 +38,7 @@ export class InputController {
   selectedFarm: number | null = null;
   private dragging = false;
   private touch = false;
+  private pending: number | null = null;
   private readonly gestures = new GestureRecognizer((g) => this.onGesture(g));
   private lastDrag = { x: 0, y: 0 };
 
@@ -79,6 +80,10 @@ export class InputController {
   }
 
   /** switch the touch controls on or off; the mouse and keyboard paths are unchanged either way */
+  get touchActive(): boolean {
+    return this.touch;
+  }
+
   setTouch(on: boolean): void {
     this.touch = on;
     this.canvas.style.touchAction = on ? 'none' : '';
@@ -168,7 +173,13 @@ export class InputController {
   private onGesture(g: Gesture): void {
     if (!this.actions.canAct()) return;
     const cam = this.renderer.camera;
-    if (g.kind === 'tap') this.primary(g.x, g.y, false);
+    if (g.kind === 'tap') {
+      const cell = this.placing ? this.cellAt(g.x, g.y) : null;
+      if (this.placing) {
+        // choosing a spot by touch only previews it; Confirm sends the command (FR-007)
+        if (cell !== null) this.pending = cell;
+      } else this.primary(g.x, g.y, false);
+    }
     else if (g.kind === 'longpress') this.cancelNear(g.x, g.y, TOUCH_MARKER_HIT_PX);
     else if (g.kind === 'pan') cam.pan(-g.dx, -g.dy);
     else cam.zoomAt(g.x, g.y, g.factor);
@@ -252,8 +263,29 @@ export class InputController {
     this.send({ type: 'setFarmOutput', mold: PLAYER, building: this.selectedFarm, level });
   }
 
+  /** the spot chosen by touch and waiting for Confirm, or null */
+  get pendingCell(): number | null {
+    return this.placing ? this.pending : null;
+  }
+
+  /** Confirm: send the same command a click sends; leave placement mode if it will be accepted */
+  confirmPlacement(): void {
+    if (!this.placing || this.pending === null) return;
+    const allowed = canPlace(this.getWorld(), PLAYER, this.placing, this.pending).ok;
+    this.send({ type: 'placeBuilding', mold: PLAYER, building: this.placing, cell: this.pending });
+    if (allowed) this.cancelPlacement();
+  }
+
+  /** Cancel: leave placement mode with nothing built */
+  cancelPlacement(): void {
+    this.placing = null;
+    this.pending = null;
+    this.hoverCell = null;
+  }
+
   /** enter placement mode for a building, or leave it if it is already selected */
   togglePlacing(type: BuildingType): void {
+    this.pending = null;
     this.placing = this.placing === type ? null : type;
     if (!this.placing) this.hoverCell = null;
     else if (this.pointer) this.hoverCell = this.cellAt(this.pointer.x, this.pointer.y);

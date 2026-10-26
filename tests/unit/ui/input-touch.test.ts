@@ -104,3 +104,61 @@ describe('touch input mapping (contracts/touch-controls.md)', () => {
     expect(sent).toEqual([{ type: 'setTarget', mold: 1, cell: Math.floor(100 / CELL) * 160 + Math.floor(100 / CELL) }]);
   });
 });
+
+describe('touch placement: preview, then Confirm (FR-007)', () => {
+  const tap = (fire: (t: string, id: number, x: number, y: number, ms: number) => void, x: number, y: number, t0 = 0): void => {
+    fire('pointerdown', 1, x, y, t0);
+    fire('pointerup', 1, x, y, t0 + 80);
+  };
+
+  it('a tap while placing only previews: no command until Confirm, then exactly one placeBuilding', () => {
+    const { input, sent, fire } = rig();
+    input.togglePlacing('farm');
+    tap(fire, 8 * CELL + 3, 9 * CELL + 3);
+    expect(sent).toEqual([]);
+    expect(input.pendingCell).toBe(9 * 160 + 8);
+    input.confirmPlacement();
+    expect(sent).toEqual([{ type: 'placeBuilding', mold: 1, building: 'farm', cell: 9 * 160 + 8 }]);
+  });
+
+  it('tapping again moves the pending spot', () => {
+    const { input, sent, fire } = rig();
+    input.togglePlacing('booster');
+    tap(fire, 2 * CELL + 1, 2 * CELL + 1);
+    tap(fire, 4 * CELL + 1, 4 * CELL + 1, 500);
+    expect(input.pendingCell).toBe(4 * 160 + 4);
+    expect(sent).toEqual([]);
+  });
+
+  it('Cancel, or choosing another building, sends nothing and clears the spot', () => {
+    const { input, sent, fire } = rig();
+    input.togglePlacing('farm');
+    tap(fire, 5 * CELL + 1, 5 * CELL + 1);
+    input.cancelPlacement();
+    expect(input.placing).toBeNull();
+    expect(input.pendingCell).toBeNull();
+    input.togglePlacing('farm');
+    tap(fire, 5 * CELL + 1, 5 * CELL + 1, 500);
+    input.togglePlacing('booster');
+    expect(input.pendingCell).toBeNull();
+    input.confirmPlacement();
+    expect(sent).toEqual([]);
+  });
+
+  it('panning keeps the pending spot', () => {
+    const { input, fire } = rig();
+    input.togglePlacing('farm');
+    tap(fire, 6 * CELL + 1, 6 * CELL + 1);
+    fire('pointerdown', 1, 300, 300, 1000);
+    fire('pointermove', 1, 360, 300, 1050);
+    fire('pointerup', 1, 360, 300, 1100);
+    expect(input.pendingCell).toBe(6 * 160 + 6);
+  });
+
+  it('confirm with nothing chosen does nothing', () => {
+    const { input, sent } = rig();
+    input.togglePlacing('farm');
+    input.confirmPlacement();
+    expect(sent).toEqual([]);
+  });
+});

@@ -475,3 +475,43 @@ button, input[type='range'], select { touch-action: manipulation; }
 .touch-bar .round:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 .touch .hud .clock button,
 .touch .farm-panel .dial button { min-width: 44px; min-height: 44px; }
+
+/* Placement bar (007): the preview verdict with Build and Cancel, bottom centre, clear of the finger */
+.placement-bar { display: none; }
+.touch .placement-bar:not([hidden]) {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  background: var(--paper);
+  border: 4px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.placement-text { font-weight: 800; font-size: 15px; line-height: 1.2; min-width: 120px; }
+.placement-text.bad { color: var(--danger); }
+.placement-bar button {
+  min-width: 88px;
+  min-height: 48px;
+  border: 3px solid var(--ink);
+  background: var(--accent);
+  color: var(--ink);
+  font: 22px/1 var(--display);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.placement-bar button:disabled { opacity: 0.4; box-shadow: none; }
+.placement-bar .btn-cancel { background: var(--paper-dark); }
+.placement-bar button:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+/* the farm panel sits below the round buttons and its dial is thumb-sized */
+.touch .farm-panel { top: 70px; right: 10px; }
+.touch .farm-panel .dial button { width: 52px; height: 52px; font-size: 28px; }
+.touch .farm-panel .hint { display: none; }
