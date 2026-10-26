@@ -58,11 +58,19 @@ export class Director {
       else if (e.type === 'dropLanded') add('land');
       else if (e.type === 'buildingPlaced' && e.mold === s.playerId) add('place');
       else if (e.type === 'commandRejected' && e.mold === s.playerId) add('refuse');
+      else if (e.type === 'moldEvolved' && e.mold === s.playerId) add('evolve');
+      else if (e.type === 'buildingUpgraded' && e.mold === s.playerId) add('upgrade');
+      else if (e.type === 'buildingDestroyed' && e.mold === s.playerId) add('demolish');
     }
 
-    // fronts: visible deaths over the last second, only when something new died this frame
-    if (s.visibleDeaths.length > 0) {
-      for (const d of s.visibleDeaths) this.window.push({ t: s.nowMs, own: d.own });
+    // veins of your own dying back with no enemy to blame (out of reach, starved, cut off): a soft sigh, not a fight
+    const withered = s.visibleDeaths.filter((d) => d.own && !d.byEnemy).length;
+    if (withered > 0) add('wither', withered / 6);
+
+    // fronts: visible deaths over the last second, only when something new died this frame; only a kill by an enemy is a fight
+    const fought = s.visibleDeaths.filter((d) => d.byEnemy);
+    if (fought.length > 0) {
+      for (const d of fought) this.window.push({ t: s.nowMs, own: d.own });
       this.window = this.window.filter((d) => s.nowMs - d.t <= FRONT_WINDOW_MS);
       const own = this.window.filter((d) => d.own).length;
       const enemy = this.window.length - own;
