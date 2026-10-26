@@ -8,7 +8,7 @@ import type { World } from '../../../src/sim/types';
 function worldAt(seconds: number, over: Record<string, number> = {}): World {
   const world = createRound({ runSeed: 4242, roundNumber: 2 });
   world.tick = Math.round(seconds / TICK_DT);
-  for (const c of world.components.values()) c.pool = 200;
+  for (const c of world.components.values()) c.pool = 600;
   Object.assign(world.balance.burst, over);
   return world;
 }

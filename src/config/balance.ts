@@ -268,7 +268,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   victoryControl: 0.75,
   victoryEase: { startSeconds: 420, perMinute: 0.025, floor: 0.5 },
-  burst: { minSeconds: 240, cost: 100, seeds: 28, spacing: 9, bloomSeconds: 90, spreadEvery: 10, spreadChance: 0.03, winControl: 0.6 },
+  burst: { minSeconds: 240, cost: 500, seeds: 28, spacing: 9, bloomSeconds: 90, spreadEvery: 10, spreadChance: 0.03, winControl: 0.6 },
   defaultAllocation: 0.3,
 
   aiCommandsPerThink: 3,
