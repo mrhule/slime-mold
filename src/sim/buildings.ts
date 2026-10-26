@@ -117,6 +117,29 @@ export function upgradeBuilding(world: World, moldId: MoldId, cell: CellIndex): 
   return { ok: true };
 }
 
+/** Tear down a building, paying part of its cost back into its piece. The cell and its veins stay. */
+export function demolishBuilding(world: World, moldId: MoldId, cell: CellIndex): PlaceResult {
+  const b = buildingOn(world, cell);
+  if (!b) return { ok: false, reason: 'no-building' };
+  if (b.moldId !== moldId) return { ok: false, reason: 'not-your-cell' };
+  const comp = world.components.get(world.component[cell] as number);
+  if (comp) {
+    const spec = world.balance.buildings[b.type];
+    const extra = b.type === 'storehouse' ? world.balance.buildings.storehouse.upgradeCost.slice(0, b.level - 1).reduce((a, c) => a + c, 0) : 0;
+    comp.pool += (spec.cost + extra) * world.balance.demolishRefund;
+  }
+  b.destroyed = true;
+  world.buildingAt[cell] = -1;
+  world.events.push({ type: 'buildingDestroyed', id: b.id, building: b.type, mold: moldId, cell });
+  if (b.type === 'booster') recomputeBoost(world); // its bonus ends at once
+  if (b.type === 'storehouse') {
+    clampPools(world); // its cap ends at once
+    recomputeSupply(world); // and so does its boost
+    recomputeFeed(world); // and its reach, so veins only it fed start their clock
+  }
+  return { ok: true };
+}
+
 /** the live building standing on a cell, if any */
 export function buildingOn(world: Readonly<World>, cell: CellIndex): Building | undefined {
   const id = world.buildingAt[cell] as number;

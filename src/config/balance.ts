@@ -161,6 +161,9 @@ export interface BalanceConfig {
    */
   feed: { coreReach: number; trickle: number; floor: number; graceSeconds: number; fadeSeconds: number };
 
+  /** the share of a building's cost paid back into its piece when the player demolishes it */
+  demolishRefund: number;
+
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
   /** goo pool placement (008) */
@@ -265,6 +268,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   feed: { coreReach: 40, trickle: 0.5, floor: 0.04, graceSeconds: 30, fadeSeconds: 60 },
+
+  demolishRefund: 0.5,
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

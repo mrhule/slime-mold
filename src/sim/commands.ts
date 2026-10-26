@@ -1,4 +1,4 @@
-import { placeBuilding, upgradeBuilding } from './buildings';
+import { demolishBuilding, placeBuilding, upgradeBuilding } from './buildings';
 import { addTarget } from './growth';
 import { dirBetween } from './grid';
 import { cutKey, linkCells, relabelComponent, unlinkCells } from './network';
@@ -57,6 +57,11 @@ export function applyCommand(world: World, cmd: Command): void {
     }
     case 'upgradeBuilding': {
       const res = upgradeBuilding(world, cmd.mold, cmd.cell);
+      if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
+      return;
+    }
+    case 'demolishBuilding': {
+      const res = demolishBuilding(world, cmd.mold, cmd.cell);
       if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
       return;
     }

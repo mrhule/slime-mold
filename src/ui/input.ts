@@ -144,7 +144,7 @@ export class InputController {
         this.send({ type: 'clearTargets', mold: PLAYER });
         return;
       }
-      if (!this.cancelNear(sx, sy, MARKER_HIT_PX)) this.toggleLinkNear(sx, sy, VEIN_HIT_PX);
+      this.secondary(sx, sy, MARKER_HIT_PX, VEIN_HIT_PX);
     }
   };
 
@@ -165,6 +165,44 @@ export class InputController {
       return;
     }
     this.send({ type: 'setTarget', mold: PLAYER, cell });
+  }
+
+  /** the building the player armed for demolition (right-clicked once, a moment ago), or null */
+  get demolishArmed(): number | null {
+    return this.armed && performance.now() < this.armed.until ? this.armed.cell : null;
+  }
+
+  private armed: { cell: number; until: number } | null = null;
+
+  /**
+   * The right click (or a long press): cancel a target marker, else demolish a building (the second
+   * click within three seconds; the first only arms it), else cut or rejoin a vein.
+   */
+  private secondary(sx: number, sy: number, markerPx: number, veinPx: number): void {
+    if (this.cancelNear(sx, sy, markerPx)) return;
+    const building = this.buildingAt(sx, sy);
+    if (building !== null) {
+      if (this.demolishArmed === building) {
+        this.armed = null;
+        this.send({ type: 'demolishBuilding', mold: PLAYER, cell: building });
+      } else this.armed = { cell: building, until: performance.now() + 3000 };
+      return;
+    }
+    this.armed = null;
+    this.toggleLinkNear(sx, sy, veinPx);
+  }
+
+  /** the cell of the player's building (any kind) under a screen point */
+  private buildingAt(sx: number, sy: number): number | null {
+    const sim = this.getWorld();
+    const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
+    for (const b of sim.buildings) {
+      if (b.destroyed || b.moldId !== PLAYER) continue;
+      const bx = (b.cell % sim.width) * CELL + CELL / 2;
+      const by = Math.floor(b.cell / sim.width) * CELL + CELL / 2;
+      if (Math.hypot(bx - wx, by - wy) <= 14) return b.cell;
+    }
+    return null;
   }
 
   /** the cell of the player's factory under a screen point (its art is bigger than its cell), or null */
@@ -249,7 +287,7 @@ export class InputController {
       } else this.primary(g.x, g.y, false);
     }
     else if (g.kind === 'longpress') {
-      if (!this.cancelNear(g.x, g.y, TOUCH_MARKER_HIT_PX)) this.toggleLinkNear(g.x, g.y, TOUCH_VEIN_HIT_PX);
+      this.secondary(g.x, g.y, TOUCH_MARKER_HIT_PX, TOUCH_VEIN_HIT_PX);
     }
     else if (g.kind === 'pan') cam.pan(-g.dx, -g.dy);
     else cam.zoomAt(g.x, g.y, g.factor);

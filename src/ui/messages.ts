@@ -12,7 +12,7 @@ export const REASONS: Record<string, string> = {
   'limit-reached': 'No more of those allowed!',
   'cant-afford': 'Not enough nutrients!',
   'no-vein': 'No vein there to cut!',
-  'no-building': 'Nothing to upgrade there!',
+  'no-building': 'No building there!',
   'not-upgradable': "Only factories can be upgraded!",
   'max-level': 'Already fully upgraded!',
   'no-food-nearby': 'Build next to big food!',

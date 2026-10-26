@@ -160,7 +160,9 @@ export type Command =
   /** cut the vein between two adjacent cells of the mold, or rejoin one it cut earlier */
   | { type: 'toggleLink'; mold: MoldId; a: CellIndex; b: CellIndex }
   /** raise the factory on a cell one level: more reach, paid from its piece */
-  | { type: 'upgradeBuilding'; mold: MoldId; cell: CellIndex };
+  | { type: 'upgradeBuilding'; mold: MoldId; cell: CellIndex }
+  /** tear down the mold's building on a cell, getting part of its cost back */
+  | { type: 'demolishBuilding'; mold: MoldId; cell: CellIndex };
 
 export type PlaceReason =
   | 'unknown-building'

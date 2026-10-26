@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultBalance } from '../../../src/config/balance';
 import { applyCommand } from '../../../src/sim/commands';
-import { placeBuilding, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding } from '../../../src/sim/buildings';
+import { demolishBuilding, placeBuilding, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding } from '../../../src/sim/buildings';
 import { fadeStrays } from '../../../src/sim/fade';
 import { addMold } from '../../../src/sim/molds';
 import { addCell } from '../../../src/sim/network';
@@ -129,5 +129,44 @@ describe('building a factory in time saves a stretch of vein', () => {
     expect(world.strayFor[far]).toBe(0);
     expect(world.biomass[far]!).toBeGreaterThan(0.5); // hurt a little, but saved
     expect(world.owner[far]).toBe(mold.id);
+  });
+});
+
+describe('demolishing a building', () => {
+  it('removes it, keeps the cell and its veins, and pays half back (upgrades included)', () => {
+    const { world, mold, comp, cells } = longVein();
+    const at = cells[10] as number;
+    placeBuilding(world, mold.id, 'storehouse', at);
+    comp.pool = 200;
+    upgradeBuilding(world, mold.id, at);
+    const before = comp.pool;
+    const paid = spec.cost + (spec.upgradeCost[0] as number);
+    expect(demolishBuilding(world, mold.id, at)).toEqual({ ok: true });
+    expect(world.buildings[0]!.destroyed).toBe(true);
+    expect(world.buildingAt[at]).toBe(-1);
+    expect(world.owner[at]).toBe(mold.id);
+    expect(comp.pool).toBeCloseTo(before + paid * defaultBalance.demolishRefund, 6);
+    expect(world.events.some((e) => e.type === 'buildingDestroyed')).toBe(true);
+    // the spot is free again, and the building count (limit) dropped
+    expect(placeBuilding(world, mold.id, 'storehouse', at)).toEqual({ ok: true });
+  });
+
+  it('ends a factory\'s reach at once, so the veins it fed start their die-back clock', () => {
+    const { world, mold, comp, cells } = longVein(70);
+    const far = cells[60] as number;
+    placeBuilding(world, mold.id, 'storehouse', cells[58] as number);
+    comp.pool = 300;
+    age(world, 10);
+    expect(world.strayFor[far]).toBe(0);
+    applyCommand(world, { type: 'demolishBuilding', mold: mold.id, cell: cells[58] as number });
+    age(world, 10);
+    expect(world.strayFor[far]!).toBeGreaterThan(0);
+  });
+
+  it('refuses where there is no building, or it belongs to someone else', () => {
+    const { world, mold, cells } = longVein();
+    expect(demolishBuilding(world, mold.id, cells[3] as number)).toEqual({ ok: false, reason: 'no-building' });
+    placeBuilding(world, mold.id, 'storehouse', cells[10] as number);
+    expect(demolishBuilding(world, 2, cells[10] as number)).toEqual({ ok: false, reason: 'not-your-cell' });
   });
 });
