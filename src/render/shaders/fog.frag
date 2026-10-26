@@ -29,9 +29,9 @@ float vnoise(vec2 p) {
 void main(void) {
   vec2 p = vUV * uGrid;
 
-  // hand-drawn boundary: wobble the sample point, re-seeded 8 times a second
-  float t = floor(uTime * 8.0);
-  vec2 wob = (vec2(vnoise(p * 1.4 + t * 1.3), vnoise(p * 1.4 + 17.0 - t * 1.1)) - 0.5) * 0.9;
+  // hand-drawn boundary: wobble the sample point, drifting slowly and smoothly (no re-seeding jumps)
+  float t = uTime * 0.25;
+  vec2 wob = (vec2(vnoise(p * 0.9 + t * 1.3), vnoise(p * 0.9 + 17.0 - t * 1.1)) - 0.5) * 0.7;
   vec2 q = p + wob - 0.5;
   vec2 i = floor(q);
   vec2 f = fract(q);
