@@ -39,7 +39,7 @@ describe('harvester placement (FR-014)', () => {
     const onFood = cellOf(world, 20, 20);
     addCell(world, a.id, onFood, cellOf(world, 19, 20)); // grown onto the food
     expect(world.food[onFood]!).toBeGreaterThan(0);
-    expect(canPlace(world, a.id, 'farm', onFood)).toEqual({ ok: false, reason: 'on-food' });
+    expect(canPlace(world, a.id, 'booster', onFood)).toEqual({ ok: false, reason: 'on-food' });
     expect(canPlace(world, a.id, 'harvester', onFood)).toEqual({ ok: true });
   });
 

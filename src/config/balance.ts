@@ -7,6 +7,18 @@ export interface FoodTypeSpec {
   nutrients: number;
   /** nutrients absorbed per owned cell per second */
   absorbRate: number;
+  /** a goo pool: its cells never lose nutrients, it never depletes, and it pays only with a store house (008) */
+  infinite?: boolean;
+}
+
+export interface PoolConfig {
+  /** contested pools away from every start (plus one per two rivals) */
+  contested: number;
+  /** how far from a start, in cells, its own pool sits (a ring of this width) */
+  nearMin: number;
+  nearMax: number;
+  /** fewest cells between two pools' footprints */
+  spacing: number;
 }
 
 export interface BuildingSpec {
@@ -34,17 +46,6 @@ export interface HarvesterSpec extends BuildingSpec {
   rateMult: number;
 }
 
-export interface FarmSpec extends BuildingSpec {
-  /** nutrients per second into its piece at output 1.0 (level 4), once linked to a store house */
-  income: number;
-  /** output level a new farm starts at */
-  defaultLevel: number;
-  /** output (as a multiple of normal) per level: level 4 = 1.0 at 0.25 */
-  levelStep: number;
-  /** highest level; levels are integers 0..maxLevel */
-  maxLevel: number;
-}
-
 export interface StoreHouseSpec extends BuildingSpec {
   /** extra cap its piece gets from each working store house */
   capacity: number;
@@ -60,19 +61,6 @@ export interface StoreHouseSpec extends BuildingSpec {
   drain: number;
   /** below this stock the boost stops; it resumes at 1.25x this */
   lowStock: number;
-}
-
-export interface FertileConfig {
-  /** fertile patches placed near each start */
-  nearPatches: number;
-  /** path distance from a start within which near patches sit */
-  nearRadius: number;
-  patchMin: number;
-  patchMax: number;
-  /** contested patches away from every start (plus one per two rivals) */
-  contested: number;
-  /** fewest fertile cells every start must have within fairRadius */
-  minNear: number;
 }
 
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
@@ -155,12 +143,12 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { farm: FarmSpec; booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
+  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
 
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
-  /** fertile ground generation (003) */
-  fertile: FertileConfig;
+  /** goo pool placement (008) */
+  pools: PoolConfig;
 
   /** coefficients for difficultyFor(round), R14 */
   difficulty: {
@@ -248,17 +236,19 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     breadCrumb: { w: 3, h: 3, nutrients: 120, absorbRate: 1.5 },
     sugarCube: { w: 4, h: 4, nutrients: 300, absorbRate: 3.0 },
     fruitSlice: { w: 6, h: 4, nutrients: 500, absorbRate: 1.0 },
+    // a pool of primordial goo: 12 cells holding 1 nutrient each that are never used up; each cell a mold
+    // holds pays 0.125/s while a store house is on its piece, so a fully held pool pays 1.5/s (008)
+    goo: { w: 4, h: 3, nutrients: 12, absorbRate: 0.125, infinite: true },
   },
 
   buildings: {
-    farm: { cost: 25, upkeep: 0.15, limit: 6, income: 1.5, defaultLevel: 4, levelStep: 0.25, maxLevel: 6 },
     storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15 },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 
   pool: { baseCap: 300 },
-  fertile: { nearPatches: 2, nearRadius: 18, patchMin: 2, patchMax: 4, contested: 1, minNear: 24 },
+  pools: { contested: 2, nearMin: 11, nearMax: 19, spacing: 8 },
 
   difficulty: {
     baseW: 160,

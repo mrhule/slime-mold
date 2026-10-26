@@ -1,4 +1,4 @@
-import { clampPools, drainStoreHouses, recomputeSupply, tickBuildings } from './buildings';
+import { clampPools, drainStoreHouses, recomputeSupply } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
@@ -27,7 +27,6 @@ function tickIncome(world: World): void {
     mold.incomeTick += gain;
   }
   tickFood(world);
-  tickBuildings(world);
 }
 
 function settleNetIncome(world: World): void {

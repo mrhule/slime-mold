@@ -11,7 +11,6 @@ export function createOpenWorld(
   height = 40,
   balance: BalanceConfig = defaultBalance,
   seed = 1,
-  opts: { fertile?: boolean } = {},
 ): World {
   const world = createWorld(width, height, balance, seed);
   for (let y = 0; y < height; y++) {
@@ -20,13 +19,10 @@ export function createOpenWorld(
     }
   }
   world.reachableCells = (width - 2) * (height - 2);
-  if (opts.fertile ?? true) {
-    for (let i = 0; i < world.terrain.length; i++) if (world.terrain[i] === Terrain.Open) world.fertile[i] = 1;
-  }
   return world;
 }
 
-/** Put a store house on an owned cell without paying (tests of farms and caps stay short). */
+/** Put a store house on an owned cell without paying (tests of pools and caps stay short). */
 export function withStoreHouse(world: World, moldId: number, cell: number): void {
   world.buildings.push({
     id: world.buildings.length,
@@ -35,8 +31,6 @@ export function withStoreHouse(world: World, moldId: number, cell: number): void
     cell,
     placedTick: world.tick,
     target: -1,
-    level: 0,
-    linked: false,
     boosting: false,
     destroyed: false,
   });

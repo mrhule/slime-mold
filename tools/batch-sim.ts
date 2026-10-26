@@ -1,6 +1,6 @@
 /**
  * Headless balance and performance report (T092):
- *   npm run sim:batch -- --rounds 1-3 --games 20 [--aggr 0.4] [--think 1.2] [--farms 4] [--max 25] [--seed 1] [--verbose]
+ *   npm run sim:batch -- --rounds 1-3 --games 20 [--aggr 0.4] [--think 1.2] [--max 25] [--seed 1] [--verbose]
  *                        [--set upkeepPerCell=0.002,dropInterval=25]   (balance overrides, dotted paths allowed)
  *
  * Plays whole rounds with the player driven by the same AI the rivals use (so no human is
@@ -10,8 +10,9 @@ import { think } from '../src/sim/ai/rival-ai';
 import { Rng } from '../src/sim/rng';
 import { defaultBalance } from '../src/config/balance';
 import type { BalanceConfig } from '../src/config/balance';
-import { canPlace, createRound, enqueue, step, viewFor, workingStoreHouses } from '../src/sim';
-import type { AiState, Component, World } from '../src/sim';
+import { canPlace, createRound, enqueue, step, viewFor } from '../src/sim';
+import { poolCounts, poolIncome } from '../src/sim/food';
+import type { AiState, World } from '../src/sim';
 import { TICK_DT } from '../src/sim/types';
 
 function arg(name: string, fallback: string): string {
@@ -29,8 +30,6 @@ const baseSeed = Number(arg('seed', '1'));
 const verbose = process.argv.includes('--verbose');
 /** how often (seconds) the player model decides what to do; a fixed, human-like pace */
 const playerThink = Number(arg('think', '1.2'));
-/** how many farms the player model builds (a human would; the rival AI does not build yet) */
-const farms = Number(arg('farms', '4'));
 
 /** apply "--set a=1,b.c=2" on top of the default balance */
 function balanceFromArgs(): BalanceConfig {
@@ -55,50 +54,37 @@ interface GameResult {
   cells: number;
   rivalCells: number;
   tickMs: number;
-  /** the player model's farms and store houses at the end, and when its first farm paid (minutes, -1 if never) */
-  farms: number;
+  /** the player model's goo pools held and store houses at the end, and when a pool first paid it (minutes, -1 if never) */
+  pools: number;
   stores: number;
-  firstFarmMin: number;
+  firstPoolMin: number;
 }
 
 /**
- * A human-ish habit: a store house near the core first, then farms on fertile ground in a piece
- * that has one, up to `farms` of them.
+ * A human-ish habit: a store house near the core early, so a goo pool pays as soon as a vein reaches it
+ * (the rival AI builds its store house only once it holds a pool).
  */
-function maybeBuildFarm(world: World): void {
+function maybeBuildStore(world: World): void {
   const mold = world.molds[0]!;
-  if (mold.status !== 'alive' || farms <= 0) return;
-  const spec = world.balance.buildings.farm;
-  const mine = world.buildings.filter((b) => !b.destroyed && b.moldId === 1);
-  if (mine.filter((b) => b.type === 'farm').length >= farms) return;
+  if (mold.status !== 'alive') return;
+  if (world.buildings.some((b) => !b.destroyed && b.moldId === 1 && b.type === 'storehouse')) return;
   const w = world.width;
   const cx = mold.core % w;
   const cy = Math.floor(mold.core / w);
-  const nearest = (type: 'farm' | 'storehouse', cost: number, want: (comp: Component) => boolean): number => {
-    let best = -1;
-    let bestD = Infinity;
-    for (const comp of world.components.values()) {
-      if (comp.moldId !== 1 || comp.pool < cost + 3 || !want(comp)) continue;
-      for (const c of comp.cells) {
-        const d = ((c % w) - cx) ** 2 + (Math.floor(c / w) - cy) ** 2;
-        if (d < bestD && canPlace(world, 1, type, c).ok) {
-          bestD = d;
-          best = c;
-        }
+  const cost = world.balance.buildings.storehouse.cost;
+  let best = -1;
+  let bestD = Infinity;
+  for (const comp of world.components.values()) {
+    if (comp.moldId !== 1 || comp.pool < cost + 3) continue;
+    for (const c of comp.cells) {
+      const d = ((c % w) - cx) ** 2 + (Math.floor(c / w) - cy) ** 2;
+      if (d < bestD && canPlace(world, 1, 'storehouse', c).ok) {
+        bestD = d;
+        best = c;
       }
     }
-    return best;
-  };
-  const stocked = (comp: Component): boolean => workingStoreHouses(world, comp) > 0;
-  const farm = nearest('farm', spec.cost, stocked);
-  if (farm >= 0) {
-    enqueue(world, { type: 'placeBuilding', mold: 1, building: 'farm', cell: farm });
-    return;
   }
-  // no farm site in a stocked piece: first make sure a store house exists, near a fertile cell
-  if (mine.some((b) => b.type === 'storehouse')) return;
-  const store = nearest('storehouse', world.balance.buildings.storehouse.cost, () => true);
-  if (store >= 0) enqueue(world, { type: 'placeBuilding', mold: 1, building: 'storehouse', cell: store });
+  if (best >= 0) enqueue(world, { type: 'placeBuilding', mold: 1, building: 'storehouse', cell: best });
 }
 
 /** the player is run by the rival AI: think on the same cadence, through ordinary commands */
@@ -110,17 +96,17 @@ function playGame(round: number, seed: number): GameResult {
   const maxTicks = Math.round((maxMinutes * 60) / TICK_DT);
   let tickMsTotal = 0;
   let ticks = 0;
-  let firstFarm = -1;
+  let firstPool = -1;
   while (world.tick < maxTicks && world.outcome === 'playing') {
     if (world.tick % interval === 0 && world.molds[0]!.status === 'alive') {
       for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
-      maybeBuildFarm(world);
+      maybeBuildStore(world);
     }
     const t0 = performance.now();
     step(world);
     tickMsTotal += performance.now() - t0;
     ticks++;
-    if (firstFarm < 0 && world.tick % 20 === 0 && world.buildings.some((b) => !b.destroyed && b.moldId === 1 && b.type === 'farm' && b.linked)) firstFarm = (world.tick * TICK_DT) / 60;
+    if (firstPool < 0 && world.tick % 20 === 0 && poolIncome(world, 1) > 0) firstPool = (world.tick * TICK_DT) / 60;
   }
   return {
     outcome: world.outcome === 'playing' ? 'timeout' : world.outcome,
@@ -128,9 +114,9 @@ function playGame(round: number, seed: number): GameResult {
     cells: world.molds[0]!.cellCount,
     rivalCells: world.molds.slice(1).reduce((a, m) => a + m.cellCount, 0),
     tickMs: tickMsTotal / Math.max(1, ticks),
-    farms: world.buildings.filter((b) => !b.destroyed && b.moldId === 1 && b.type === 'farm').length,
+    pools: poolCounts(world, 1).held,
     stores: world.buildings.filter((b) => !b.destroyed && b.moldId === 1 && b.type === 'storehouse').length,
-    firstFarmMin: firstFarm,
+    firstPoolMin: firstPool,
   };
 }
 
@@ -142,7 +128,7 @@ for (let round = roundFrom; round <= roundTo; round++) {
   for (let g = 0; g < games; g++) {
     const res = playGame(round, baseSeed * 1000 + g);
     results.push(res);
-    if (verbose) console.log(`  round ${round} game ${g}: ${res.outcome} in ${res.minutes.toFixed(1)} min, ${res.cells} cells vs ${res.rivalCells}; farms ${res.farms}, stores ${res.stores}, first paying farm ${res.firstFarmMin < 0 ? 'never' : res.firstFarmMin.toFixed(1) + ' min'}`);
+    if (verbose) console.log(`  round ${round} game ${g}: ${res.outcome} in ${res.minutes.toFixed(1)} min, ${res.cells} cells vs ${res.rivalCells}; pools ${res.pools}, stores ${res.stores}, first paying pool ${res.firstPoolMin < 0 ? 'never' : res.firstPoolMin.toFixed(1) + ' min'}`);
   }
   const wins = results.filter((r) => r.outcome === 'victory').length;
   const losses = results.filter((r) => r.outcome === 'defeat').length;

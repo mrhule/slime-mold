@@ -1,9 +1,52 @@
 import { Container, Graphics } from 'pixi.js';
+import { workingStoreHouses } from '../sim/index';
 import { hash2 } from '../sim/noise';
 import type { FoodSource, World } from '../sim/types';
-import { FOOD, INK } from './palette';
+import { drawUnlinked } from './building-layer';
+import { FOOD, INK, moldColor } from './palette';
 import { style } from './style';
 import { CELL } from './units';
+
+const GOO_LIP = 0x24351c;
+
+/** what the player can see of a goo pool: who holds most of it, and whether it is paying or waiting */
+interface PoolState {
+  owner: number;
+  color: number | null;
+  paying: boolean;
+  waiting: boolean;
+}
+
+/** read the pool's ownership from the player's view: only cells in sight now count */
+function poolState(world: Readonly<World>, f: FoodSource): PoolState {
+  const player = world.molds[0];
+  const vision = player?.vision;
+  const counts = new Map<number, number>();
+  let paying = false;
+  let waiting = false;
+  for (let y = f.y; y < f.y + f.h; y++) {
+    for (let x = f.x; x < f.x + f.w; x++) {
+      const c = y * world.width + x;
+      if (vision && vision[c] !== 2) continue;
+      const owner = world.owner[c] as number;
+      if (owner === 0) continue;
+      counts.set(owner, (counts.get(owner) ?? 0) + 1);
+      const comp = world.components.get(world.component[c] as number);
+      const works = !!comp && workingStoreHouses(world, comp) > 0;
+      if (works) paying = true;
+      else if (owner === 1) waiting = true;
+    }
+  }
+  let owner = 0;
+  let most = 0;
+  for (const [id, n] of counts) {
+    if (n > most || (n === most && id < owner)) {
+      owner = id;
+      most = n;
+    }
+  }
+  return { owner, color: owner > 0 ? (world.molds[owner - 1]?.color ?? 0) : null, paying, waiting };
+}
 
 /** Outlined, cel-shaded food drawn procedurally; shrinks as it is eaten. */
 export class FoodLayer {
@@ -39,7 +82,14 @@ export class FoodLayer {
     };
     const amounts = new Map<number, number>();
     let key = '';
+    const pools = new Map<number, PoolState>();
     for (const f of world.foodSources) {
+      if (world.balance.foodTypes[f.type].infinite) {
+        const st = poolState(world, f);
+        pools.set(f.id, st);
+        key += `g${st.owner}${st.paying ? 'p' : ''}${st.waiting ? 'w' : ''}${Math.floor(world.tick / 4)},`;
+        continue;
+      }
       const a = f.depleted ? null : known(f);
       if (a === null || a <= 0) {
         key += 'x';
@@ -54,10 +104,50 @@ export class FoodLayer {
     g.clear();
     this.rim.clear();
     for (const f of world.foodSources) {
+      const st = pools.get(f.id);
+      if (st) {
+        this.drawGoo(this.rim, f, st, world.tick);
+        this.drawGoo(g, f, st, world.tick);
+        if (st.waiting) drawUnlinked(g, (f.x + f.w / 2) * CELL, f.y * CELL - 2);
+        continue;
+      }
       const a = amounts.get(f.id);
       if (a === undefined) continue;
       this.draw(this.rim, f, a);
       this.draw(g, f, a);
+    }
+  }
+
+  /**
+   * A pool of primordial goo: a dark inked lip around a bubbling green well, always shown (it is terrain).
+   * A pool a mold holds gets a ring in that mold's colour, pulsing while it pays; a pool the player holds
+   * that waits for a store house carries the broken-chain mark.
+   */
+  private drawGoo(g: Graphics, f: FoodSource, st: PoolState, tick: number): void {
+    const pal = FOOD.goo;
+    const cx = (f.x + f.w / 2) * CELL;
+    const cy = (f.y + f.h / 2) * CELL;
+    const rx = (f.w * CELL) / 2 - 1;
+    const ry = (f.h * CELL) / 2 - 1;
+    // hard offset shadow, dark lip, deep slime, lit surface, glossy highlight
+    g.ellipse(cx + style.shadow.groundOffset[0], cy + style.shadow.groundOffset[1] + 2, rx, ry).fill({ color: INK, alpha: style.shadow.groundAlpha * 1.6 });
+    g.ellipse(cx, cy, rx, ry).fill(GOO_LIP).stroke({ width: 3, color: INK });
+    g.ellipse(cx, cy + 1, rx * 0.84, ry * 0.8).fill(pal.shade).stroke({ width: 1.8, color: INK });
+    g.ellipse(cx - rx * 0.04, cy - ry * 0.05, rx * 0.72, ry * 0.62).fill(pal.base);
+    g.ellipse(cx - rx * 0.28, cy - ry * 0.3, rx * 0.3, ry * 0.13).fill(pal.light);
+    // slow bubbles that swell and pop in place
+    for (let k = 0; k < 4; k++) {
+      const t = ((tick + k * 23) % 90) / 90;
+      const bx = cx + (hash2(f.id, k, 5) - 0.5) * rx * 1.2;
+      const by = cy + (hash2(f.id, k, 6) - 0.5) * ry * 0.9;
+      const r = 1 + 3.2 * Math.sqrt(t);
+      g.circle(bx, by, r).fill({ color: pal.light, alpha: 0.85 * (1 - t) }).stroke({ width: 1.3, color: INK, alpha: 0.7 * (1 - t) });
+    }
+    if (st.owner > 0) {
+      const color = moldColor(st.color ?? 0);
+      const pulse = st.paying ? 0.55 + 0.35 * Math.sin((tick / 12) * Math.PI) : 0.45;
+      g.ellipse(cx, cy, rx + 3.5, ry + 3.5).stroke({ width: 4.5, color: INK, alpha: 0.5 * pulse });
+      g.ellipse(cx, cy, rx + 3.5, ry + 3.5).stroke({ width: 2.4, color, alpha: pulse });
     }
   }
 

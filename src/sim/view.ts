@@ -1,4 +1,4 @@
-import { canPlace, capOf, farmLinked, workingStoreHouses } from './buildings';
+import { canPlace, capOf, workingStoreHouses } from './buildings';
 import { SQRT2, octile } from './grid';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -32,7 +32,6 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
       pool: c.pool,
       cap: capOf(world, c),
       storeHouses: workingStoreHouses(world, c),
-      linkedFarms: world.buildings.filter((b) => !b.destroyed && b.type === 'farm' && world.component[b.cell] === c.id && farmLinked(world, b)).length,
       cellCount: c.cells.length,
       orphaned: c.orphaned,
     }));
@@ -51,22 +50,20 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
     height: h,
     terrain: world.terrain,
     visibility,
-    fertileAt: (cell) => world.fertile[cell] === 1,
-    farms() {
-      const out: { id: number; cell: CellIndex; level: number; linked: boolean; pool: number; cap: number }[] = [];
-      for (const b of world.buildings) {
-        if (b.destroyed || b.type !== 'farm' || b.moldId !== moldId) continue;
-        const comp = world.components.get(world.component[b.cell] as number);
-        if (!comp) continue;
-        out.push({ id: b.id, cell: b.cell, level: b.level, linked: farmLinked(world, b), pool: comp.pool, cap: capOf(world, comp) });
+    knownPools() {
+      // goo pools are terrain: every mold knows where they are, in the fog or not
+      const out: { cell: CellIndex; w: number; h: number; cells: number; owned: number }[] = [];
+      for (const src of world.foodSources) {
+        if (!world.balance.foodTypes[src.type].infinite) continue;
+        let owned = 0;
+        for (let y = src.y; y < src.y + src.h; y++) {
+          for (let x = src.x; x < src.x + src.w; x++) if (world.owner[y * w + x] === moldId) owned++;
+        }
+        out.push({ cell: src.y * w + src.x, w: src.w, h: src.h, cells: src.w * src.h, owned });
       }
       return out;
     },
-    farmLevel(buildingId) {
-      const b = world.buildings[buildingId];
-      return b && !b.destroyed && b.type === 'farm' && b.moldId === moldId ? b.level : -1;
-    },
-    rules: { storeHousesPerPiece: world.balance.buildings.storehouse.perPiece, farmDefaultLevel: world.balance.buildings.farm.defaultLevel },
+    rules: { storeHousesPerPiece: world.balance.buildings.storehouse.perPiece },
     pieceOf: (cell) => (world.owner[cell] === moldId ? (world.component[cell] as number) : -1),
     ownerAt(cell) {
       const v = vision[cell];
@@ -86,7 +83,7 @@ export function viewFor(world: World, moldId: MoldId): MoldView {
     knownFood() {
       const out: { cell: CellIndex; amount: number; stale: boolean }[] = [];
       for (const src of world.foodSources) {
-        if (src.depleted) continue;
+        if (src.depleted || world.balance.foodTypes[src.type].infinite) continue;
         let amount = 0;
         let seenNow = false;
         let seenEver = false;

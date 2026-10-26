@@ -58,7 +58,7 @@ export function generateMap(world: World, rng: Rng, startCount: number): Generat
 
   scatterFood(world, rng, starts, reach);
   balanceFood(world, rng, starts, reach);
-  placeFertile(world, rng, starts, reach);
+  placeGooPools(world, rng, starts, reach);
   return { starts, playerIndex: rng.int(starts.length) };
 }
 
@@ -227,7 +227,10 @@ export function foodNear(world: World, start: CellIndex, radius = world.balance.
     }
   }
   let value = 0;
-  for (const id of sources) value += (world.foodSources[id] as FoodSource).total;
+  for (const id of sources) {
+    const src = world.foodSources[id] as FoodSource;
+    if (!world.balance.foodTypes[src.type].infinite) value += src.total; // goo pools never run out and are judged on their own
+  }
   return { value, cells: queue };
 }
 
@@ -261,99 +264,65 @@ function balanceFood(world: World, rng: Rng, starts: CellIndex[], reach: Uint8Ar
   }
 }
 
-/** fertile cells within `fairRadius` steps of a start */
-export function fertileNear(world: World, start: CellIndex, radius = world.balance.fairRadius): number {
-  let n = 0;
-  for (const c of foodNear(world, start, radius).cells) if (world.fertile[c]) n++;
-  return n;
-}
-
-/** mark a rough disk of fertile ground; only on reachable open or rough cells that hold no food */
-function paintFertile(world: World, reach: Uint8Array, cx: number, cy: number, r: number): number {
-  const { width: w, height: h } = world;
-  let added = 0;
-  for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) {
-    for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
-      if (x <= 0 || y <= 0 || x >= w - 1 || y >= h - 1) continue;
-      const c = cellAt(w, x, y);
-      const t = world.terrain[c];
-      if (!reach[c] || (t !== Terrain.Open && t !== Terrain.Rough) || (world.foodSourceId[c] as number) >= 0 || world.fertile[c]) continue;
-      // a wobbly edge so patches are blobs, not discs
-      const edge = r + (hash2(x, y, world.seed) - 0.5) * 1.6;
-      if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > edge * edge) continue;
-      world.fertile[c] = 1;
-      added++;
-    }
+/** goo pools within `fairRadius` steps of a start (008) */
+export function poolsNear(world: World, start: CellIndex, radius = world.balance.fairRadius): number {
+  const seen = new Set<number>();
+  for (const c of foodNear(world, start, radius).cells) {
+    const sid = world.foodSourceId[c] as number;
+    if (sid >= 0 && world.balance.foodTypes[(world.foodSources[sid] as FoodSource).type].infinite) seen.add(sid);
   }
-  return added;
+  return seen.size;
 }
 
 /**
- * Fertile ground (003 S9): a few patches near every start, a top-up so no start is left poor, and
- * contested patches placed as far from every start as the samples allow.
+ * Pools of primordial goo (008): one at a fixed ring of distance from every start, so each mold has
+ * the same opening, then a few contested pools placed as far from every start and every other pool
+ * as the samples allow. Pool footprints must be reachable and must not overlap anything.
  */
-function placeFertile(world: World, rng: Rng, starts: CellIndex[], reach: Uint8Array): void {
+function placeGooPools(world: World, rng: Rng, starts: CellIndex[], reach: Uint8Array): void {
   const { width: w, balance: b } = world;
-  const f = b.fertile;
-  const radius = (): number => f.patchMin + rng.int(f.patchMax - f.patchMin + 1);
-  const nearPatch = (start: CellIndex): number => {
-    const sx = start % w;
-    const sy = Math.floor(start / w);
-    for (let attempt = 0; attempt < 40; attempt++) {
-      const dx = rng.int(2 * f.nearRadius + 1) - f.nearRadius;
-      const dy = rng.int(2 * f.nearRadius + 1) - f.nearRadius;
+  const spec = b.foodTypes.goo;
+  const p = b.pools;
+  const placed: [number, number][] = [];
+  const okAt = (x: number, y: number): boolean => canPlaceFood(world, 'goo', x, y) && footprintReachable(world, reach, x, y, spec.w, spec.h);
+  const apart = (x: number, y: number): boolean => placed.every(([px, py]) => (px - x) * (px - x) + (py - y) * (py - y) >= (spec.w + p.spacing) * (spec.w + p.spacing));
+
+  for (const s of starts) {
+    const sx = s % w;
+    const sy = Math.floor(s / w);
+    for (let attempt = 0; attempt < 300; attempt++) {
+      const dx = rng.int(2 * p.nearMax + 1) - p.nearMax;
+      const dy = rng.int(2 * p.nearMax + 1) - p.nearMax;
       const d2 = dx * dx + dy * dy;
-      if (d2 > f.nearRadius * f.nearRadius || d2 < (b.startClearRadius + 2) * (b.startClearRadius + 2)) continue;
-      const c = cellAt(w, sx + dx, sy + dy);
-      if (!reach[c] || world.terrain[c] === Terrain.Wall) continue;
-      const added = paintFertile(world, reach, sx + dx, sy + dy, radius());
-      if (added > 0) return added;
-    }
-    return 0;
-  };
-
-  for (const s of starts) for (let i = 0; i < f.nearPatches; i++) nearPatch(s);
-
-  // so no start is left poor next to a rich one
-  for (let round = 0; round < 6; round++) {
-    const counts = starts.map((s) => fertileNear(world, s));
-    const target = Math.max(f.minNear, (1 - 2 * b.fairTolerance) * Math.max(...counts));
-    let changed = false;
-    for (let i = 0; i < starts.length; i++) {
-      let have = counts[i] as number;
-      for (let k = 0; k < 4 && have < target; k++) {
-        const added = nearPatch(starts[i] as number);
-        have += added;
-        if (added > 0) changed = true;
+      if (d2 < p.nearMin * p.nearMin || d2 > p.nearMax * p.nearMax) continue;
+      const x = sx + dx - Math.floor(spec.w / 2);
+      const y = sy + dy - Math.floor(spec.h / 2);
+      if (!okAt(x, y) || !apart(x, y)) continue;
+      if (placeFood(world, 'goo', x, y, 'initial')) {
+        placed.push([x, y]);
+        break;
       }
     }
-    if (!changed) break;
   }
 
-  // contested ground: best-candidate sampling away from every start and earlier patches
-  const rivals = starts.length - 1;
-  const placed: [number, number][] = [];
-  const count = f.contested + Math.floor(rivals / 2);
+  const count = p.contested + Math.floor((starts.length - 1) / 2);
   for (let n = 0; n < count; n++) {
-    let best = -1;
+    let best: [number, number] | null = null;
     let bestD = -1;
-    for (let k = 0; k < 60; k++) {
-      const c = rng.int(world.terrain.length);
-      if (!reach[c] || (world.terrain[c] !== Terrain.Open && world.terrain[c] !== Terrain.Rough)) continue;
-      const x = c % w;
-      const y = Math.floor(c / w);
+    for (let k = 0; k < 80; k++) {
+      const x = 2 + rng.int(Math.max(1, w - spec.w - 4));
+      const y = 2 + rng.int(Math.max(1, world.height - spec.h - 4));
+      if (!okAt(x, y)) continue;
       let d = Infinity;
       for (const s of starts) d = Math.min(d, (x - (s % w)) ** 2 + (y - Math.floor(s / w)) ** 2);
+      if (d < (p.nearMax + 3) * (p.nearMax + 3)) continue; // contested ground is not a start's own pool
       for (const [px, py] of placed) d = Math.min(d, (x - px) ** 2 + (y - py) ** 2);
       if (d > bestD) {
         bestD = d;
-        best = c;
+        best = [x, y];
       }
     }
-    if (best < 0) continue;
-    const x = best % w;
-    const y = Math.floor(best / w);
-    if (paintFertile(world, reach, x, y, radius()) > 0) placed.push([x, y]);
+    if (best && placeFood(world, 'goo', best[0], best[1], 'initial')) placed.push(best);
   }
 }
 
@@ -364,8 +333,7 @@ export function validateMap(world: World, starts: CellIndex[]): boolean {
   const values = starts.map((s) => foodNear(world, s).value);
   const richest = Math.max(...values);
   if (!values.every((v) => v >= (1 - world.balance.fairTolerance) * richest - 1e-6)) return false;
-  // every start has fertile ground in reach, in comparable amounts (003 FR-015)
-  const fertile = starts.map((s) => fertileNear(world, s));
-  const most = Math.max(...fertile);
-  return fertile.every((n) => n >= world.balance.fertile.minNear && n >= (1 - 2 * world.balance.fairTolerance) * most - 1e-6);
+  // every start has a goo pool in reach, and no start has more than one pool more than another (008 FR-010)
+  const pools = starts.map((s) => poolsNear(world, s));
+  return pools.every((n) => n >= 1) && Math.max(...pools) - Math.min(...pools) <= 1;
 }

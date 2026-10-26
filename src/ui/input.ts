@@ -1,6 +1,6 @@
 import type { GameRenderer } from '../render/renderer';
 import { FxLayer } from '../render/fx-layer';
-import { canPlace, pendingAllocation, pendingFarmLevel } from '../sim';
+import { canPlace, pendingAllocation } from '../sim';
 import { CELL } from '../render/units';
 import type { BuildingType, Command, World } from '../sim/types';
 import { BUILD_HOTKEYS } from './buildbar';
@@ -35,8 +35,6 @@ export class InputController {
   placing: BuildingType | null = null;
   /** cell under the cursor (placement preview), or null */
   hoverCell: number | null = null;
-  /** id of the own farm whose output panel is open, or null */
-  selectedFarm: number | null = null;
   private dragging = false;
   private touch = false;
   private pending: number | null = null;
@@ -141,7 +139,7 @@ export class InputController {
     }
   };
 
-  /** the left click (or a tap): place a building, select a farm, or set a growth target */
+  /** the left click (or a tap): place a building or set a growth target */
   private primary(sx: number, sy: number, keepPlacing: boolean): void {
     const cell = this.placing ? this.placementCellAt(sx, sy) : this.cellAt(sx, sy);
     if (cell === null) return;
@@ -152,14 +150,6 @@ export class InputController {
       if (allowed && !keepPlacing) this.placing = null;
       return;
     }
-    const sim = this.getWorld();
-    const id = sim.buildingAt[cell] as number;
-    const b = id >= 0 ? sim.buildings[id] : undefined;
-    if (b && !b.destroyed && b.type === 'farm' && b.moldId === PLAYER) {
-      this.selectedFarm = b.id; // open its panel instead of growing there
-      return;
-    }
-    this.selectedFarm = null;
     this.send({ type: 'setTarget', mold: PLAYER, cell });
   }
 
@@ -228,7 +218,6 @@ export class InputController {
     const k = e.key.toLowerCase();
     if (k === 'escape') {
       if (this.placing) this.placing = null;
-      else if (this.selectedFarm !== null) this.selectedFarm = null;
       else this.actions.escape();
       return;
     }
@@ -236,10 +225,6 @@ export class InputController {
     const building = BUILD_HOTKEYS[k];
     if (building) {
       this.togglePlacing(building);
-      return;
-    }
-    if ((k === '[' || k === ']') && this.selectedFarm !== null) {
-      this.nudgeFarm(k === ']' ? 1 : -1);
       return;
     }
     if (k === ' ') {
@@ -263,14 +248,6 @@ export class InputController {
     }
     if (k.startsWith('arrow')) e.preventDefault();
   };
-
-  /** raise or lower the selected farm's output level by one step (a setFarmOutput command) */
-  nudgeFarm(delta: 1 | -1): void {
-    if (this.selectedFarm === null) return;
-    const sim = this.getWorld();
-    const level = Math.min(sim.balance.buildings.farm.maxLevel, Math.max(0, pendingFarmLevel(sim, this.selectedFarm) + delta));
-    this.send({ type: 'setFarmOutput', mold: PLAYER, building: this.selectedFarm, level });
-  }
 
   /** the spot chosen by touch and waiting for Confirm, or null */
   get pendingCell(): number | null {

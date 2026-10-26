@@ -15,7 +15,6 @@ import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
-import { FarmPanel } from './ui/farm-panel';
 import { InputController } from './ui/input';
 import { FOOD_NAMES, reasonText } from './ui/messages';
 import { shakeImpulse } from './render/style';
@@ -119,7 +118,6 @@ async function main(): Promise<void> {
     },
   });
   const buildBar = new BuildBar(ui, (type) => input.togglePlacing(type));
-  const farmPanel = new FarmPanel(ui, (delta) => input.nudgeFarm(delta));
   const screens = new Screens(ui, {
     start: () => run.start(),
     resume: () => run.resume(),
@@ -224,7 +222,7 @@ async function main(): Promise<void> {
       const preview = placePreview(run.world, PLAYER, input.placing, input.hoverCell);
       const result = preview.result;
       ghost = { cell: input.hoverCell, ok: result.ok, type: input.placing };
-      const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : preview.unlinked ? ' (no store house on this vein: it will not pay)' : '';
+      const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : '';
       buildBar.showHint(result.ok ? `Click to build${note}` : reasonText(result.reason), pointer.x, pointer.y, result.ok);
     } else if (input.touchActive && input.placing) {
       // touch: the chosen spot is previewed and its reason shown in the placement bar (FR-007, FR-008)
@@ -234,7 +232,7 @@ async function main(): Promise<void> {
       } else {
         const preview = placePreview(run.world, PLAYER, input.placing, cell);
         ghost = { cell, ok: preview.result.ok, type: input.placing };
-        const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : preview.unlinked ? ' (no store house on this vein: it will not pay)' : '';
+        const note = preview.capAfter !== undefined ? ` (stock cap ${Math.round(preview.capBefore ?? 0)} to ${Math.round(preview.capAfter)})` : '';
         touchBar.setPlacement({ text: preview.result.ok ? `Build here?${note}` : reasonText(preview.result.reason), canConfirm: preview.result.ok, hasSpot: true });
       }
       buildBar.showHint(null, 0, 0, true);
@@ -248,8 +246,7 @@ async function main(): Promise<void> {
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });
     buildBar.update(model.build, input.placing);
-    farmPanel.update(run.world, input.selectedFarm);
-    buildBar.highlight(model.farms.unlinked > 0 && input.placing !== 'storehouse' ? 'storehouse' : null);
+    buildBar.highlight(model.pools.waiting > 0 && input.placing !== 'storehouse' ? 'storehouse' : null);
 
     for (const e of frameEvents) {
       if (e.type === 'commandRejected' && e.mold === PLAYER) {

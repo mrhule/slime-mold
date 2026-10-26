@@ -3,17 +3,15 @@ import type { Rng } from '../rng';
 import type { AiState, BuildingType, CellIndex, Command, FoodType, MoldView } from '../types';
 
 /** Public knowledge of what each food type is worth, for judging drops from a warning. */
-const FOOD_VALUE: Record<FoodType, number> = { oatFlake: 40, breadCrumb: 120, sugarCube: 300, fruitSlice: 500 };
+const FOOD_VALUE: Record<FoodType, number> = { oatFlake: 40, breadCrumb: 120, sugarCube: 300, fruitSlice: 500, goo: 150 };
 /** roughly how fast a mold grows toward something, in cells per second */
 const GROW_SPEED = 5;
 const MIN_SPACING = 9;
 const EXPLORE_SAMPLES = 10;
 /** how many own cells to try when looking for a spot to build */
 const BUILD_TRIES = 80;
-/** grow toward fertile ground until the mold has this many farms */
-const FARM_WISH = 3;
-/** what a patch of fertile ground is worth when scoring growth targets (an oat flake is 40) */
-const FERTILE_VALUE = 18;
+/** what a goo pool nobody holds is worth when scoring growth targets (an oat flake is 40, a bread crumb 120) */
+const POOL_VALUE = 150;
 /** a booster factory this close to a front (as the crow flies) strengthens it well along the veins */
 const BOOSTER_REACH = 10;
 /** food worth a harvester: roughly bread crumb size and up */
@@ -81,37 +79,21 @@ function planBuild(view: MoldView, state: AiState): Command | null {
     }
   }
 
-  // otherwise a farm, for steady income: on fertile ground, with a store house on the same vein
-  if (affords('farm', 1)) {
-    const stocked = new Set(view.self.components.filter((c) => c.storeHouses > 0).map((c) => c.id));
-    for (let i = 0; i < Math.min(own.length, BUILD_TRIES * 4); i++) {
-      const c = own[i] as CellIndex;
-      if (!view.fertileAt(c) || !view.canBuild('farm', c)) continue;
-      if (!stocked.has(view.pieceOf(c))) {
-        // no store house in this piece yet: build one first, anywhere on it
-        if (!affords('storehouse', 1)) break;
-        const piece = view.pieceOf(c);
-        for (const s of own) {
-          if (view.pieceOf(s) === piece && view.canBuild('storehouse', s)) return place('storehouse', s);
+  // a goo pool held on a piece with no store house pays nothing: build a store house on that piece
+  if (affords('storehouse', 0.5)) {
+    const waiting = new Set(view.self.components.filter((c) => !c.orphaned && c.storeHouses === 0).map((c) => c.id));
+    for (const pool of view.knownPools()) {
+      if (pool.owned === 0) continue;
+      for (let y = 0; y < pool.h; y++) {
+        for (let x = 0; x < pool.w; x++) {
+          const piece = view.pieceOf(pool.cell + y * w + x);
+          if (piece < 0 || !waiting.has(piece)) continue;
+          for (const s of own) {
+            if (view.pieceOf(s) === piece && view.canBuild('storehouse', s)) return place('storehouse', s);
+          }
         }
-        break;
       }
-      return place('farm', c);
     }
-  }
-  return null;
-}
-
-/**
- * Farm output (003): a farm whose piece is full pays nothing but still costs upkeep, so turn it
- * down to level 2; turn it back up to the default once the stock has room again. Same command the
- * player's dial sends.
- */
-function planOutput(view: MoldView): Command | null {
-  const me = view.self.id;
-  for (const f of view.farms()) {
-    if (f.linked && f.pool >= f.cap - 1 && f.level > 2) return { type: 'setFarmOutput', mold: me, building: f.id, level: 2 };
-    if (f.pool < 0.5 * f.cap && f.level < view.rules.farmDefaultLevel) return { type: 'setFarmOutput', mold: me, building: f.id, level: view.rules.farmDefaultLevel };
   }
   return null;
 }
@@ -150,20 +132,10 @@ export function think(view: MoldView, state: AiState, rng: Rng, maxCommands: num
     if (view.ownerAt(f.cell) === me) continue;
     candidates.push({ cell: f.cell, kind: 'food', score: score(f.cell, f.amount * (f.stale ? 0.6 : 1)) });
   }
-  // fertile ground to farm on (003): worth growing to while the mold has few farms; the nearest
-  // few unowned fertile cells are candidates (fertile ground is public terrain)
-  if (view.farms().length < FARM_WISH) {
-    const near: Candidate[] = [];
-    for (let y = 1; y < h - 1; y += 2) {
-      for (let x = 1; x < w - 1; x += 2) {
-        const c = y * w + x;
-        if (!view.fertileAt(c) || view.ownerAt(c) === me) continue;
-        const sc = score(c, FERTILE_VALUE);
-        if (sc > 0) near.push({ cell: c, kind: 'food', score: sc });
-      }
-    }
-    near.sort((u, v) => v.score - u.score || u.cell - v.cell);
-    for (const c of near.slice(0, 2)) candidates.push(c);
+  // goo pools are terrain every mold knows about; worth growing to, and worth more the less of one is held
+  for (const p of view.knownPools()) {
+    if (p.owned >= p.cells) continue;
+    candidates.push({ cell: p.cell, kind: 'food', score: score(p.cell, POOL_VALUE * (1 - p.owned / p.cells)) });
   }
   for (const d of view.dropWarnings()) {
     const from = view.nearestOwn(d.cell);
@@ -205,8 +177,6 @@ export function think(view: MoldView, state: AiState, rng: Rng, maxCommands: num
 
   const build = planBuild(view, state);
   if (build) commands.splice(Math.min(1, commands.length), 0, build);
-  const output = planOutput(view);
-  if (output) commands.splice(Math.min(1, commands.length), 0, output); // cheap and rare, so it is never cut by the command limit
 
   state.debug = candidates.slice(0, 3).map((c) => `${c.kind}@${c.cell % w},${Math.floor(c.cell / w)} ${c.score.toFixed(2)}`);
   if (build && build.type === 'placeBuilding') state.debug.unshift(`build ${build.building}`);

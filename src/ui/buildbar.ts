@@ -1,35 +1,20 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { farm: 'Slime Pool', storehouse: 'Store House', booster: 'Booster Factory', harvester: 'Harvester' };
-const SHORT: Record<BuildingType, string> = { farm: 'Pool', storehouse: 'Store', booster: 'Booster', harvester: 'Harvest' };
+const NAMES: Record<BuildingType, string> = { storehouse: 'Store House', booster: 'Booster Factory', harvester: 'Harvester' };
+const SHORT: Record<BuildingType, string> = { storehouse: 'Store', booster: 'Booster', harvester: 'Harvest' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
-  farm: 'A pool of nutrient-rich slime: slow, steady income. Only on fertile ground, and only pays with a store house on its vein.',
-  storehouse: 'Raises how many nutrients its vein can hold, and pools on the vein pay into it.',
+  storehouse: 'Raises how many nutrients its vein can hold, and goo pools on the vein pay into it. Pools only pay with a store house on their vein.',
   booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
   harvester: 'Place beside big food to absorb it faster (same total).',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { p: 'farm', t: 'storehouse', b: 'booster', m: 'harvester' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { t: 'storehouse', b: 'booster', m: 'harvester' };
 
 const ICONS: Record<BuildingType, string> = {
   storehouse: '',
   booster: '',
   harvester: '',
-  farm: `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
-    <ellipse cx="21" cy="31" rx="16" ry="4" fill="#14110f" opacity=".45"/>
-    <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
-      <ellipse cx="20" cy="25" rx="16" ry="8.5" fill="#2a3a1f"/>
-      <ellipse cx="20" cy="23.4" rx="16" ry="7.2" fill="#f2c744"/>
-      <ellipse cx="20" cy="23.4" rx="12.6" ry="5.4" fill="#3e8f2e" stroke-width="1.8"/>
-      <ellipse cx="19" cy="22.6" rx="10.6" ry="4.4" fill="#7ed957" stroke="none"/>
-      <ellipse cx="21" cy="18.4" rx="5.4" ry="4.2" fill="#7ed957" stroke-width="2"/>
-      <circle cx="28" cy="21.6" r="2.4" fill="#d8ffb0" stroke-width="1.6"/>
-      <circle cx="12" cy="26" r="1.8" fill="#d8ffb0" stroke-width="1.4"/>
-    </g>
-    <ellipse cx="14" cy="21" rx="4.2" ry="1.4" fill="#d8ffb0"/>
-    <ellipse cx="19.4" cy="16.8" rx="2" ry="1.2" fill="#d8ffb0"/>
-  </svg>`,
 };
 
 const BOOSTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
@@ -119,8 +104,7 @@ export class BuildBar {
       btn.classList.toggle('selected', selected === opt.type);
       const full = opt.count >= opt.limit;
       btn.classList.toggle('disabled', !opt.affordable || full);
-      const income = opt.income !== undefined ? `+${opt.income}/s income, ` : '';
-      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${income}${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
+      btn.title = `${NAMES[opt.type]}: ${BLURB[opt.type]} ${opt.upkeep}/s upkeep. Costs ${opt.cost}.${full ? ' Limit reached.' : !opt.affordable ? ' Not enough nutrients yet.' : ''}`;
     }
   }
 

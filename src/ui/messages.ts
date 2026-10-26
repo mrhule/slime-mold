@@ -25,6 +25,7 @@ export const FOOD_NAMES: Record<string, string> = {
   breadCrumb: 'Bread crumb',
   sugarCube: 'Sugar cube',
   fruitSlice: 'Fruit slice',
+  goo: 'Goo pool',
 };
 
 export const reasonText = (reason: string): string => REASONS[reason] ?? reason;

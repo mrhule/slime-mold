@@ -56,11 +56,11 @@ describe('director (contracts/audio-cues.md)', () => {
     const d = new Director();
     d.update(snap());
     const mine: SimEvent[] = [
-      { type: 'buildingPlaced', id: 0, building: 'farm', mold: 1, cell: 3 },
+      { type: 'buildingPlaced', id: 0, building: 'storehouse', mold: 1, cell: 3 },
       { type: 'commandRejected', mold: 1, reason: 'cant-afford' },
     ];
     const theirs: SimEvent[] = [
-      { type: 'buildingPlaced', id: 1, building: 'farm', mold: 2, cell: 9 },
+      { type: 'buildingPlaced', id: 1, building: 'storehouse', mold: 2, cell: 9 },
       { type: 'commandRejected', mold: 2, reason: 'cant-afford' },
     ];
     expect(cues(d, snap({ events: mine }))).toEqual(['place', 'refuse']);

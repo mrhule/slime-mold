@@ -1,4 +1,5 @@
-import { buildingIncome, capOf, countBuildings, farmLinked } from './buildings';
+import { capOf, countBuildings } from './buildings';
+import { poolCounts, poolIncome } from './food';
 import { mapControl } from './round';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
@@ -25,17 +26,6 @@ export function stockOf(world: World, moldId: MoldId): { total: number; cap: num
   return { total, cap, full };
 }
 
-function farmCounts(world: World, moldId: MoldId): { total: number; linked: number; unlinked: number } {
-  let total = 0;
-  let linked = 0;
-  for (const b of world.buildings) {
-    if (b.destroyed || b.type !== 'farm' || b.moldId !== moldId) continue;
-    total++;
-    if (farmLinked(world, b)) linked++;
-  }
-  return { total, linked, unlinked: total - linked };
-}
-
 function buildOptions(world: World, moldId: MoldId): BuildOption[] {
   const out: BuildOption[] = [];
   for (const type of Object.keys(world.balance.buildings) as BuildingType[]) {
@@ -50,7 +40,6 @@ function buildOptions(world: World, moldId: MoldId): BuildOption[] {
       limit: spec.limit,
       affordable,
     };
-    if (type === 'farm') option.income = world.balance.buildings.farm.income;
     out.push(option);
   }
   return out;
@@ -67,9 +56,9 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     growthStarved: mold.targets.some((t) => t.state === 'starved'),
     targets: mold.targets.map((t) => ({ id: t.id, cell: t.cell, state: t.state })),
     build: buildOptions(world, moldId),
-    buildingIncome: buildingIncome(world, moldId),
+    poolIncome: poolIncome(world, moldId),
     stock: stockOf(world, moldId),
-    farms: farmCounts(world, moldId),
+    pools: poolCounts(world, moldId),
     rivals: world.molds
       .filter((m) => m.id !== moldId)
       .map((m) => ({

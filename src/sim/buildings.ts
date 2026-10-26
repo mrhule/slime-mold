@@ -24,7 +24,7 @@ export function harvestTarget(world: Readonly<World>, cell: CellIndex): FoodSour
   const y = Math.floor(cell / w);
   let best: FoodSource | null = null;
   for (const f of world.foodSources) {
-    if (f.depleted) continue;
+    if (f.depleted || world.balance.foodTypes[f.type].infinite) continue; // goo pools are not harvested
     if (x >= f.x - 1 && x <= f.x + f.w && y >= f.y - 1 && y <= f.y + f.h) {
       if (!best || f.id < best.id) best = f;
     }
@@ -51,8 +51,6 @@ export function canPlace(world: Readonly<World>, moldId: MoldId, type: BuildingT
   if ((world.buildingAt[cell] as number) >= 0) return { ok: false, reason: 'occupied' };
   // food cells are only for harvesters (FR-004)
   if (type !== 'harvester' && (world.food[cell] as number) > 0) return { ok: false, reason: 'on-food' };
-  // farms only grow on fertile ground (003 FR-009)
-  if (type === 'farm' && world.fertile[cell] === 0) return { ok: false, reason: 'not-fertile' };
   if (type === 'harvester') {
     const target = harvestTarget(world, cell);
     if (!target) return { ok: false, reason: 'no-food-nearby' };
@@ -79,8 +77,6 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
     cell,
     placedTick: world.tick,
     target: type === 'harvester' ? (harvestTarget(world, cell) as FoodSource).id : -1,
-    level: type === 'farm' ? world.balance.buildings.farm.defaultLevel : 0,
-    linked: false,
     boosting: false,
     destroyed: false,
   };
@@ -101,76 +97,9 @@ export function buildingOn(world: Readonly<World>, cell: CellIndex): Building | 
   return id >= 0 ? world.buildings[id] : undefined;
 }
 
-/** does a working farm stand on this cell? (farms are sources of supply, B3) */
-export function isFarmCell(world: Readonly<World>, cell: CellIndex): boolean {
-  return buildingOn(world, cell)?.type === 'farm';
-}
-
-/** what a farm at `level` would pay per second once linked: income * o * (1.5 - 0.5 * o), o = level * levelStep (S6) */
-export function farmIncomeAt(world: Readonly<World>, level: number): number {
-  const spec = world.balance.buildings.farm;
-  const o = level * spec.levelStep;
-  return spec.income * o * (1.5 - 0.5 * o);
-}
-
-/** a farm's upkeep per second at `level`: it grows with the output and stops at level 0 */
-export function farmUpkeepAt(world: Readonly<World>, level: number): number {
-  const spec = world.balance.buildings.farm;
-  return spec.upkeep * level * spec.levelStep;
-}
-
-/** does a working store house stand in the farm's piece? (S4) */
-export function farmLinked(world: Readonly<World>, b: Building): boolean {
-  if (b.destroyed || b.type !== 'farm') return false;
-  const comp = world.components.get(world.component[b.cell] as number);
-  return !!comp && workingStoreHouses(world, comp) > 0;
-}
-
-/**
- * Nutrients per second a farm pays right now: nothing while unlinked, otherwise its income at its
- * level, so level 4 is the plain income and the curve flattens toward the top (S6).
- */
-export function farmOutput(world: Readonly<World>, b: Building): number {
-  if (b.destroyed || b.type !== 'farm' || !farmLinked(world, b)) return 0;
-  return farmIncomeAt(world, b.level);
-}
-
-/** per-second upkeep of one building; a farm's grows with its output level and stops at level 0 */
+/** per-second upkeep of one building */
 function upkeepOf(world: Readonly<World>, b: Building): number {
-  return b.type === 'farm' ? farmUpkeepAt(world, b.level) : world.balance.buildings[b.type].upkeep;
-}
-
-/**
- * Farms pay their own piece every tick, but only while linked to a store house, and they slow down
- * to the piece's headroom so nothing they make is wasted (S5). Flips of the link state raise events.
- */
-export function tickBuildings(world: World): void {
-  const dt = TICK_DT;
-  const desired = new Map<number, number>();
-  for (const b of world.buildings) {
-    if (b.destroyed || b.type !== 'farm') continue;
-    const linked = farmLinked(world, b);
-    if (linked !== b.linked) {
-      b.linked = linked;
-      world.events.push({ type: 'farmLinkChanged', building: b.id, linked });
-    }
-    const out = farmOutput(world, b) * dt;
-    if (out > 0) desired.set(world.component[b.cell] as number, (desired.get(world.component[b.cell] as number) ?? 0) + out);
-  }
-  for (const b of world.buildings) {
-    if (b.destroyed || b.type !== 'farm') continue;
-    const compId = world.component[b.cell] as number;
-    const comp = world.components.get(compId);
-    if (!comp) continue;
-    const want = desired.get(compId) ?? 0;
-    if (want <= 0) continue;
-    const headroom = Math.max(0, capOf(world, comp) - comp.pool);
-    const scale = want > headroom ? headroom / want : 1;
-    const gain = farmOutput(world, b) * dt * scale;
-    comp.pool += gain;
-    const mold = world.molds[b.moldId - 1];
-    if (mold) mold.incomeTick += gain;
-  }
+  return world.balance.buildings[b.type].upkeep;
 }
 
 /** per-second upkeep of the live buildings standing in a piece */
@@ -178,15 +107,6 @@ export function buildingUpkeep(world: Readonly<World>, compId: number): number {
   let sum = 0;
   for (const b of world.buildings) {
     if (!b.destroyed && world.component[b.cell] === compId) sum += upkeepOf(world, b);
-  }
-  return sum;
-}
-
-/** nutrients per second the mold's farms pay right now (linked ones, at their levels), before upkeep */
-export function buildingIncome(world: Readonly<World>, moldId: MoldId): number {
-  let sum = 0;
-  for (const b of world.buildings) {
-    if (!b.destroyed && b.moldId === moldId && b.type === 'farm') sum += farmOutput(world, b);
   }
   return sum;
 }
@@ -298,7 +218,7 @@ export function placePreview(
   moldId: MoldId,
   type: BuildingType,
   cell: CellIndex,
-): { result: PlaceResult; unlinked?: boolean; capBefore?: number; capAfter?: number } {
+): { result: PlaceResult; capBefore?: number; capAfter?: number } {
   const result = canPlace(world, moldId, type, cell);
   if (!result.ok) return { result };
   const comp = world.components.get(world.component[cell] as number);
@@ -308,7 +228,6 @@ export function placePreview(
     const n = workingStoreHouses(world, comp);
     return { result, capBefore: capOf(world, comp), capAfter: world.balance.pool.baseCap + spec.capacity * Math.min(n + 1, spec.perPiece) };
   }
-  if (type === 'farm') return { result, unlinked: workingStoreHouses(world, comp) === 0 };
   return { result };
 }
 

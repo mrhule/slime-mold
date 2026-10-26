@@ -11,13 +11,13 @@ export const TICK_DT = 0.05;
 
 export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
-export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice';
+export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | 'goo';
 
-export type BuildingType = 'farm' | 'booster' | 'harvester' | 'storehouse';
+export type BuildingType = 'booster' | 'harvester' | 'storehouse';
 
 /** what `Mold.memBuilding` stores for each building type (0 = none) */
-export const BUILDING_CODE: Record<BuildingType, number> = { farm: 1, booster: 2, harvester: 3, storehouse: 4 };
-export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'farm', 'booster', 'harvester', 'storehouse'];
+export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -85,7 +85,7 @@ export interface Mold {
   vision: Uint8Array;
   memOwner: Uint8Array;
   memFood: Float32Array;
-  /** last-seen building on each cell: 0 none, 1 farm, 2 booster, 3 harvester */
+  /** last-seen building on each cell: 0 none, 1 booster, 2 harvester, 3 store house */
   memBuilding: Uint8Array;
   /** for the player: enemy cells currently in view (HUD rival list) */
   seenCells: Uint32Array;
@@ -134,10 +134,6 @@ export interface Building {
   placedTick: number;
   /** harvester only: the food source it speeds up, otherwise -1 */
   target: number;
-  /** farm only: output level, an integer 0..farm.maxLevel (default farm.defaultLevel); others 0 */
-  level: number;
-  /** farm only: whether a working store house shared its piece at the last tick (for link events) */
-  linked: boolean;
   /** store house only: its growth/harvest boost is on (stock above lowStock, with hysteresis) */
   boosting: boolean;
   /** true once its cell is gone; the entry stays so ids do not shift */
@@ -158,8 +154,7 @@ export type Command =
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
   | { type: 'setAllocation'; mold: MoldId; value: number }
-  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex }
-  | { type: 'setFarmOutput'; mold: MoldId; building: number; level: number };
+  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -172,8 +167,7 @@ export type PlaceReason =
   | 'cant-afford'
   | 'no-food-nearby'
   | 'food-too-small'
-  | 'already-harvested'
-  | 'not-fertile';
+  | 'already-harvested';
 
 export type PlaceResult = { ok: true } | { ok: false; reason: PlaceReason };
 
@@ -186,7 +180,6 @@ export type SimEvent =
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'buildingDestroyed'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
-  | { type: 'farmLinkChanged'; building: number; linked: boolean }
   | { type: 'storeFull'; componentId: number }
   | { type: 'capLost'; componentId: number; amount: number }
   | { type: 'commandRejected'; mold: MoldId; reason: string; cell?: CellIndex };
@@ -225,8 +218,6 @@ export interface BuildOption {
   cost: number;
   /** per second */
   upkeep: number;
-  /** per second, farm only */
-  income?: number;
   count: number;
   limit: number;
   /** some piece of the mold holds at least `cost` */
@@ -242,12 +233,12 @@ export interface HudModel {
   growthStarved: boolean;
   targets: HudTarget[];
   build: BuildOption[];
-  /** nutrients per second from working farms, before upkeep */
-  buildingIncome: number;
+  /** nutrients per second from goo pools the mold holds with a store house on their piece (008) */
+  poolIncome: number;
   /** stored nutrients against the caps of the mold's pieces (003) */
   stock: { total: number; cap: number; full: boolean };
-  /** how many of the mold's farms are linked to a store house, and how many are not */
-  farms: { total: number; linked: number; unlinked: number };
+  /** goo pools the mold holds a ring cell of, and how many of those wait for a store house on their piece (008) */
+  pools: { held: number; waiting: number };
   rivals: {
     id: MoldId;
     color: number;
@@ -264,7 +255,7 @@ export interface MoldView {
     id: MoldId;
     allocation: number;
     cellCount: number;
-    components: { id: number; pool: number; cap: number; storeHouses: number; linkedFarms: number; cellCount: number; orphaned: boolean }[];
+    components: { id: number; pool: number; cap: number; storeHouses: number; cellCount: number; orphaned: boolean }[];
     targets: HudTarget[];
     frontCells: CellIndex[];
     frontLoss: number;
@@ -273,14 +264,10 @@ export interface MoldView {
   height: number;
   terrain: Readonly<Uint8Array>;
   visibility(cell: CellIndex): 0 | 1 | 2;
-  /** fertile ground is terrain: known to every mold, like obstacles */
-  fertileAt(cell: CellIndex): boolean;
-  /** the mold's own farms with the stock and cap of the piece each stands in (nothing is exposed about other molds' farms) */
-  farms(): { id: number; cell: CellIndex; level: number; linked: boolean; pool: number; cap: number }[];
-  /** an own farm's output level, or -1 if the id is not one of its farms */
-  farmLevel(buildingId: number): number;
+  /** goo pools are terrain, known to every mold in the fog like obstacles: the top-left cell and the cells the mold holds of each */
+  knownPools(): { cell: CellIndex; w: number; h: number; cells: number; owned: number }[];
   /** public rules the AI plans with */
-  rules: { storeHousesPerPiece: number; farmDefaultLevel: number };
+  rules: { storeHousesPerPiece: number };
   /** id of the mold's own piece holding this cell, or -1 */
   pieceOf(cell: CellIndex): number;
   ownerAt(cell: CellIndex): MoldId | 0;
@@ -370,8 +357,6 @@ export interface World {
   boost: Float32Array;
   /** true while any working booster factory is boosting some cells (lets recomputing be skipped) */
   boostActive: boolean;
-  /** 1 where ground is fertile (farms only), else 0; set by map generation */
-  fertile: Uint8Array;
   /** growth and harvest speed multiplier from working store houses (1 = none) */
   supply: Float32Array;
   /** true while any working store house boosts some cell (lets rebuilding be skipped) */

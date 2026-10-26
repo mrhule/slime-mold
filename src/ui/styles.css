@@ -58,8 +58,7 @@ html, body {
   text-shadow: 2px 2px 0 var(--ink);
 }
 
-.hud .row,
-.farm-panel .row {
+.hud .row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -68,16 +67,14 @@ html, body {
   padding: 1px 0;
 }
 
-.hud .label,
-.farm-panel .label {
+.hud .label {
   font-family: var(--display);
   font-size: 17px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
-.hud .value,
-.farm-panel .value {
+.hud .value {
   font-weight: 800;
   font-size: 18px;
   font-variant-numeric: tabular-nums;
@@ -141,43 +138,13 @@ html, body {
 .settings .setting select { font: inherit; font-weight: 800; padding: 2px 6px; border: 3px solid var(--ink); background: #fff6dc; }
 .settings .setting input[type='checkbox'] { width: 22px; height: 22px; accent-color: #f2c744; }
 
-.farm-panel {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 230px;
-  pointer-events: auto;
-}
-.farm-panel[hidden] { display: none; }
-.farm-panel .dial { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
-.farm-panel .dial button {
-  width: 34px;
-  height: 34px;
-  font-family: var(--display);
-  font-size: 22px;
-  line-height: 1;
-  background: #fff6dc;
-  color: var(--ink);
-  border: 3px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
-  cursor: pointer;
-}
-.farm-panel .dial button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-.farm-panel .pips { display: flex; gap: 4px; flex: 1; justify-content: center; }
-.farm-panel .pip { width: 14px; height: 22px; border: 3px solid var(--ink); background: #fff6dc; transform: skewX(-8deg); }
-.farm-panel .pip.on { background: #f2c744; }
-.farm-panel .farm-status { margin: 6px 0 2px; padding: 3px 6px; border: 3px solid var(--ink); font-weight: 800; font-size: 13px; background: #dff0c4; }
-.farm-panel .farm-status.unlinked { background: #ffe9a8; }
-.farm-panel .farm-status.throttled { background: #cfe3ea; }
-.farm-panel .farm-status.parked { background: #d9d6cc; }
 .buildbar button.hint-pulse { animation: hint-pulse 0.9s ease-in-out infinite alternate; }
 @keyframes hint-pulse {
   from { transform: translateY(0); }
   to { transform: translateY(-5px); }
 }
 
-.hud .hint,
-.farm-panel .hint {
+.hud .hint {
   margin-top: 8px;
   font-size: 12px;
   font-weight: 600;
@@ -473,8 +440,7 @@ button, input[type='range'], select { touch-action: manipulation; }
   cursor: pointer;
 }
 .touch-bar .round:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-.touch .hud .clock button,
-.touch .farm-panel .dial button { min-width: 44px; min-height: 44px; }
+.touch .hud .clock button { min-width: 44px; min-height: 44px; }
 
 /* Placement bar (007): the preview verdict with Build and Cancel, bottom centre, clear of the finger */
 .placement-bar { display: none; }
@@ -511,10 +477,6 @@ button, input[type='range'], select { touch-action: manipulation; }
 .placement-bar .btn-cancel { background: var(--paper-dark); }
 .placement-bar button:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 
-/* the farm panel sits below the round buttons and its dial is thumb-sized */
-.touch .farm-panel { top: 70px; right: 10px; }
-.touch .farm-panel .dial button { width: 52px; height: 52px; font-size: 28px; }
-.touch .farm-panel .hint { display: none; }
 
 /* ---- Touch layout (007): thumb-sized controls on a short landscape screen ---- */
 .touch-only { display: none; }
@@ -581,11 +543,10 @@ html.touch, .touch body {
 .touch .buildbar button.selected { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 .touch .buildbar button .name { font-size: 18px; }
 
-/* round buttons, mute, toasts and the farm panel share the top right and top centre */
+/* round buttons, mute and toasts share the top right and top centre */
 .touch .touch-bar { top: 8px; right: 8px; gap: 8px; }
 .touch .touch-bar .round { width: 48px; height: 48px; }
 .touch .mute-btn { top: 8px; bottom: auto; right: 184px; width: 48px; height: 48px; }
-.touch .farm-panel { top: 64px; right: 140px; }
 .touch .toast { top: 8px; bottom: auto; transform: translateX(-50%); max-width: calc(100vw - 460px); }
 .touch .banner { top: 64px; }
 .touch .placement-bar:not([hidden]) { max-width: calc(100vw - 372px); bottom: 8px; }
@@ -715,7 +676,6 @@ html.touch, .touch body {
 /* things that used to sit at the top or bottom move clear of the bars */
 .touch .toast { top: 60px; max-width: min(340px, calc(100vw - 340px)); }
 .touch .banner { top: 60px; }
-.touch .farm-panel { top: 60px; right: 84px; }
 .touch .placement-bar:not([hidden]) { left: 300px; right: 84px; bottom: 6px; transform: none; max-width: none; padding: 6px 8px; gap: 8px; }
 .touch .placement-bar button { min-width: 72px; min-height: 48px; font-size: 18px; }
 .touch .placement-text { min-width: 0; flex: 1; font-size: 14px; }
@@ -725,7 +685,6 @@ html.touch, .touch body {
 .touch .buildbar { display: grid; grid-template-columns: repeat(2, 60px); gap: 5px; padding: 5px; }
 .touch .buildbar button { min-width: 0; min-height: 56px; padding: 1px 2px; }
 .touch .buildbar button svg { width: 30px; height: 26px; }
-.touch .farm-panel { right: 148px; }
 .touch .placement-bar:not([hidden]) { right: 148px; }
 
 /* ---- Build menu (touch): one Build button opens a modal list of buildings ---- */
@@ -802,7 +761,6 @@ html.touch, .touch body {
 .touch .buildbar.open button .name { display: none; }
 
 /* with the build block gone, the bars can reach further right */
-.touch .farm-panel { right: 92px; }
 .touch .placement-bar:not([hidden]) { right: 92px; }
 .touch .buildbar.open button[data-building] { overflow: hidden; }
 .touch .buildbar.open button .blurb {

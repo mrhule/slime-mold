@@ -1,4 +1,5 @@
 import { DX, DY, cellAt } from './grid';
+import { workingStoreHouses } from './buildings';
 import { addCell } from './network';
 import { moldOf } from './world';
 import { TICK_DT, Terrain } from './types';
@@ -65,13 +66,40 @@ export function foodCells(world: World, src: FoodSource): CellIndex[] {
 
 /** Absorb nutrients from every food cell a mold holds, and retire used-up food. */
 export function tickFood(world: World): void {
+  const piecesWithStore = new Map<number, boolean>();
+  const paying = (compId: number): boolean => {
+    let ok = piecesWithStore.get(compId);
+    if (ok === undefined) {
+      const comp = world.components.get(compId);
+      ok = !!comp && workingStoreHouses(world, comp) > 0;
+      piecesWithStore.set(compId, ok);
+    }
+    return ok;
+  };
   // which (mold, food item) pairs have a working harvester (FR-015)
   const harvested = new Set<number>();
   for (const b of world.buildings) if (!b.destroyed && b.type === 'harvester') harvested.add(b.moldId * 65536 + b.target);
   const mult = world.balance.buildings.harvester.rateMult;
   for (const src of world.foodSources) {
     if (src.depleted) continue;
-    const baseRate = world.balance.foodTypes[src.type].absorbRate * TICK_DT;
+    const spec = world.balance.foodTypes[src.type];
+    const baseRate = spec.absorbRate * TICK_DT;
+    if (spec.infinite) {
+      // a goo pool: each held cell pays a fixed rate into its piece, but only while that piece has a
+      // store house; nothing is ever taken from the cells and the pool never depletes (008)
+      for (const c of foodCells(world, src)) {
+        const owner = world.owner[c] as number;
+        if (owner === 0) continue;
+        const compId = world.component[c] as number;
+        if (!paying(compId)) continue;
+        const comp = world.components.get(compId) as Component;
+        comp.pool += baseRate;
+        const mold = moldOf(world, owner);
+        mold.stats.nutrientsGathered += baseRate;
+        mold.incomeTick += baseRate;
+      }
+      continue;
+    }
     for (const c of foodCells(world, src)) {
       const left = world.food[c] as number;
       const owner = world.owner[c] as number;
@@ -128,4 +156,39 @@ export function engulfFood(world: World, moldId: MoldId, cell: CellIndex): void 
       }
     }
   }
+}
+
+/** goo pools: nutrients per second a mold earns from the cells it holds, on pieces that have a store house (008) */
+export function poolIncome(world: Readonly<World>, moldId: MoldId): number {
+  let sum = 0;
+  for (const src of world.foodSources) {
+    const spec = world.balance.foodTypes[src.type];
+    if (!spec.infinite) continue;
+    for (const c of foodCells(world as World, src)) {
+      if (world.owner[c] !== moldId) continue;
+      const comp = world.components.get(world.component[c] as number);
+      if (comp && workingStoreHouses(world, comp) > 0) sum += spec.absorbRate;
+    }
+  }
+  return sum;
+}
+
+/** how many goo pools a mold holds some of, and how many of those have a held cell on a piece with no store house */
+export function poolCounts(world: Readonly<World>, moldId: MoldId): { held: number; waiting: number } {
+  let held = 0;
+  let waiting = 0;
+  for (const src of world.foodSources) {
+    if (!world.balance.foodTypes[src.type].infinite) continue;
+    let any = false;
+    let idle = false;
+    for (const c of foodCells(world as World, src)) {
+      if (world.owner[c] !== moldId) continue;
+      any = true;
+      const comp = world.components.get(world.component[c] as number);
+      if (!comp || workingStoreHouses(world, comp) === 0) idle = true;
+    }
+    if (any) held++;
+    if (idle) waiting++;
+  }
+  return { held, waiting };
 }

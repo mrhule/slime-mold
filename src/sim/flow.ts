@@ -1,9 +1,8 @@
 import { dirBetween, edgeSlot, neighbor, octile } from './grid';
-import { buildingOn, farmOutput, isFarmCell } from './buildings';
 import { refreshSources } from './network';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
-import type { Building, CellIndex, Component, GrowthTarget, World } from './types';
+import type { CellIndex, Component, GrowthTarget, World } from './types';
 
 /**
  * Tree-routed Physarum flow (R2). Every `flowEvery` ticks, for each connected piece:
@@ -21,7 +20,6 @@ export function solveFlow(world: World): void {
 
 function sourceRate(world: World, cell: CellIndex, core: CellIndex): number {
   if (cell === core) return world.balance.coreIncome;
-  if (isFarmCell(world, cell)) return farmOutput(world, buildingOn(world, cell) as Building);
   const sid = world.foodSourceId[cell] as number;
   const src = world.foodSources[sid];
   if (!src || src.depleted || (world.food[cell] as number) <= 0) return 0;

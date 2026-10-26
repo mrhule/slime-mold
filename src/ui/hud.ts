@@ -126,9 +126,9 @@ export class Hud {
     this.el.control!.textContent = `${Math.round(hud.mapControl * 100)}%`;
     (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / this.winControl) * 100)}%`;
     this.el.starved!.hidden = !hud.growthStarved;
-    const unlinked = hud.farms.unlinked;
-    this.el.unlinked!.hidden = unlinked === 0;
-    if (unlinked > 0) this.el.unlinked!.textContent = `${unlinked} ${unlinked === 1 ? 'pool is' : 'pools are'} not paying: build a Store House (T) on their vein`;
+    const waiting = hud.pools.waiting;
+    this.el.unlinked!.hidden = waiting === 0;
+    if (waiting > 0) this.el.unlinked!.textContent = `${waiting} goo ${waiting === 1 ? 'pool is' : 'pools are'} waiting: build a Store House (T) on the same vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
     this.el.chip!.textContent = `Fight ${Math.round(hud.allocation * 100)}%`;
     for (const b of this.speedButtons) {

@@ -6,12 +6,6 @@ import { INK, moldColor } from './palette';
 import { style as look } from './style';
 import { CELL } from './units';
 
-const POOL_RIM_SHADE = 0x2a3a1f;
-const SLIME = 0x7ed957;
-const SLIME_DARK = 0x3e8f2e;
-const SLIME_LIGHT = 0xd8ffb0;
-/** the farm is drawn a bit larger than one cell so it reads at a glance */
-const FARM_SCALE = 1.35;
 
 const BOOST_GREY = 0x7a7f84;
 const BOOST_SHADE = 0x4b4f53;
@@ -39,37 +33,6 @@ export interface BuildingStyle {
   stale?: boolean;
   /** a harvester whose food is used up */
   idle?: boolean;
-}
-
-/**
- * An inked slime pool (the sim's farm): a shallow basin in the owner's color holding a pool of green
- * slime with a glossy highlight, a couple of bubbles and a small mound rising in the middle. Drawn
- * with a hard offset shadow, flat two-band shading and heavy outlines (FR-032). `ghost` draws it as
- * a see-through placement preview in the given outline color.
- */
-export function drawFarm(g: Graphics, cx: number, cy: number, rimColor: number, ghost?: number): void {
-  const alpha = ghost === undefined ? 1 : 0.6;
-  const ink = ghost ?? INK;
-  const S = FARM_SCALE;
-  const w = ghost === undefined ? 3 : 2.5;
-
-  // hard offset shadow
-  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 10 * S, 4.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
-
-  // basin: dark lower band and a thick rim in the owner's color
-  g.ellipse(cx, cy + 3.6 * S, 10 * S, 6 * S).fill({ color: POOL_RIM_SHADE, alpha }).stroke({ width: w, color: ink, alpha });
-  g.ellipse(cx, cy + 2.8 * S, 10 * S, 5 * S).fill({ color: rimColor, alpha }).stroke({ width: w, color: ink, alpha });
-
-  // the slime: dark body, lit surface, glossy highlight
-  g.ellipse(cx, cy + 2.8 * S, 7.8 * S, 3.7 * S).fill({ color: SLIME_DARK, alpha }).stroke({ width: 1.8, color: ink, alpha });
-  g.ellipse(cx - 0.6 * S, cy + 2.3 * S, 6.6 * S, 2.9 * S).fill({ color: SLIME, alpha });
-  g.ellipse(cx - 3 * S, cy + 1.5 * S, 2.6 * S, 0.9 * S).fill({ color: SLIME_LIGHT, alpha });
-
-  // a mound of slime rising in the middle, and two bubbles
-  g.ellipse(cx + 0.8 * S, cy + 0.2 * S, 3.4 * S, 2.6 * S).fill({ color: SLIME, alpha }).stroke({ width: w * 0.7, color: ink, alpha, join: 'round' });
-  g.ellipse(cx + 0.1 * S, cy - 0.6 * S, 1.3 * S, 0.8 * S).fill({ color: SLIME_LIGHT, alpha });
-  g.circle(cx + 4.2 * S, cy + 1.2 * S, 1.5 * S).fill({ color: SLIME_LIGHT, alpha }).stroke({ width: 1.4, color: ink, alpha });
-  g.circle(cx - 4.6 * S, cy + 3.6 * S, 1.1 * S).fill({ color: SLIME_LIGHT, alpha }).stroke({ width: 1.2, color: ink, alpha });
 }
 
 /** An inked booster factory: a squat machine with a chimney and a lightning bolt on its front. */
@@ -159,8 +122,7 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
 
 /** draw any building by type */
 export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: number, color: number, style: BuildingStyle = {}): void {
-  if (type === 'farm') drawFarm(g, cx, cy, style.stale ? STALE_GREY : color, style.ghost);
-  else if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
+  if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
   else if (type === 'booster') drawBooster(g, cx, cy, color, style);
   else drawHarvester(g, cx, cy, color, style);
 }
@@ -178,7 +140,7 @@ export function drawStoreCover(g: Graphics, width: number, cover: { cell: number
   }
 }
 
-/** A small broken-chain mark above a farm that has no store house on its vein. */
+/** A small broken-chain mark above a goo pool whose piece has no store house. */
 export function drawUnlinked(g: Graphics, cx: number, cy: number): void {
   const y = cy - 19;
   g.circle(cx - 4.5, y, 3.2).stroke({ width: 3.6, color: INK });
@@ -232,7 +194,7 @@ export class BuildingLayer {
     let key = '';
     for (const b of world.buildings) {
       const idle = b.type === 'harvester' ? (foodOf(b)?.depleted ? 'i' : 'a') : '';
-      key += shown(b) ? `${b.id}${idle}${b.type === 'farm' ? (b.linked ? 'l' : 'u') : ''},` : 'x';
+      key += shown(b) ? `${b.id}${idle},` : 'x';
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
     // the veins a booster covers keep growing, so redraw its glow a few times a second
@@ -268,7 +230,6 @@ export class BuildingLayer {
       }
       drawBuilding(this.rim, b.type, x, y, color, { idle });
       drawBuilding(this.g, b.type, x, y, color, { idle });
-      if (b.type === 'farm' && !b.linked) drawUnlinked(this.g, x, y);
     }
   }
 }

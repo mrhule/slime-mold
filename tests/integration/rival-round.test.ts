@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { think } from '../../src/sim/ai/rival-ai';
 import { Rng } from '../../src/sim/rng';
 import { assertInvariants, createRound, enqueue, step, viewFor } from '../../src/sim';
+import { poolCounts, poolIncome } from '../../src/sim/food';
 import type { AiState, World } from '../../src/sim';
 
 const TWENTY_MINUTES = 20 * 60 * 20;
@@ -50,11 +51,11 @@ describe('a round against a rival (US2 independent test)', () => {
   }, 240_000);
 });
 
-describe('rivals use store houses and fertile farms (003 US5)', () => {
-  it('over several seeds rivals build store houses and linked farms, only legally', () => {
+describe('rivals use store houses and goo pools (003 US5, 008)', () => {
+  it('over several seeds molds reach goo pools, build store houses and earn from them, only legally', () => {
     let storeHouses = 0;
-    let farms = 0;
-    let linkedFarms = 0;
+    let poolsHeld = 0;
+    let paid = 0;
     // a rich start so the build reserve is met early (difficulty changes timing only)
     for (const seed of [2001, 2002, 2003, 2004]) {
       const world = createRound({ runSeed: seed, roundNumber: 6 });
@@ -66,23 +67,17 @@ describe('rivals use store houses and fertile farms (003 US5)', () => {
           for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
         }
         step(world);
+        if (t % 200 === 0) for (const m of world.molds) paid += poolIncome(world, m.id) > 0 ? 1 : 0;
         if (world.outcome !== 'playing') break;
       }
-      assertInvariants(world); // includes: every farm stands on fertile ground, levels are 0..6
-      for (const b of world.buildings) {
-        if (b.destroyed) continue;
-        if (b.type === 'storehouse') storeHouses++;
-        if (b.type === 'farm') {
-          farms++;
-          expect(world.fertile[b.cell]).toBe(1);
-          if (b.linked) linkedFarms++;
-        }
-      }
+      assertInvariants(world);
+      for (const b of world.buildings) if (!b.destroyed && b.type === 'storehouse') storeHouses++;
+      for (const m of world.molds) poolsHeld += poolCounts(world, m.id).held;
       // the rivals of the round (molds 2..) obey the same rules; their records are in the same list
       expect(world.molds.length).toBeGreaterThan(1);
     }
     expect(storeHouses).toBeGreaterThan(0);
-    expect(farms).toBeGreaterThan(0);
-    expect(linkedFarms).toBeGreaterThan(0);
+    expect(poolsHeld).toBeGreaterThan(0);
+    expect(paid).toBeGreaterThan(0);
   }, 120_000);
 });

@@ -52,8 +52,7 @@ function foragingWorld(round: number): World {
 }
 
 /**
- * The growth-only world with every building type at its per-mold limit (farms on fertile ground,
- * store houses boosting growing tips), so the building and boost code runs at its worst.
+ * The growth-only world with every building type at its per-mold limit (store houses boosting growing tips), so the building and boost code runs at its worst.
  */
 function buildingsWorld(round: number): World {
   const world = foragingWorld(round);
@@ -63,7 +62,6 @@ function buildingsWorld(round: number): World {
   for (let c = 0; c < world.owner.length; c++) if (world.owner[c] === 1 && (world.food[c] as number) <= 0 && world.buildingAt[c]! < 0) own.push(c);
   const plan: [BuildingType, number][] = [
     ['storehouse', spec.storehouse.limit],
-    ['farm', spec.farm.limit],
     ['booster', spec.booster.limit],
   ];
   let k = 0;
@@ -71,7 +69,6 @@ function buildingsWorld(round: number): World {
   for (const [type, count] of plan) {
     for (let i = 0; i < count; i++) {
       const cell = own[(k++ * stride + 7) % own.length]!;
-      if (type === 'farm') world.fertile[cell] = 1;
       placeBuilding(world, 1, type, cell);
     }
   }

@@ -32,9 +32,6 @@ export const MAP = {
   wall: 0x24211e,
   wallLight: 0x3a3631,
   scratch: 0x70725f,
-  fertile: 0x63762f,
-  fertileLight: 0x86a043,
-  fertileInk: 0x26300f,
 } as const;
 
 export const FOOD = {
@@ -42,4 +39,5 @@ export const FOOD = {
   breadCrumb: { base: 0xb9773a, shade: 0x84501f, light: 0xe8c58b },
   sugarCube: { base: 0xf1efe6, shade: 0xb5b2a4, light: 0xffffff },
   fruitSlice: { base: 0xd9452f, shade: 0x9e2d1e, light: 0xf5a08a },
+  goo: { base: 0x5fd13b, shade: 0x2f8f2a, light: 0xd4ff9c },
 } as const;

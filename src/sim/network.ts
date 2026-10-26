@@ -1,4 +1,4 @@
-import { clampPools, isFarmCell, recomputeBoost, recomputeSupply } from './buildings';
+import { clampPools, recomputeBoost, recomputeSupply } from './buildings';
 import { DX, DY, dirBetween, edgeSlot, neighbor, popcount8 } from './grid';
 import { moldOf } from './world';
 import type { Building, CellIndex, Component, MoldId, World } from './types';
@@ -181,7 +181,7 @@ export function refreshSources(world: World, comp: Component): void {
   const was = comp.orphaned;
   comp.sources.length = 0;
   for (const cell of comp.cells) {
-    if (cell === mold.core || (world.food[cell] as number) > 0 || isFarmCell(world, cell)) comp.sources.push(cell);
+    if (cell === mold.core || (world.food[cell] as number) > 0) comp.sources.push(cell);
   }
   comp.orphaned = comp.sources.length === 0 && comp.cells.length > 0;
   if (comp.orphaned && !was) {

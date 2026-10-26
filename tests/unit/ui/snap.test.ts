@@ -57,7 +57,7 @@ describe('placement snapping', () => {
   it('never returns a cell the mold does not own unless nothing is in range', () => {
     const world = grown();
     const core = world.molds[0]!.core;
-    const snapped = snapPlacement(world, 1, 'farm', core + 3 * world.width + 3, 6);
+    const snapped = snapPlacement(world, 1, 'booster', core + 3 * world.width + 3, 6);
     expect(world.owner[snapped] === 1 || snapped === core + 3 * world.width + 3).toBe(true);
   });
 

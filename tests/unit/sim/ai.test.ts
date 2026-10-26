@@ -11,7 +11,7 @@ import { Rng } from '../../../src/sim/rng';
 import type { AiState, Command, World } from '../../../src/sim/types';
 import { viewFor } from '../../../src/sim/view';
 import { defaultBalance } from '../../../src/config/balance';
-import { canPlace, placeBuilding } from '../../../src/sim/buildings';
+import { canPlace } from '../../../src/sim/buildings';
 import { cellOf, createOpenWorld, withStoreHouse } from '../../helpers';
 
 function rivalWorld(aggression = 0.5): { world: World; id: number; state: AiState } {
@@ -20,6 +20,13 @@ function rivalWorld(aggression = 0.5): { world: World; id: number; state: AiStat
   const rival = addMold(world, 'rival', cellOf(world, 20, 30), 30, aggression);
   updateVision(world);
   return { world, id: rival.id, state: rival.ai! };
+}
+
+/** a goo pool beside the rival's east arm, with one of its cells held */
+function holdPool(world: World, id: number): void {
+  placeFood(world, 'goo', 22, 29, 'initial');
+  addCell(world, id, cellOf(world, 22, 30), cellOf(world, 21, 30));
+  updateVision(world);
 }
 
 const targets = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'setTarget' }> => c.type === 'setTarget');
@@ -52,6 +59,16 @@ describe('rival AI', () => {
     const t = targets(think(viewFor(world, id), state, new Rng(3), 3));
     expect(t.length).toBeGreaterThan(0);
     expect(t[0]!.cell).toBe(cellOf(world, 30, 27));
+  });
+
+  it('grows toward a goo pool it has never seen: pools are terrain every mold knows', () => {
+    const { world, id, state } = rivalWorld();
+    placeFood(world, 'goo', 60, 10, 'initial');
+    updateVision(world);
+    const view = viewFor(world, id);
+    expect(view.visibility(cellOf(world, 60, 10))).toBe(0);
+    const t = targets(think(view, state, new Rng(3), 3));
+    expect(t.some((c) => c.cell === cellOf(world, 60, 10))).toBe(true);
   });
 
   it('prefers richer and closer food', () => {
@@ -155,44 +172,52 @@ describe('rival AI building (US4)', () => {
     return { world, id, state };
   }
 
-  it('builds a store house first, through the same command, when it has more than cost + reserve', () => {
+  it('builds a store house, through the same command, when it holds a goo pool with none on its piece', () => {
     const { world, id, state } = rich(200, 60);
+    holdPool(world, id);
     const cmds = placements(think(viewFor(world, id), state, new Rng(1), 3));
     expect(cmds).toHaveLength(1);
     expect(cmds[0]).toMatchObject({ mold: id, building: 'storehouse' });
     expect(world.owner[cmds[0]!.cell]).toBe(id);
   });
 
-  it('then builds a farm on fertile ground in the piece that has a store house', () => {
+  it('builds no second store house for a pool whose piece already has one', () => {
     const { world, id, state } = rich(200, 60);
+    holdPool(world, id);
     const core = world.molds[id - 1]!.core;
     withStoreHouse(world, id, core + 1); // an arm of the core
-    const cmds = placements(think(viewFor(world, id), state, new Rng(1), 3));
-    expect(cmds).toHaveLength(1);
-    expect(cmds[0]).toMatchObject({ mold: id, building: 'farm' });
-    expect(world.fertile[cmds[0]!.cell]).toBe(1);
+    expect(placements(think(viewFor(world, id), state, new Rng(1), 3))).toHaveLength(0);
+  });
+
+  it('builds nothing while it holds no goo pool and has no other need', () => {
+    const { world, id, state } = rich(150, 20);
+    expect(placements(think(viewFor(world, id), state, new Rng(1), 3))).toHaveLength(0);
   });
 
   it('does not build when it cannot afford cost + reserve', () => {
-    const { world, id, state } = rich(60, 60);
+    const { world, id, state } = rich(50, 60);
+    holdPool(world, id);
     expect(placements(think(viewFor(world, id), state, new Rng(1), 3))).toHaveLength(0);
   });
 
   it('a smaller reserve means it builds sooner (difficulty changes timing only)', () => {
     const early = rich(70, 10);
     const late = rich(70, 200);
+    holdPool(early.world, early.id);
+    holdPool(late.world, late.id);
     expect(placements(think(viewFor(early.world, early.id), early.state, new Rng(1), 3))).toHaveLength(1);
     expect(placements(think(viewFor(late.world, late.id), late.state, new Rng(1), 3))).toHaveLength(0);
   });
 
   it('pays the same cost and obeys the same limits as the player when the command runs', () => {
     const { world, id, state } = rich(500, 20);
+    holdPool(world, id);
     const cmd = placements(think(viewFor(world, id), state, new Rng(1), 3))[0]!;
     const comp = world.components.get(world.component[cmd.cell]!)!;
     const before = comp.pool;
     enqueue(world, cmd);
     step(world);
-    expect(before - comp.pool).toBeGreaterThanOrEqual(world.balance.buildings.farm.cost - 1); // minus a tick of income
+    expect(before - comp.pool).toBeGreaterThanOrEqual(world.balance.buildings.storehouse.cost - 1); // minus a tick of income
     expect(world.buildings.filter((b) => b.moldId === id)).toHaveLength(1);
     // fill the limit: the AI stops asking, and the sim would refuse anyway
     for (const comp2 of world.components.values()) if (comp2.moldId === id) comp2.pool = 5000;
@@ -200,7 +225,7 @@ describe('rival AI building (US4)', () => {
       for (const cm of placements(think(viewFor(world, id), state, new Rng(i), 3))) enqueue(world, cm);
       step(world);
     }
-    expect(world.buildings.filter((b) => b.moldId === id && b.type === 'farm').length).toBeLessThanOrEqual(world.balance.buildings.farm.limit);
+    expect(world.buildings.filter((b) => b.moldId === id && b.type === 'storehouse').length).toBeLessThanOrEqual(world.balance.buildings.storehouse.limit);
   });
 
   it('builds a booster factory near a front it is losing', () => {
@@ -240,15 +265,14 @@ describe('rival AI building (US4)', () => {
   it('can only ask about its own cells', () => {
     const { world, id } = rich(500, 0);
     const view = viewFor(world, id);
-    expect(view.canBuild('farm', cellOf(world, 21, 30))).toBe(true);
-    expect(view.canBuild('farm', cellOf(world, 50, 10))).toBe(false); // empty ground
-    expect(view.canBuild('farm', cellOf(world, 90, 50))).toBe(false); // the other mold's core
+    expect(view.canBuild('booster', cellOf(world, 21, 30))).toBe(true);
+    expect(view.canBuild('booster', cellOf(world, 50, 10))).toBe(false); // empty ground
+    expect(view.canBuild('booster', cellOf(world, 90, 50))).toBe(false); // the other mold's core
   });
 });
 
-describe('rival AI: store houses, farms and output (003 US5)', () => {
+describe('rival AI: store houses (003 US5, 008)', () => {
   const placements2 = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'placeBuilding' }> => c.type === 'placeBuilding');
-  const outputs = (cmds: Command[]) => cmds.filter((c): c is Extract<Command, { type: 'setFarmOutput' }> => c.type === 'setFarmOutput');
 
   function funded(pool: number, reserve = 10) {
     const { world, id, state } = rivalWorld(0.5);
@@ -260,7 +284,7 @@ describe('rival AI: store houses, farms and output (003 US5)', () => {
 
   it('never issues a placement the sim would refuse', () => {
     const { world, id, state } = funded(250);
-    world.fertile[cellOf(world, 21, 30)] = 1;
+    holdPool(world, id);
     for (let round = 0; round < 6; round++) {
       const cmds = think(viewFor(world, id), state, new Rng(round + 1), 3);
       for (const p of placements2(cmds)) {
@@ -284,26 +308,5 @@ describe('rival AI: store houses, farms and output (003 US5)', () => {
     updateVision(world);
     const again = placements2(think(viewFor(world, id), state, new Rng(1), 3));
     expect(again.some((c) => c.building === 'storehouse')).toBe(false);
-  });
-
-  it('turns a farm down while its piece is full, and back up when there is room', () => {
-    const { world, id, state } = funded(100);
-    const core = world.molds[id - 1]!.core;
-    world.fertile[core + 1] = 1;
-    placeBuilding(world, id, 'farm', core + 1);
-    withStoreHouse(world, id, core - 1);
-    const piece = [...world.components.values()].find((c) => c.moldId === id)!;
-    const cap = defaultBalance.pool.baseCap + defaultBalance.buildings.storehouse.capacity;
-    piece.pool = cap;
-    updateVision(world);
-    const down = outputs(think(viewFor(world, id), state, new Rng(1), 3));
-    expect(down).toHaveLength(1);
-    expect(down[0]).toMatchObject({ mold: id, level: 2 });
-    const farmB = world.buildings.find((b) => b.type === 'farm')!;
-    farmB.level = 2;
-    piece.pool = 0.3 * cap;
-    updateVision(world);
-    const up = outputs(think(viewFor(world, id), state, new Rng(1), 3));
-    expect(up[0]).toMatchObject({ level: defaultBalance.buildings.farm.defaultLevel });
   });
 });

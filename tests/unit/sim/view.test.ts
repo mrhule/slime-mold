@@ -82,51 +82,33 @@ describe('MoldView (the AI fairness surface)', () => {
   });
 });
 
-describe('MoldView and the new buildings (003 US5)', () => {
-  it('fertile ground is global terrain, like obstacles', () => {
+describe('MoldView and goo pools (008)', () => {
+  it('goo pools are terrain: every mold knows where they are, even in the fog', () => {
     const { world, me } = setup();
-    world.fertile.fill(0);
-    const far = cellOf(world, 90, 40);
-    world.fertile[far] = 1;
+    const far = placeFood(world, 'goo', 80, 10, 'initial');
+    expect(far).not.toBeNull();
     const view = viewFor(world, me);
-    expect(view.visibility(far)).toBe(0);
-    expect(view.fertileAt(far)).toBe(true);
-    expect(view.fertileAt(cellOf(world, 91, 40))).toBe(false);
+    expect(view.visibility(cellOf(world, 80, 10))).toBe(0);
+    expect(view.knownPools()).toEqual([{ cell: cellOf(world, 80, 10), w: 4, h: 3, cells: 12, owned: 0 }]);
+    expect(view.knownFood()).toHaveLength(0); // a pool is not food to be eaten
   });
 
-  it('exposes own farms, caps, and levels, and nothing about an opponent', async () => {
-    const { placeBuilding } = await import('../../../src/sim/buildings');
-    const { withStoreHouse } = await import('../../helpers');
+  it('reports how many pool cells the mold itself holds, and nothing about a rival', () => {
     const { world, me, rival } = setup();
-    world.fertile[cellOf(world, 16, 25)] = 1;
-    world.fertile[cellOf(world, 84, 25)] = 1;
-    for (const c of world.components.values()) c.pool = 150;
-    expect(placeBuilding(world, me, 'farm', cellOf(world, 16, 25))).toEqual({ ok: true });
-    expect(placeBuilding(world, rival, 'farm', cellOf(world, 84, 25))).toEqual({ ok: true });
-    withStoreHouse(world, me, cellOf(world, 14, 25));
+    placeFood(world, 'goo', 17, 24, 'initial');
+    addCell(world, me, cellOf(world, 17, 24), cellOf(world, 16, 25));
+    addCell(world, me, cellOf(world, 18, 24), cellOf(world, 17, 24));
     const view = viewFor(world, me);
-    const farms = view.farms();
-    expect(farms).toHaveLength(1); // not the rival's
-    expect(farms[0]).toMatchObject({ cell: cellOf(world, 16, 25), level: world.balance.buildings.farm.defaultLevel, linked: true });
-    expect(farms[0]!.cap).toBe(world.balance.pool.baseCap + world.balance.buildings.storehouse.capacity);
-    expect(view.farmLevel(farms[0]!.id)).toBe(farms[0]!.level);
-    const rivalFarm = world.buildings.find((b) => b.type === 'farm' && b.moldId === rival)!;
-    expect(view.farmLevel(rivalFarm.id)).toBe(-1);
-    const piece = view.self.components[0]!;
-    expect(piece).toMatchObject({ storeHouses: 1, linkedFarms: 1 });
-    expect(view.pieceOf(cellOf(world, 16, 25))).toBe(piece.id);
-    expect(view.pieceOf(cellOf(world, 84, 25))).toBe(-1);
+    expect(view.knownPools()[0]).toMatchObject({ owned: 2, cells: 12 });
+    expect(viewFor(world, rival).knownPools()[0]).toMatchObject({ owned: 0 });
   });
 
-  it('canBuild reflects fertile ground and cost for farms', () => {
+  it('canBuild reflects cost for a store house', () => {
     const { world, me } = setup();
-    world.fertile.fill(0);
     const own = cellOf(world, 16, 25);
     for (const c of world.components.values()) c.pool = 100;
-    expect(viewFor(world, me).canBuild('farm', own)).toBe(false); // not fertile
-    world.fertile[own] = 1;
-    expect(viewFor(world, me).canBuild('farm', own)).toBe(true);
+    expect(viewFor(world, me).canBuild('storehouse', own)).toBe(true);
     for (const c of world.components.values()) c.pool = 1;
-    expect(viewFor(world, me).canBuild('farm', own)).toBe(false); // cannot pay
+    expect(viewFor(world, me).canBuild('storehouse', own)).toBe(false); // cannot pay
   });
 });
