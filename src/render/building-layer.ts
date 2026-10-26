@@ -6,10 +6,10 @@ import { INK, moldColor } from './palette';
 import { style as look } from './style';
 import { CELL } from './units';
 
-const POT = 0x8a5a2b;
-const POT_SHADE = 0x5e3a1b;
-const POT_LIGHT = 0xc58a4e;
-const SPOT = 0xfff6dc;
+const POOL_RIM_SHADE = 0x2a3a1f;
+const SLIME = 0x7ed957;
+const SLIME_DARK = 0x3e8f2e;
+const SLIME_LIGHT = 0xd8ffb0;
 /** the farm is drawn a bit larger than one cell so it reads at a glance */
 const FARM_SCALE = 1.35;
 
@@ -42,32 +42,34 @@ export interface BuildingStyle {
 }
 
 /**
- * An inked nutrient farm: a round planter with three sprouting mushroom caps. Drawn with
- * hard offset shadow, flat two-band shading, and heavy outlines (FR-032). `ghost` draws it as a
- * see-through placement preview in the given outline color.
+ * An inked slime pool (the sim's farm): a shallow basin in the owner's color holding a pool of green
+ * slime with a glossy highlight, a couple of bubbles and a small mound rising in the middle. Drawn
+ * with a hard offset shadow, flat two-band shading and heavy outlines (FR-032). `ghost` draws it as
+ * a see-through placement preview in the given outline color.
  */
-export function drawFarm(g: Graphics, cx: number, cy: number, capColor: number, ghost?: number): void {
+export function drawFarm(g: Graphics, cx: number, cy: number, rimColor: number, ghost?: number): void {
   const alpha = ghost === undefined ? 1 : 0.6;
   const ink = ghost ?? INK;
   const S = FARM_SCALE;
   const w = ghost === undefined ? 3 : 2.5;
 
   // hard offset shadow
-  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 9.5 * S, 4.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 6 * S, 10 * S, 4.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
 
-  // stems and caps behind the pot rim
-  const caps: [number, number, number][] = [[-5.5, -3, 3.6], [0.5, -6.5, 4.4], [6, -2.5, 3.4]];
-  for (const [dx, dy, r] of caps) {
-    g.roundRect(cx + (dx - 1.1) * S, cy + dy * S, 2.2 * S, 7 * S, 1).fill({ color: SPOT, alpha }).stroke({ width: 1.6, color: ink, alpha });
-    g.ellipse(cx + dx * S, cy + dy * S, r * S, r * 0.75 * S).fill({ color: capColor, alpha }).stroke({ width: w, color: ink, alpha, join: 'round' });
-    g.ellipse(cx + (dx + r * 0.38) * S, cy + (dy + r * 0.3) * S, r * 0.5 * S, r * 0.34 * S).fill({ color: INK, alpha: 0.26 * alpha });
-    g.circle(cx + (dx - r * 0.3) * S, cy + (dy - r * 0.2) * S, Math.max(0.9, r * 0.22 * S)).fill({ color: SPOT, alpha });
-  }
+  // basin: dark lower band and a thick rim in the owner's color
+  g.ellipse(cx, cy + 3.6 * S, 10 * S, 6 * S).fill({ color: POOL_RIM_SHADE, alpha }).stroke({ width: w, color: ink, alpha });
+  g.ellipse(cx, cy + 2.8 * S, 10 * S, 5 * S).fill({ color: rimColor, alpha }).stroke({ width: w, color: ink, alpha });
 
-  // planter: dark lower band, lit upper band, thick rim
-  g.ellipse(cx, cy + 3.4 * S, 9 * S, 5.6 * S).fill({ color: POT_SHADE, alpha }).stroke({ width: w, color: ink, alpha });
-  g.ellipse(cx, cy + 2.6 * S, 9 * S, 4.1 * S).fill({ color: POT, alpha }).stroke({ width: w, color: ink, alpha });
-  g.ellipse(cx - 2.4 * S, cy + 1.4 * S, 3.6 * S, 1.2 * S).fill({ color: POT_LIGHT, alpha });
+  // the slime: dark body, lit surface, glossy highlight
+  g.ellipse(cx, cy + 2.8 * S, 7.8 * S, 3.7 * S).fill({ color: SLIME_DARK, alpha }).stroke({ width: 1.8, color: ink, alpha });
+  g.ellipse(cx - 0.6 * S, cy + 2.3 * S, 6.6 * S, 2.9 * S).fill({ color: SLIME, alpha });
+  g.ellipse(cx - 3 * S, cy + 1.5 * S, 2.6 * S, 0.9 * S).fill({ color: SLIME_LIGHT, alpha });
+
+  // a mound of slime rising in the middle, and two bubbles
+  g.ellipse(cx + 0.8 * S, cy + 0.2 * S, 3.4 * S, 2.6 * S).fill({ color: SLIME, alpha }).stroke({ width: w * 0.7, color: ink, alpha, join: 'round' });
+  g.ellipse(cx + 0.1 * S, cy - 0.6 * S, 1.3 * S, 0.8 * S).fill({ color: SLIME_LIGHT, alpha });
+  g.circle(cx + 4.2 * S, cy + 1.2 * S, 1.5 * S).fill({ color: SLIME_LIGHT, alpha }).stroke({ width: 1.4, color: ink, alpha });
+  g.circle(cx - 4.6 * S, cy + 3.6 * S, 1.1 * S).fill({ color: SLIME_LIGHT, alpha }).stroke({ width: 1.2, color: ink, alpha });
 }
 
 /** An inked booster factory: a squat machine with a chimney and a lightning bolt on its front. */
@@ -128,7 +130,7 @@ export function drawHarvester(g: Graphics, cx: number, cy: number, flag: number,
 
 /**
  * An inked store house: a squat barn with a red roof and a round steel tank beside it, so it
- * reads as "storage" and differs from the farm's mushrooms, the booster's chimney and the
+ * reads as "storage" and differs from the slime pool, the booster's chimney and the
  * harvester's tripod even in grayscale.
  */
 export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {

@@ -128,7 +128,7 @@ export class Hud {
     this.el.starved!.hidden = !hud.growthStarved;
     const unlinked = hud.farms.unlinked;
     this.el.unlinked!.hidden = unlinked === 0;
-    if (unlinked > 0) this.el.unlinked!.textContent = `${unlinked} ${unlinked === 1 ? 'farm is' : 'farms are'} not paying: build a Store House (T) on their vein`;
+    if (unlinked > 0) this.el.unlinked!.textContent = `${unlinked} ${unlinked === 1 ? 'pool is' : 'pools are'} not paying: build a Store House (T) on their vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
     this.el.chip!.textContent = `Fight ${Math.round(hud.allocation * 100)}%`;
     for (const b of this.speedButtons) {

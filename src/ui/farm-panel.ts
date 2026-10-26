@@ -3,7 +3,7 @@ import { TICK_DT } from '../sim/types';
 import type { World } from '../sim/types';
 
 /**
- * The comic panel for the selected farm (contracts/controls.md): output pips, income and upkeep
+ * The comic panel for the selected slime pool (contracts/controls.md): output pips, income and upkeep
  * at that level, a status line, and - / + buttons. It only reads the world; the buttons ask the
  * caller to nudge the level, which becomes a `setFarmOutput` command.
  */
@@ -19,7 +19,7 @@ export class FarmPanel {
     parent.insertAdjacentHTML(
       'beforeend',
       `<div class="panel farm-panel" hidden>
-        <div class="panel-title">Nutrient Farm</div>
+        <div class="panel-title">Slime Pool</div>
         <div class="dial">
           <button type="button" data-delta="-1" title="Less output ([)" aria-label="Less output">&minus;</button>
           <div class="pips" data-f="pips" role="img"></div>

@@ -155,3 +155,6 @@ Nothing in `src/sim/` changes in this feature.
 - US1 was checked in the browser pane with Touch mode on: a synthetic touch tap placed a target marker, the round buttons showed, and a fresh touch profile started on Low quality. Feel on a real phone is still for the playtest checklist.
 
 - Placement snapping (after phone testing): a chosen spot snaps to the nearest cell where the building is allowed, within about 36 screen pixels (2 to 8 cells), falling back to your nearest free vein cell so the reason shows. It applies to mouse and touch alike; only your own cells are ever returned.
+
+- Build menu (touch): the build block became one Build button that opens a modal list (name, cost, count, description). Desktop keeps the bar.
+- Slime pool: the farm is now drawn and named as a slimy green pool (build bar icon, map art, panel title, messages, README, hotkey F to P). The rules still call it a farm, so no sim or test changes.

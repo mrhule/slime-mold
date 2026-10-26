@@ -14,9 +14,9 @@ export const REASONS: Record<string, string> = {
   'no-food-nearby': 'Build next to big food!',
   'food-too-small': 'That food is too small!',
   'already-harvested': 'Already harvesting that!',
-  'not-fertile': 'Farms need fertile ground!',
+  'not-fertile': 'Pools need fertile ground!',
   'not-your-building': 'That is not your building!',
-  'not-a-farm': 'Only farms have an output dial!',
+  'not-a-farm': 'Only pools have an output dial!',
   'bad-level': 'That output level is not allowed!',
 };
 

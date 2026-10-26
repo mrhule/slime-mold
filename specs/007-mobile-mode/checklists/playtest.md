@@ -51,3 +51,9 @@ Run on a real phone in landscape (or Chrome device mode), with Touch mode Auto o
 - [ ] With a building chosen, a tap (or the mouse) a little off the vein lands the preview on the nearest allowed vein cell
 - [ ] A farm snaps to fertile ground on your vein, a harvester to a cell beside big food
 - [ ] With nothing allowed nearby, the preview stays where you tapped and says why
+
+## Build menu and Slime Pool
+
+- [ ] The Build button (bottom right) opens a modal list of the four buildings with cost, count and a short description; tapping one closes it and starts placement; the X or the dim area closes it
+- [ ] The slime pool (the old farm, still the same building in the rules) shows a green pool with a rim in your colour, in the menu and on the map; it reads at a glance next to the store house
+- [ ] Desktop: the build keys are now P / T / B / M (P for pool)

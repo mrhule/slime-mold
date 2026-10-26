@@ -98,7 +98,7 @@ export class Screens {
       <ul class="keys kbd-only">
         <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel</li>
         <li><b>Q / E</b> or the slider: send nutrients to growth or to the fight</li>
-        <li><b>F</b> build a farm &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
+        <li><b>P</b> build a slime pool &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
       </ul>
     </div></div>`;
   }

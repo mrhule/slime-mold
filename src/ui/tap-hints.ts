@@ -6,9 +6,9 @@ interface HintTarget {
   closest(selector: string): { getAttribute(name: string): string | null } | null;
 }
 
-const HINT_AREAS = '.hud, .buildbar, .farm-panel, .touch-bar';
+const HINT_AREAS = '.hud, .farm-panel, .touch-bar';
 
-/** the hint for a tapped element: its own or its nearest ancestor's title, inside the HUD or build bar */
+/** the hint for a tapped element: its own or its nearest ancestor's title, inside the HUD, farm panel or round buttons */
 export function hintFor(target: HintTarget | null): string | null {
   if (!target) return null;
   if (!target.closest(HINT_AREAS)) return null;
