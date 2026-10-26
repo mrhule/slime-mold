@@ -237,8 +237,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     sugarCube: { w: 4, h: 4, nutrients: 300, absorbRate: 3.0 },
     fruitSlice: { w: 6, h: 4, nutrients: 500, absorbRate: 1.0 },
     // a pool of primordial goo: 12 cells holding 1 nutrient each that are never used up; each cell a mold
-    // holds pays 0.125/s while a store house is on its piece, so a fully held pool pays 1.5/s (008)
-    goo: { w: 4, h: 3, nutrients: 12, absorbRate: 0.125, infinite: true },
+    // holds pays 0.2/s while a store house is on its piece, so a fully held pool pays 2.4/s (008, S12 balance)
+    goo: { w: 4, h: 3, nutrients: 12, absorbRate: 0.2, infinite: true },
   },
 
   buildings: {
@@ -248,7 +248,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   pool: { baseCap: 300 },
-  pools: { contested: 2, nearMin: 11, nearMax: 19, spacing: 8 },
+  pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },
 
   difficulty: {
     baseW: 160,

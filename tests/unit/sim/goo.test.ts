@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { defaultBalance } from '../../../src/config/balance';
 import { canPlace } from '../../../src/sim/buildings';
 import { engulfFood, placeFood, poolCounts, poolIncome } from '../../../src/sim/food';
 import { readHud } from '../../../src/sim/hud';
@@ -11,7 +12,7 @@ import { TICK_DT } from '../../../src/sim/types';
 import type { World } from '../../../src/sim/types';
 import { cellOf, createOpenWorld, createWorldWithMold, withStoreHouse } from '../../helpers';
 
-const RATE = 0.125; // balance.foodTypes.goo.absorbRate, per cell per second
+const RATE = defaultBalance.foodTypes.goo.absorbRate; // per cell per second
 
 /** a mold whose east arm reaches a goo pool at (14..17, 19..21); returns the world and the arm's last cell */
 function reachPool(): { world: World; mold: { id: number }; arm: number; pool: ReturnType<typeof placeFood> } {
@@ -35,7 +36,7 @@ describe('goo pools (008)', () => {
     expect(held).toBe(12);
   });
 
-  it('pays nothing without a store house, then 0.125 per cell per second with one', () => {
+  it('pays nothing without a store house, then its rate per cell per second with one', () => {
     const { world, mold, arm } = reachPool();
     expect(poolIncome(world, mold.id)).toBe(0);
     expect(poolCounts(world, mold.id)).toEqual({ held: 1, waiting: 1 });

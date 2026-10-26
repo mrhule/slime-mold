@@ -13,8 +13,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 
 - **Tap** the map to grow there; **drag** to look around; **pinch** to zoom; **press and hold** a marker to
   cancel it. The round buttons at the top right open the menu, jump to your core and clear all targets.
-- **Build:** pick a building, tap a spot to preview it, then press **Build** (or Cancel). Tap your own slime pool
-  to change its output.
+- **Build:** pick a building, tap a spot to preview it, then press **Build** (or Cancel).
 - Touch mode starts on Low quality to save battery; you can raise it in Settings.
 
 ## Sound, music and look
@@ -40,9 +39,11 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
   everyone, so it becomes a race.
 - **Spend.** Growing costs nutrients and every cell costs upkeep. If you grow past what your
   income can pay for, your outermost cells starve. Each connected piece of vein holds only so many
-  nutrients, so build **Store Houses** (`T`) to raise that cap. **Slime Pools** (`P`) only go on
-  **fertile ground** (green patches with inked tufts, visible even in the fog) and only pay while a
-  store house is on their vein; click a pool to dial its output up or down (`[` / `]`). A store
+  nutrients, so build **Store Houses** (`T`) to raise that cap. Income comes from **pools of
+  primordial goo** (glowing green wells, visible even in the fog): grow a vein to one and the mold
+  spreads over it and harvests it. A pool never runs dry, pays for each of its cells you hold, and
+  only pays while a store house is on the same vein; where two molds reach one pool, the cells each
+  holds decide the split. A store
   house also speeds up tips and **Harvesters** (`M`, beside big food) along its vein, fading with
   distance, at a small drain on the stock. **Booster Factories** (`B`) make the whole vein they sit
   on stronger in fights.
@@ -63,8 +64,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 |---|---|
 | Left-click | Set a growth target (or place a building in placement mode) |
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
-| `P` / `T` / `B` / `M` | Place a Slime Pool / Store House / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
-| Click your pool, then `[` / `]` | Open its output panel and lower / raise its output (income and upkeep move together) |
+| `T` / `B` / `M` | Place a Store House / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |
 | `1` `2` `3` | Speed 1x, 2x, 3x |

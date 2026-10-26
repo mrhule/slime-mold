@@ -54,12 +54,19 @@ export class FoodLayer {
   private readonly g = new Graphics();
   /** an ink-tinted copy of every item shifted toward the lower right behind it: a heavier outline on the shadow side (A12) */
   private readonly rim = new Graphics();
+  /** goo pools are terrain, so they are drawn in their own container that sits above the fog (008 FR-001) */
+  readonly poolContainer = new Container();
+  private readonly poolG = new Graphics();
+  private readonly poolRim = new Graphics();
   private lastKey = '';
 
   constructor() {
     this.rim.tint = INK;
     this.rim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
     this.container.addChild(this.rim, this.g);
+    this.poolRim.tint = INK;
+    this.poolRim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
+    this.poolContainer.addChild(this.poolRim, this.poolG);
   }
 
   update(world: Readonly<World>): void {
@@ -103,12 +110,14 @@ export class FoodLayer {
     const g = this.g;
     g.clear();
     this.rim.clear();
+    this.poolG.clear();
+    this.poolRim.clear();
     for (const f of world.foodSources) {
       const st = pools.get(f.id);
       if (st) {
-        this.drawGoo(this.rim, f, st, world.tick);
-        this.drawGoo(g, f, st, world.tick);
-        if (st.waiting) drawUnlinked(g, (f.x + f.w / 2) * CELL, f.y * CELL - 2);
+        this.drawGoo(this.poolRim, f, st, world.tick);
+        this.drawGoo(this.poolG, f, st, world.tick);
+        if (st.waiting) drawUnlinked(this.poolG, (f.x + f.w / 2) * CELL, f.y * CELL - 2);
         continue;
       }
       const a = amounts.get(f.id);
