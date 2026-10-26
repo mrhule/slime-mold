@@ -26,6 +26,7 @@ export function addCell(world: World, moldId: MoldId, cell: CellIndex, linkTo: C
   const mold = moldOf(world, moldId);
   world.owner[cell] = moldId;
   world.biomass[cell] = 1;
+  world.strayFor[cell] = 0;
   mold.cellCount++;
   mold.stats.cellsBuilt++;
   if (mold.cellCount > mold.stats.peakSize) mold.stats.peakSize = mold.cellCount;

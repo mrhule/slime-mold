@@ -61,6 +61,7 @@ export function createWorld(
   const boost = new Float32Array(cells).fill(1);
   const supply = new Float32Array(cells).fill(1);
   const feed = new Float32Array(cells).fill(1);
+  const strayFor = new Float32Array(cells);
   return {
     width,
     height,
@@ -91,6 +92,7 @@ export function createWorld(
     supply,
     supplyActive: false,
     feed,
+    strayFor,
     supplyUse: new Set<number>(),
     cuts: new Set<number>(),
     drops: [],

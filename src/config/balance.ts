@@ -153,8 +153,13 @@ export interface BalanceConfig {
   /** one entry per building type (002) */
   buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
 
-  /** how far supply carries along the veins: from the core and from each working factory, in cells; the growth speed left past the end (0.5 = half); and how many seconds a vein out of every reach takes to fade and die */
-  feed: { coreReach: number; trickle: number; fadeSeconds: number };
+  /**
+   * how far supply carries along the veins: from the core and from each working factory, in cells (a
+   * factory has its own reach). Growth speed falls from 1 at supply to `trickle` at the end of the reach,
+   * then to `floor` (almost nothing) half a reach further out. A vein out of every reach for `graceSeconds`
+   * (time to build a factory) starts to die back, taking `fadeSeconds` to go.
+   */
+  feed: { coreReach: number; trickle: number; floor: number; graceSeconds: number; fadeSeconds: number };
 
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
@@ -254,12 +259,12 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   },
 
   buildings: {
-    storehouse: { cost: 25, upkeep: 0.2, limit: 4, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
+    storehouse: { cost: 25, upkeep: 0.2, limit: 6, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
 
-  feed: { coreReach: 40, trickle: 0.5, fadeSeconds: 180 },
+  feed: { coreReach: 40, trickle: 0.5, floor: 0.04, graceSeconds: 30, fadeSeconds: 60 },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

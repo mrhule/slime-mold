@@ -284,22 +284,31 @@ export function recomputeSupply(world: World): void {
 }
 
 /**
- * Rebuild how well each vein cell is fed: 1 right at supply (a mold's core, or a working store
- * house), tapering linearly along the veins to `trickle` at the end of its reach. Cells out of
- * every reach get the trickle, so a long thin chain still grows, only slowly. Overlapping
- * supplies take the best, not the sum.
+ * How well fed a vein cell `d` steps along the veins from a supply with the given reach is: 1 right at
+ * it, falling in a line to `trickle` at the end of the reach, then to `floor` (growth almost stops)
+ * half a reach further out, and `floor` beyond.
+ */
+export function feedAt(world: Readonly<World>, d: number, reach: number): number {
+  const { trickle, floor } = world.balance.feed;
+  if (d <= reach) return 1 - ((1 - trickle) * d) / reach;
+  const over = Math.min(1, (d - reach) / (0.5 * reach));
+  return trickle - (trickle - floor) * over;
+}
+
+/**
+ * Rebuild how well each vein cell is fed (see `feedAt`) from the best supply near it: a mold's core,
+ * any cell over food, or a working factory (which has its own reach). Overlapping supplies take the
+ * best, not the sum. Cells out of every reach are left at the floor.
  */
 export function recomputeFeed(world: World): void {
-  const { coreReach, trickle } = world.balance.feed;
-  const fill = (cover: { cell: CellIndex; bonus: number }[]): void => {
-    for (const { cell, bonus } of cover) {
-      const f = trickle + (1 - trickle) * bonus;
-      if (f > (world.feed[cell] as number)) world.feed[cell] = f;
-    }
+  const { coreReach, floor } = world.balance.feed;
+  world.feed.fill(floor);
+  const take = (cell: CellIndex, f: number): void => {
+    if (f > (world.feed[cell] as number)) world.feed[cell] = f;
   };
-  world.feed.fill(trickle);
   // the core and every cell over food supply their own veins, all at once: one search from every source
   const w = world.width;
+  const limit = 1.5 * coreReach;
   const dist = new Int32Array(world.owner.length).fill(-1);
   const queue: CellIndex[] = [];
   const seed = (c: CellIndex): void => {
@@ -312,8 +321,8 @@ export function recomputeFeed(world: World): void {
   for (let head = 0; head < queue.length; head++) {
     const c = queue[head] as CellIndex;
     const d = dist[c] as number;
-    world.feed[c] = Math.max(world.feed[c] as number, trickle + (1 - trickle) * (1 - d / coreReach));
-    if (d + 1 >= coreReach) continue;
+    take(c, feedAt(world, d, coreReach));
+    if (d + 1 >= limit) continue;
     const bits = world.edges[c] as number;
     for (let k = 0; k < 8; k++) {
       if (!(bits & (1 << k))) continue;
@@ -323,7 +332,12 @@ export function recomputeFeed(world: World): void {
       queue.push(n);
     }
   }
-  for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed && b.boosting) fill(veinCover(world, b.cell, reachOf(world, b), 1));
+  for (const b of world.buildings) {
+    if (b.type !== 'storehouse' || b.destroyed || !b.boosting) continue;
+    const reach = reachOf(world, b);
+    // veinCover tapers 1 -> 0 over its reach, so ask for one and a half reaches and turn each value back into a distance
+    for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * reach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * reach, reach));
+  }
 }
 
 /**

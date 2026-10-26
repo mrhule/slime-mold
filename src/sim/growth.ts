@@ -238,8 +238,10 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
     builtThisTick++;
     addCell(world, mold.id, next, head);
     // a new cell is one step farther from supply than the one it grew from, until the next recompute
-    const { coreReach, trickle } = world.balance.feed;
-    world.feed[next] = Math.max(trickle, (world.feed[head] as number) - (1 - trickle) / coreReach);
+    const fd = world.balance.feed;
+    const here = world.feed[head] as number;
+    const step = here > fd.trickle ? (1 - fd.trickle) / fd.coreReach : (fd.trickle - fd.floor) / (0.5 * fd.coreReach);
+    world.feed[next] = Math.max(fd.floor, here - step);
     engulfFood(world, mold.id, next);
     growSpurs(world, mold, tip, head, next);
     tip.pos++;

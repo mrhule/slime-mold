@@ -10,7 +10,7 @@ import { assertInvariants } from '../../../src/sim/world';
 import { cellOf, createOpenWorld } from '../../helpers';
 
 const spec = defaultBalance.buildings.storehouse;
-const { coreReach, fadeSeconds } = defaultBalance.feed;
+const { coreReach, graceSeconds, fadeSeconds } = defaultBalance.feed;
 const quiet = { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0 };
 
 /** a vein east from the core along y = 15, long enough to run past the core's reach */
@@ -80,11 +80,13 @@ describe('factory upgrades', () => {
 });
 
 describe('veins out of every reach fade and die', () => {
-  it('cells past the core\'s reach lose biomass and die while the near ones keep theirs', () => {
+  it('cells past the core\'s reach are left alone for the grace period, then lose biomass and die', () => {
     const { world, mold, cells } = longVein(70);
     const near = cells[10] as number;
     const far = cells[60] as number;
-    age(world, fadeSeconds * 0.5);
+    age(world, graceSeconds - 2);
+    expect(world.biomass[far]).toBe(1); // still time to build a factory
+    age(world, 2 + fadeSeconds * 0.5);
     expect(world.biomass[near]).toBe(1);
     expect(world.biomass[far]!).toBeLessThan(1);
     expect(world.biomass[far]!).toBeGreaterThan(0);
@@ -100,7 +102,7 @@ describe('veins out of every reach fade and die', () => {
     const far = cells[60] as number;
     placeBuilding(world, mold.id, 'storehouse', cells[58] as number);
     comp.pool = 300;
-    age(world, fadeSeconds * 2);
+    age(world, graceSeconds + fadeSeconds * 2);
     expect(world.owner[far]).toBe(mold.id);
     expect(world.biomass[far]).toBe(1);
   });
@@ -109,8 +111,23 @@ describe('veins out of every reach fade and die', () => {
     const { world, mold, cells } = longVein(70);
     const tipHead = cells[69] as number;
     mold.targets.push({ id: 99, cell: tipHead, path: [tipHead], pos: 0, progress: 0, rate: 0, state: 'growing', starvedFor: 0 } as never);
-    age(world, fadeSeconds * 2);
+    age(world, graceSeconds + fadeSeconds * 2);
     expect(world.owner[tipHead]).toBe(mold.id);
     expect(world.owner[mold.core]).toBe(mold.id);
+  });
+});
+
+describe('building a factory in time saves a stretch of vein', () => {
+  it('the clock resets once the vein is back in reach', () => {
+    const { world, mold, comp, cells } = longVein(70);
+    const far = cells[60] as number;
+    age(world, graceSeconds + 5);
+    expect(world.strayFor[far]!).toBeGreaterThan(graceSeconds);
+    placeBuilding(world, mold.id, 'storehouse', cells[58] as number);
+    comp.pool = 300;
+    age(world, fadeSeconds);
+    expect(world.strayFor[far]).toBe(0);
+    expect(world.biomass[far]!).toBeGreaterThan(0.5); // hurt a little, but saved
+    expect(world.owner[far]).toBe(mold.id);
   });
 });

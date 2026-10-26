@@ -277,11 +277,13 @@ export interface MoldView {
   /** goo pools are terrain, known to every mold in the fog like obstacles: the top-left cell and the cells the mold holds of each */
   knownPools(): { cell: CellIndex; w: number; h: number; cells: number; owned: number }[];
   /** public rules the AI plans with */
-  rules: { storeHousesPerPiece: number };
+  rules: { storeHousesPerPiece: number; /** feed at the end of a supply's reach: cells at or below it are out of reach */ feedTrickle: number; factoryMaxLevel: number; factoryUpgradeCost: number[] };
   /** id of the mold's own piece holding this cell, or -1 */
   pieceOf(cell: CellIndex): number;
   ownerAt(cell: CellIndex): MoldId | 0;
   biomassAt(cell: CellIndex): number | null;
+  /** how well fed one of the mold's own cells is, from 1 at supply down to the floor far from it (see balance.feed) */
+  feedAt(cell: CellIndex): number;
   foodAt(cell: CellIndex): number;
   visibleEnemyCells(): CellIndex[];
   knownFood(): { cell: CellIndex; amount: number; stale: boolean }[];
@@ -292,6 +294,8 @@ export interface MoldView {
   ownCells(): CellIndex[];
   /** would a building be allowed here right now? (same rules as the player, own cells only) */
   canBuild(type: BuildingType, cell: CellIndex): boolean;
+  /** the mold's own factories: where, how upgraded, and the piece they stand in */
+  ownFactories(): { cell: CellIndex; level: number; piece: number }[];
   /** the most nutrients any one piece of the mold holds */
   richestPool(): number;
   /** what a building costs (public knowledge) */
@@ -373,6 +377,8 @@ export interface World {
   supplyActive: boolean;
   /** growth speed (trickle..1) from how far each cell is along the veins from the core or a working store house; 1 = right at supply */
   feed: Float32Array;
+  /** seconds each cell has been out of every supply's reach (it starts dying back after the grace period) */
+  strayFor: Float32Array;
   /** ids of pieces where a boosted tip or harvester did work this tick (store houses drain only then); not hashed, rebuilt every tick */
   supplyUse: Set<number>;
   /** veins the player cut on purpose, as cutKey(a, b); they are not healed or bridged around until rejoined */

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { defaultBalance } from '../../../src/config/balance';
-import { placeBuilding, recomputeFeed, recomputeSupply } from '../../../src/sim/buildings';
+import { feedAt, placeBuilding, recomputeFeed, recomputeSupply } from '../../../src/sim/buildings';
 import { addMold } from '../../../src/sim/molds';
 import { addCell } from '../../../src/sim/network';
 import type { Component } from '../../../src/sim/types';
 import { cellOf, createOpenWorld } from '../../helpers';
 
-const { coreReach, trickle } = defaultBalance.feed;
+const { coreReach, trickle, floor } = defaultBalance.feed;
 const reach = defaultBalance.buildings.storehouse.reach;
 
 /** a straight vein east from the core, long enough to run past the core's reach */
@@ -23,15 +23,18 @@ function setup(len = 60) {
 }
 
 describe('feed: growth speed falls off with distance from supply', () => {
-  it('is 1 at the core, tapers linearly along the vein, and holds the trickle past the reach', () => {
+  it('is 1 at the core, falls to the trickle at the end of the reach, then to almost nothing half a reach further', () => {
     const { world, mold, cells } = setup();
     recomputeFeed(world);
     expect(world.feed[mold.core]).toBeCloseTo(1, 6);
     for (let i = 0; i < cells.length; i++) {
       const d = i + 1;
-      const want = d < coreReach ? trickle + (1 - trickle) * (1 - d / coreReach) : trickle;
-      expect(world.feed[cells[i] as number], `cell ${i}`).toBeCloseTo(want, 5);
+      expect(world.feed[cells[i] as number], `cell ${i}`).toBeCloseTo(feedAt(world, d, coreReach), 5);
     }
+    expect(feedAt(world, coreReach, coreReach)).toBeCloseTo(trickle, 6);
+    expect(feedAt(world, 1.5 * coreReach, coreReach)).toBeCloseTo(floor, 6);
+    expect(feedAt(world, 3 * coreReach, coreReach)).toBeCloseTo(floor, 6);
+    expect(floor).toBeLessThan(0.1); // growth is almost zero out there
   });
 
   it('a working store house restores full feed around itself', () => {
@@ -53,6 +56,6 @@ describe('feed: growth speed falls off with distance from supply', () => {
     (world.components.get(world.component[store] as number) as Component).pool = 0;
     recomputeSupply(world);
     recomputeFeed(world);
-    expect(world.feed[store]).toBeCloseTo(trickle, 6);
+    expect(world.feed[store]).toBeCloseTo(feedAt(world, 51, coreReach), 6);
   });
 });

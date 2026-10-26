@@ -132,9 +132,9 @@ export class VeinLayer {
     for (const c of cells) if ((hw[c] as number) === 0) hw[c] = 1.6;
 
     // how well fed each cell is, 0 (far from supply) to 1 (at it): thin and dull veins read as starved
-    const { trickle } = world.balance.feed;
+    const { floor } = world.balance.feed;
     // a cell that is fading away (biomass falling) looks as starved as one far from supply
-    const fedAt = (c: number): number => Math.min(world.biomass[c] as number, Math.min(1, Math.max(0, ((world.feed[c] as number) - trickle) / (1 - trickle || 1))));
+    const fedAt = (c: number): number => Math.min(world.biomass[c] as number, Math.min(1, Math.max(0, ((world.feed[c] as number) - floor) / (1 - floor || 1))));
     const slim = (c: number): number => 0.55 + 0.45 * fedAt(c);
 
     const nodeVerts = 9; // centre + 8 around
