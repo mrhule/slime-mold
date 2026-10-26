@@ -91,24 +91,60 @@ describe('TrackPlayer', () => {
     return { player, els, exhausted: () => exhausted };
   }
 
-  it('starts a track, then the next when it ends, and keeps going', () => {
+  it('plays on one element: the next track is a new src on the same element, and it keeps going', () => {
     const { player, els } = make(['a', 'b']);
     player.start();
     expect(els).toHaveLength(1);
     expect(els[0]!.plays).toBe(1);
     expect(player.playing).toBe(true);
+    const first = els[0]!.src;
     els[0]!.fire('ended');
-    expect(els).toHaveLength(2);
-    expect(els[1]!.src).not.toBe(els[0]!.src);
-    els[1]!.fire('ended');
-    expect(els).toHaveLength(3);
+    expect(els).toHaveLength(1);
+    expect(els[0]!.src).not.toBe(first);
+    expect(els[0]!.plays).toBe(2);
+    const second = els[0]!.src;
+    els[0]!.fire('ended');
+    expect(els[0]!.src).not.toBe(second);
+    expect(els[0]!.plays).toBe(3);
+  });
+
+  it('loops through the whole list over and over until it is stopped', () => {
+    const { player, els } = make(['a', 'b', 'c']);
+    player.start();
+    const seen: string[] = [els[0]!.src];
+    for (let i = 0; i < 11; i++) {
+      els[0]!.fire('ended');
+      seen.push(els[0]!.src);
+    }
+    expect(new Set(seen)).toEqual(new Set(['a', 'b', 'c']));
+    expect(player.playing).toBe(true);
+    player.stop();
+    els[0]!.fire('ended');
+    expect(player.playing).toBe(false);
+  });
+
+  it('kick restarts playback unless the player is paused or stopped', () => {
+    const { player, els } = make(['a']);
+    player.start();
+    const plays = els[0]!.plays;
+    player.kick();
+    expect(els[0]!.plays).toBe(plays + 1);
+    player.pause();
+    player.kick();
+    expect(els[0]!.plays).toBe(plays + 1);
+    player.resume();
+    player.stop();
+    const after = els[0]!.plays;
+    player.kick();
+    expect(els[0]!.plays).toBe(after);
   });
 
   it('skips a track that fails and plays the next', () => {
     const { player, els, exhausted } = make(['a', 'b', 'c']);
     player.start();
     els[0]!.fire('error');
-    expect(els).toHaveLength(2);
+    expect(els).toHaveLength(1);
+    expect(els[0]!.plays).toBe(2); // moved on to the next track
     expect(exhausted()).toBe(0);
     expect(player.playing).toBe(true);
   });
@@ -117,7 +153,7 @@ describe('TrackPlayer', () => {
     const { player, els, exhausted } = make(['a', 'b']);
     player.start();
     els[0]!.fire('error');
-    els[1]!.fire('error');
+    els[0]!.fire('error');
     expect(exhausted()).toBe(1);
     expect(player.playing).toBe(false);
   });
@@ -127,7 +163,7 @@ describe('TrackPlayer', () => {
     player.start();
     els[0]!.fire('timeupdate'); // it really played
     els[0]!.fire('ended');
-    els[1]!.fire('error');
+    els[0]!.fire('error');
     expect(exhausted()).toBe(0);
   });
 
@@ -141,8 +177,9 @@ describe('TrackPlayer', () => {
     expect(els[0]!.plays).toBe(plays + 1);
     player.stop();
     expect(player.playing).toBe(false);
+    const playsAfterStop = els[0]!.plays;
     els[0]!.fire('ended'); // a late event after stop does nothing
-    expect(els).toHaveLength(1);
+    expect(els[0]!.plays).toBe(playsAfterStop);
   });
 
   it('an empty list reports exhaustion at once', () => {
@@ -166,8 +203,8 @@ describe('engine with recorded tracks', () => {
     engine.startMusic();
     expect(els).toHaveLength(1);
     els[0]!.fire('error');
-    els[1]!.fire('error'); // both failed: the engine starts the generated loop (it must not throw)
-    expect(els.length).toBeGreaterThanOrEqual(2);
+    els[0]!.fire('error'); // both failed: the engine starts the generated loop (it must not throw)
+    expect(els).toHaveLength(1);
   });
 
   it('with no tracks it never touches an audio element', () => {

@@ -87,6 +87,8 @@ async function main(): Promise<void> {
     if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
   };
   for (const t of unlockEvents) window.addEventListener(t, unlockAudio, { passive: true });
+  // a later tap or key press also restarts a recorded track the browser stopped (a phone locking its screen, say)
+  for (const t of ['pointerdown', 'keydown'] as const) window.addEventListener(t, () => engine.kick(), { passive: true });
 
   const send = (cmd: Command): void => enqueue(run.world, cmd);
   let applySettings: (change: Partial<Settings>) => void = () => {};

@@ -1,6 +1,6 @@
 /**
  * Recorded music: the audio files in `public/music` play as a shuffled playlist on the music bus,
- * track after track, forever. Each track streams through an `<audio>` element (no whole-file decode,
+ * track after track, forever. The tracks stream through one `<audio>` element (no whole-file decode,
  * so the big files cost no memory spike) routed into the same gain bus as the generated music, so the
  * music slider, mute, and pause all keep working. A track that fails to load is skipped; if none
  * load, `onExhausted` fires so the engine can fall back to the generated loop.
@@ -57,14 +57,22 @@ export function playlist(urls: readonly string[], rand: () => number = Math.rand
 
 const browserElement: TrackElementFactory = () => new Audio() as unknown as TrackElement;
 
+/**
+ * One `<audio>` element plays every track, changing its `src` for the next one. Phones (iOS above all)
+ * only let an element start playing from a tap, and a track that ends starts the next with no tap, so
+ * a fresh element per track would be blocked and the music would stop after one song. The one element
+ * is started from the first tap and stays unlocked for the rest of the session.
+ */
 export class TrackPlayer {
   private readonly next: () => string | null;
-  private current: TrackElement | null = null;
-  private currentGain: GainNode | null = null;
+  private el: TrackElement | null = null;
+  private gain: GainNode | null = null;
   private running = false;
   private paused = false;
   private failures = 0;
-  private played = 0;
+  private started = false;
+  private fadingOut = false;
+  private readonly total: number;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -78,8 +86,6 @@ export class TrackPlayer {
     this.total = urls.length;
   }
 
-  private readonly total: number;
-
   get playing(): boolean {
     return this.running;
   }
@@ -89,6 +95,10 @@ export class TrackPlayer {
     this.running = true;
     this.paused = false;
     this.failures = 0;
+    if (!this.attach()) {
+      this.fail();
+      return;
+    }
     this.playNext();
   }
 
@@ -101,7 +111,7 @@ export class TrackPlayer {
   pause(): void {
     this.paused = true;
     try {
-      this.current?.pause();
+      this.el?.pause();
     } catch {
       /* ignore */
     }
@@ -110,93 +120,104 @@ export class TrackPlayer {
   resume(): void {
     if (!this.running) return;
     this.paused = false;
+    this.play();
+  }
+
+  /** call from a tap or key press: starts the track again if the browser had refused or stopped it */
+  kick(): void {
+    if (this.running && !this.paused) this.play();
+  }
+
+  private play(): void {
     try {
-      void this.current?.play();
+      const p = this.el?.play();
+      if (p && typeof (p as Promise<void>).catch === 'function') (p as Promise<void>).catch(() => {});
     } catch {
       /* ignore */
     }
   }
 
-  private detach(): void {
-    const el = this.current;
-    this.current = null;
-    try {
-      el?.pause();
-      el?.removeAttribute?.('src');
-      el?.load?.();
-      this.currentGain?.disconnect();
-    } catch {
-      /* ignore */
-    }
-    this.currentGain = null;
-  }
-
-  private playNext(): void {
-    if (!this.running) return;
-    const url = this.next();
-    if (url === null) {
-      this.running = false;
-      this.onExhausted();
-      return;
-    }
-    this.detach();
+  /** create the one element and wire it into the music bus; false if the browser cannot */
+  private attach(): boolean {
+    if (this.el) return true;
     try {
       const el = this.makeElement();
       el.preload = 'auto';
       el.crossOrigin = 'anonymous';
-      el.src = url;
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
       this.ctx.createMediaElementSource(el as unknown as HTMLMediaElement).connect(gain);
       gain.connect(this.bus);
-      this.current = el;
-      this.currentGain = gain;
-
-      let started = false;
-      let fadingOut = false;
-      el.addEventListener('timeupdate', () => {
-        if (el !== this.current) return;
-        if (!started) {
-          started = true;
-          this.failures = 0;
-          this.played++;
-          gain.gain.setValueAtTime(0, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(1, this.ctx.currentTime + FADE_SECONDS);
-        }
-        const left = el.duration - el.currentTime;
-        if (!fadingOut && Number.isFinite(left) && left <= FADE_SECONDS && left > 0) {
-          fadingOut = true;
-          gain.gain.setValueAtTime(gain.gain.value, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + left);
-        }
-      });
+      el.addEventListener('timeupdate', () => this.onTime());
       el.addEventListener('ended', () => {
-        if (el === this.current) this.playNext();
+        if (this.running) this.playNext();
       });
       el.addEventListener('error', () => {
-        if (el !== this.current) return;
+        if (!this.running) return;
         this.failures++;
         // every track failed in a row: give up and let the engine fall back
-        if (this.failures >= Math.max(1, this.total)) {
-          this.running = false;
-          this.detach();
-          this.onExhausted();
-        } else {
-          this.playNext();
-        }
+        if (this.failures >= Math.max(1, this.total)) this.fail();
+        else this.playNext();
       });
-      if (!this.paused) {
-        const started$ = el.play();
-        if (started$ && typeof (started$ as Promise<void>).catch === 'function') (started$ as Promise<void>).catch(() => {});
-      }
+      this.el = el;
+      this.gain = gain;
+      return true;
     } catch {
-      this.failures++;
-      if (this.failures >= Math.max(1, this.total)) {
-        this.running = false;
-        this.onExhausted();
-      } else {
-        this.playNext();
-      }
+      return false;
     }
+  }
+
+  private onTime(): void {
+    const el = this.el;
+    const gain = this.gain;
+    if (!el || !gain) return;
+    if (!this.started) {
+      this.started = true;
+      this.failures = 0;
+      gain.gain.setValueAtTime(0, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(1, this.ctx.currentTime + FADE_SECONDS);
+    }
+    const left = el.duration - el.currentTime;
+    if (!this.fadingOut && Number.isFinite(left) && left <= FADE_SECONDS && left > 0) {
+      this.fadingOut = true;
+      gain.gain.setValueAtTime(gain.gain.value, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + left);
+    }
+  }
+
+  private fail(): void {
+    this.running = false;
+    this.detach();
+    this.onExhausted();
+  }
+
+  private detach(): void {
+    const el = this.el;
+    const gain = this.gain;
+    this.el = null;
+    this.gain = null;
+    try {
+      el?.pause();
+      el?.removeAttribute?.('src');
+      el?.load?.();
+      gain?.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private playNext(): void {
+    if (!this.running || !this.el) return;
+    const url = this.next();
+    if (url === null) {
+      this.fail();
+      return;
+    }
+    this.started = false;
+    this.fadingOut = false;
+    this.gain?.gain.setValueAtTime(0, this.ctx.currentTime);
+    this.el.src = url;
+    this.el.load?.();
+    if (!this.paused) this.play();
   }
 }

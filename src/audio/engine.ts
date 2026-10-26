@@ -155,6 +155,16 @@ export class AudioEngine {
     }
   }
 
+  /** call from any tap or key press: restarts the recorded track if the browser had refused or stopped it */
+  kick(): void {
+    try {
+      if (this.playing) void this.ctx?.resume?.();
+      this.tracks?.kick();
+    } catch {
+      /* ignore */
+    }
+  }
+
   stopMusic(): void {
     this.wantMusic = false;
     this.tracks?.stop();
