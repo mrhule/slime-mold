@@ -361,6 +361,8 @@ export interface World {
   supply: Float32Array;
   /** true while any working store house boosts some cell (lets rebuilding be skipped) */
   supplyActive: boolean;
+  /** growth speed (trickle..1) from how far each cell is along the veins from the core or a working store house; 1 = right at supply */
+  feed: Float32Array;
   /** ids of pieces where a boosted tip or harvester did work this tick (store houses drain only then); not hashed, rebuilt every tick */
   supplyUse: Set<number>;
   drops: DropEvent[];

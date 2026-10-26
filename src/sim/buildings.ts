@@ -258,6 +258,26 @@ export function recomputeSupply(world: World): void {
 }
 
 /**
+ * Rebuild how well each vein cell is fed: 1 right at supply (a mold's core, or a working store
+ * house), tapering linearly along the veins to `trickle` at the end of its reach. Cells out of
+ * every reach get the trickle, so a long thin chain still grows, only slowly. Overlapping
+ * supplies take the best, not the sum.
+ */
+export function recomputeFeed(world: World): void {
+  const { coreReach, trickle } = world.balance.feed;
+  const fill = (cover: { cell: CellIndex; bonus: number }[]): void => {
+    for (const { cell, bonus } of cover) {
+      const f = trickle + (1 - trickle) * bonus;
+      if (f > (world.feed[cell] as number)) world.feed[cell] = f;
+    }
+  };
+  world.feed.fill(trickle);
+  for (const mold of world.molds) if (mold.status === 'alive') fill(veinCover(world, mold.core, coreReach, 1));
+  const reach = world.balance.buildings.storehouse.reach;
+  for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed && b.boosting) fill(veinCover(world, b.cell, reach, 1));
+}
+
+/**
  * Store houses pay for the speed-up (S8): each boosting one drains `drain` per second from its
  * piece, but only while a boosted tip or harvester in that piece actually did work this tick.
  */

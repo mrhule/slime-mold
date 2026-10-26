@@ -60,6 +60,7 @@ export function createWorld(
   buildingAt.fill(-1);
   const boost = new Float32Array(cells).fill(1);
   const supply = new Float32Array(cells).fill(1);
+  const feed = new Float32Array(cells).fill(1);
   return {
     width,
     height,
@@ -89,6 +90,7 @@ export function createWorld(
     boostActive: false,
     supply,
     supplyActive: false,
+    feed,
     supplyUse: new Set<number>(),
     drops: [],
     reachable: new Uint8Array(cells).fill(1),

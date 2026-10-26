@@ -145,6 +145,9 @@ export interface BalanceConfig {
   /** one entry per building type (002) */
   buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec };
 
+  /** how far supply carries along the veins: from the core and from each working store house, in cells, and the growth speed left past the end (0.25 = a quarter) */
+  feed: { coreReach: number; trickle: number };
+
   /** nutrient storage per connected piece of vein (003) */
   pool: { baseCap: number };
   /** goo pool placement (008) */
@@ -246,6 +249,8 @@ export const defaultBalance: BalanceConfig = Object.freeze({
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },
+
+  feed: { coreReach: 40, trickle: 0.8 },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

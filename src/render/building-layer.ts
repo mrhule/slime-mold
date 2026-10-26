@@ -1,5 +1,4 @@
 import { Container, Graphics } from 'pixi.js';
-import { boosterCover } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -141,33 +140,35 @@ export function drawStoreCover(g: Graphics, width: number, cover: { cell: number
 }
 
 /**
- * Small inked droplets in the owner's color riding the veins a store house speeds up, flowing
- * toward it; thinner out where the bonus tapers. `homeward` maps each covered cell to the
- * neighbor one step closer to the store house.
+ * Small inked droplets riding the veins a building affects, flowing out from it: big at the
+ * source and shrinking as the effect tapers, sparser too. `steps` maps each covered cell to the
+ * neighbor one step closer to the source; a drop runs from that neighbor to the cell, so it
+ * shrinks along the way. `t` is the strength at the cell and `tNext` at the neighbor (1 = at the source).
  */
-export function drawStoreDrops(g: Graphics, width: number, homeward: { cell: number; next: number; t: number }[], color: number, timeSeconds: number): void {
-  for (const { cell, next, t } of homeward) {
+export function drawStoreDrops(g: Graphics, width: number, steps: { cell: number; next: number; t: number; tNext: number }[], color: number, timeSeconds: number, core?: number): void {
+  for (const { cell, next, t, tNext } of steps) {
     const seed = ((cell * 2654435761) >>> 0) / 4294967296;
-    // sparser drops where the bonus is weak
+    // sparser drops where the effect is weak
     if (seed > 0.3 + 0.7 * t) continue;
-    const [x1, y1] = cellCenter(cell, width);
-    const [x2, y2] = cellCenter(next, width);
+    const [x1, y1] = cellCenter(next, width);
+    const [x2, y2] = cellCenter(cell, width);
     const f = (timeSeconds * 0.9 + seed * 7) % 1;
     const x = x1 + (x2 - x1) * f;
     const y = y1 + (y2 - y1) * f;
-    const r = 2.2 + 1.2 * t;
+    const r = 1 + 3.6 * (tNext + (t - tNext) * f);
     g.circle(x, y, r + 1.6).fill({ color: INK, alpha: 0.9 });
     g.circle(x, y, r).fill({ color });
+    if (core !== undefined) g.circle(x, y, r * 0.5).fill({ color: core });
     g.circle(x - r * 0.35, y - r * 0.35, r * 0.35).fill({ color: 0xffffff, alpha: 0.85 });
   }
 }
 
-/** For each cell a store house covers: the neighbor one step closer to it, for drops to travel toward. */
-export function homewardSteps(width: number, cover: { cell: number; bonus: number }[]): { cell: number; next: number; t: number }[] {
+/** For each cell a building covers: the neighbor one step closer to it, for drops to travel out from. */
+export function homewardSteps(width: number, cover: { cell: number; bonus: number }[]): { cell: number; next: number; t: number; tNext: number }[] {
   const bonusOf = new Map<number, number>();
   for (const c of cover) bonusOf.set(c.cell, c.bonus);
   const max = Math.max(...cover.map((c) => c.bonus), 1e-9);
-  const out: { cell: number; next: number; t: number }[] = [];
+  const out: { cell: number; next: number; t: number; tNext: number }[] = [];
   for (const { cell, bonus } of cover) {
     let best = -1;
     let bestBonus = bonus + 1e-9;
@@ -182,7 +183,7 @@ export function homewardSteps(width: number, cover: { cell: number; bonus: numbe
         }
       }
     }
-    if (best >= 0) out.push({ cell, next: best, t: bonus / max });
+    if (best >= 0) out.push({ cell, next: best, t: bonus / max, tNext: bestBonus / max });
   }
   return out;
 }
@@ -196,15 +197,6 @@ export function drawUnlinked(g: Graphics, cx: number, cy: number): void {
   g.circle(cx + 4.5, y, 3.2).stroke({ width: 1.8, color: UNLINKED });
   g.moveTo(cx - 1.5, y - 5).lineTo(cx + 1.5, y + 5).stroke({ width: 4, color: INK, cap: 'round' });
   g.moveTo(cx - 1.5, y - 5).lineTo(cx + 1.5, y + 5).stroke({ width: 2, color: UNLINKED, cap: 'round' });
-}
-
-/** A soft glow along every vein a booster factory strengthens, fading with its taper. */
-export function drawBoosterCover(g: Graphics, width: number, cover: { cell: number; bonus: number }[], maxBonus: number, color: number, alpha = 1): void {
-  for (const { cell, bonus } of cover) {
-    const [x, y] = cellCenter(cell, width);
-    const t = Math.max(0, bonus / maxBonus);
-    g.circle(x, y, CELL * (0.7 + 0.5 * t)).fill({ color, alpha: alpha * (0.1 + 0.3 * t) });
-  }
 }
 
 /** Buildings drawn above the veins, redrawn only when what the player can see changes. */
@@ -244,8 +236,6 @@ export class BuildingLayer {
       key += shown(b) ? `${b.id}${idle},` : 'x';
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
-    // the veins a booster covers keep growing, so redraw its glow a few times a second
-    if (world.buildings.some((b) => b.type === 'booster' && !b.destroyed)) key += `t${Math.floor(world.tick / 10)}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
 
@@ -257,13 +247,11 @@ export class BuildingLayer {
       drawBuilding(this.rim, r.type, x, y, 0, { stale: true });
       drawBuilding(this.g, r.type, x, y, 0, { stale: true });
     }
-    const boosterSpec = world.balance.buildings.booster;
     for (const b of world.buildings) {
       if (!shown(b)) continue;
       const [x, y] = cellCenter(b.cell, world.width);
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
-      if (b.type === 'booster') drawBoosterCover(this.areas, world.width, boosterCover(world, b.cell), boosterSpec.bonus, color);
       const food = foodOf(b);
       const idle = b.type === 'harvester' && (food?.depleted ?? true);
       if (b.type === 'harvester' && !idle && food) {

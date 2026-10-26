@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import { boosterCover, storeCover } from '../sim/index';
-import { cellCenter, drawBoosterCover, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
+import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { style } from './style';
@@ -22,6 +22,8 @@ export interface PlacementGhost {
 
 const GHOST_OK = 0x2ea84a;
 const GHOST_BAD = 0xe0432a;
+const BOOST_DROP = 0xdfe6ea;
+const BOOST_BOLT = 0xffd23a;
 
 interface Landing {
   x: number;
@@ -56,7 +58,7 @@ export class FxLayer {
   private splatsThisFrame = 0;
   private readonly countdowns = new Map<number, Text>();
   /** per working store house: its covered veins and each cell's step toward home, refreshed a few times a second */
-  private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number }[] }>();
+  private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number; tNext: number }[] }>();
 
   constructor() {
     this.container.addChild(this.g);
@@ -224,17 +226,22 @@ export class FxLayer {
     const slot = Math.floor(world.tick / 10);
     const live = new Set<number>();
     for (const b of world.buildings) {
-      if (b.type !== 'storehouse' || b.destroyed || !b.boosting) continue;
+      if (b.destroyed || (b.type === 'storehouse' ? !b.boosting : b.type !== 'booster')) continue;
       if (b.moldId !== 1 && vision && vision[b.cell] !== 2) continue;
       live.add(b.id);
       let entry = this.storeFlows.get(b.id);
       if (!entry || entry.slot !== slot) {
-        const cover = storeCover(world, b.cell);
+        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : storeCover(world, b.cell);
         entry = { slot, cover, steps: homewardSteps(world.width, cover) };
         this.storeFlows.set(b.id, entry);
       }
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
+      if (b.type === 'booster') {
+        // steel drops flowing out to the veins it strengthens, apart from the owner-colored drops flowing in to a store house
+        drawStoreDrops(g, world.width, entry.steps, BOOST_DROP, timeSeconds, BOOST_BOLT);
+        continue;
+      }
       if (inspect === b.cell) drawStoreCover(g, world.width, entry.cover, world.balance.buildings.storehouse.bonus, color);
       drawStoreDrops(g, world.width, entry.steps, color, timeSeconds);
     }
@@ -275,7 +282,7 @@ export class FxLayer {
       const [gx, gy] = cellCenter(ghost.cell, world.width);
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
-      if (ghost.type === 'booster') drawBoosterCover(g, world.width, boosterCover(world, ghost.cell), world.balance.buildings.booster.bonus, color, 0.8);
+      if (ghost.type === 'booster') drawStoreDrops(g, world.width, homewardSteps(world.width, boosterCover(world, ghost.cell)), BOOST_DROP, timeSeconds, BOOST_BOLT);
       if (ghost.type === 'storehouse') drawStoreCover(g, world.width, storeCover(world, ghost.cell), world.balance.buildings.storehouse.bonus, color, 0.8);
       drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color });
     }

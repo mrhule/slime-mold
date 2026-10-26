@@ -1,4 +1,4 @@
-import { clampPools, drainStoreHouses, recomputeSupply } from './buildings';
+import { clampPools, drainStoreHouses, recomputeFeed, recomputeSupply } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
@@ -44,7 +44,10 @@ export function step(world: World): void {
   world.events = [];
   applyQueuedCommands(world);
   world.supplyUse.clear();
-  if (world.tick % world.balance.flowEvery === 0) recomputeSupply(world);
+  if (world.tick % world.balance.flowEvery === 0) {
+    recomputeSupply(world);
+    recomputeFeed(world);
+  }
   tickDrops(world);
   tickIncome(world);
   tickUpkeep(world);

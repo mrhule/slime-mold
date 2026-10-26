@@ -41,6 +41,7 @@ export function stateHash(world: World): number {
   h.array(world.food);
   h.array(world.buildingAt);
   h.array(world.supply);
+  h.array(world.feed);
   for (const m of world.molds) {
     h.num(m.id);
     h.num(m.allocation);
