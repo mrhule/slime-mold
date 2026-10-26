@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { capOf } from '../sim/index';
+import { capOf, upgradeSpec } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -180,6 +180,18 @@ export function drawRelay(g: Graphics, cx: number, cy: number, flag: number, sty
   g.circle(cx, cy, 4.6 * S).fill({ color: body, alpha }).stroke({ width: w, color: ink, alpha });
   g.moveTo(cx + Math.cos(0.2) * 3.6 * S, cy + Math.sin(0.2) * 3.6 * S).arc(cx, cy, 3.6 * S, 0.2, 1.5).stroke({ width: 1.8, color: shade, alpha: 0.85 * alpha, cap: 'round' });
   g.moveTo(cx + Math.cos(3.4) * 3.2 * S, cy + Math.sin(3.4) * 3.2 * S).arc(cx, cy, 3.2 * S, 3.4, 4.6).stroke({ width: 1.6, color: style.stale ? 0xdadad2 : RELAY_LIGHT, alpha, cap: 'round' });
+  // levels: a longer, brighter whisker per level above the first, and pips under the bulb like the factory's
+  const level = style.level ?? 1;
+  if (level >= 2) for (const [dx, dy] of whiskers) g.moveTo(cx + dx * 8.4 * S, cy + dy * 6.4 * S).lineTo(cx + dx * 11.2 * S, cy + dy * 8.4 * S);
+  if (level >= 2) g.stroke({ width: 2, color: style.stale ? STALE_GREY : RELAY_LIGHT, alpha, cap: 'round' });
+  if (!style.stale) {
+    const max = style.maxLevel ?? 3;
+    for (let i = 0; i < max; i++) {
+      const px = cx + (i - (max - 1) / 2) * 4.2 * S;
+      const on = i < level;
+      g.circle(px, cy + 9.8 * S, 1.4 * S).fill({ color: on ? RELAY_LIGHT : 0x2c2b22, alpha: (on ? 1 : 0.6) * alpha }).stroke({ width: 1.4, color: ink, alpha });
+    }
+  }
   // the owner's color as the bright nub in the middle
   if (!style.stale) g.circle(cx, cy, 1.7 * S).fill({ color: flag, alpha }).stroke({ width: 1.5, color: ink, alpha });
 }
@@ -371,7 +383,6 @@ export class BuildingLayer {
       drawBuilding(this.rim, r.type, x, y, 0, { stale: true });
       drawBuilding(this.g, r.type, x, y, 0, { stale: true });
     }
-    const maxLevel = world.balance.buildings.storehouse.maxLevel;
     for (const b of world.buildings) {
       if (!shown(b)) continue;
       const [x, y] = cellCenter(b.cell, world.width);
@@ -388,6 +399,7 @@ export class BuildingLayer {
       }
       const comp = b.type === 'storehouse' ? world.components.get(world.component[b.cell] as number) : undefined;
       const fill = comp ? Math.min(1, comp.pool / capOf(world, comp)) : 0;
+      const maxLevel = upgradeSpec(world, b.type)?.maxLevel;
       drawBuilding(this.rim, b.type, x, y, color, { idle, t: timeSeconds, fill, level: b.level, maxLevel });
       drawBuilding(this.g, b.type, x, y, color, { idle, t: timeSeconds, fill, level: b.level, maxLevel });
     }

@@ -205,12 +205,12 @@ export class InputController {
     return null;
   }
 
-  /** the cell of the player's factory under a screen point (its art is bigger than its cell), or null */
+  /** the cell of the player's factory or relay (the buildings that upgrade) under a screen point, or null */
   private factoryAt(sx: number, sy: number): number | null {
     const sim = this.getWorld();
     const [wx, wy] = this.renderer.camera.screenToWorld(sx, sy);
     for (const b of sim.buildings) {
-      if (b.destroyed || b.type !== 'storehouse' || b.moldId !== PLAYER) continue;
+      if (b.destroyed || (b.type !== 'storehouse' && b.type !== 'relay') || b.moldId !== PLAYER) continue;
       const bx = (b.cell % sim.width) * CELL + CELL / 2;
       const by = Math.floor(b.cell / sim.width) * CELL + CELL / 2;
       if (Math.hypot(bx - wx, by - wy) <= 14) return b.cell;

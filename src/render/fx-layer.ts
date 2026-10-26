@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import { cutCells } from '../sim/index';
-import { boosterCover, storeCover, veinCover } from '../sim/index';
+import { boosterCover, reachOf, storeCover, veinCover } from '../sim/index';
 import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -236,7 +236,7 @@ export class FxLayer {
       live.add(b.id);
       let entry = this.storeFlows.get(b.id);
       if (!entry || entry.slot !== slot) {
-        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, world.balance.buildings.relay.reach, 1) : storeCover(world, b.cell);
+        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, reachOf(world, b), 1) : storeCover(world, b.cell);
         entry = { slot, cover, steps: homewardSteps(world.width, cover) };
         this.storeFlows.set(b.id, entry);
       }

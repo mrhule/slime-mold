@@ -35,6 +35,12 @@ export interface BuildingSpec {
 export interface RelaySpec extends BuildingSpec {
   /** how far along the veins it carries supply, in cells (the same falloff as a factory's reach) */
   reach: number;
+  /** most levels a relay can reach (it is placed at level 1) */
+  maxLevel: number;
+  /** extra reach, in cells, for each level above the first */
+  reachPerLevel: number;
+  /** nutrients to go from level n to n + 1, at index n - 1 */
+  upgradeCost: number[];
 }
 
 export interface BoosterSpec extends BuildingSpec {
@@ -273,7 +279,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   buildings: {
     storehouse: { cost: 25, upkeep: 0.2, limit: 6, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
-    relay: { cost: 15, upkeep: 0.1, limit: 6, minTier: 2, reach: 16 },
+    relay: { cost: 15, upkeep: 0.1, limit: 6, minTier: 2, reach: 16, maxLevel: 3, reachPerLevel: 8, upgradeCost: [20, 35] },
     booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
     harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
   },

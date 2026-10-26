@@ -95,8 +95,15 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
 
 /** how far along the veins a factory reaches: its base reach plus a step for each level above the first */
 export function reachOf(world: Readonly<World>, b: Readonly<Building> | undefined): number {
-  const spec = world.balance.buildings.storehouse;
+  const spec = b?.type === 'relay' ? world.balance.buildings.relay : world.balance.buildings.storehouse;
   return spec.reach + ((b?.level ?? 1) - 1) * spec.reachPerLevel;
+}
+
+/** the upgrade ladder of a building that has one (factories and relays), else null */
+export function upgradeSpec(world: Readonly<World>, type: BuildingType): { maxLevel: number; reachPerLevel: number; upgradeCost: number[] } | null {
+  if (type === 'storehouse') return world.balance.buildings.storehouse;
+  if (type === 'relay') return world.balance.buildings.relay;
+  return null;
 }
 
 /** Raise a factory one level, paying from its piece; more reach (and a wider boost) at once. */
@@ -104,8 +111,8 @@ export function upgradeBuilding(world: World, moldId: MoldId, cell: CellIndex): 
   const b = buildingOn(world, cell);
   if (!b) return { ok: false, reason: 'no-building' };
   if (b.moldId !== moldId) return { ok: false, reason: 'not-your-cell' };
-  if (b.type !== 'storehouse') return { ok: false, reason: 'not-upgradable' };
-  const spec = world.balance.buildings.storehouse;
+  const spec = upgradeSpec(world, b.type);
+  if (!spec) return { ok: false, reason: 'not-upgradable' };
   if (b.level >= spec.maxLevel) return { ok: false, reason: 'max-level' };
   const cost = spec.upgradeCost[b.level - 1] ?? Infinity;
   const comp = world.components.get(world.component[cell] as number);
@@ -126,7 +133,7 @@ export function demolishBuilding(world: World, moldId: MoldId, cell: CellIndex):
   const comp = world.components.get(world.component[cell] as number);
   if (comp) {
     const spec = world.balance.buildings[b.type];
-    const extra = b.type === 'storehouse' ? world.balance.buildings.storehouse.upgradeCost.slice(0, b.level - 1).reduce((a, c) => a + c, 0) : 0;
+    const extra = (upgradeSpec(world, b.type)?.upgradeCost ?? []).slice(0, b.level - 1).reduce((a, c) => a + c, 0);
     comp.pool += (spec.cost + extra) * world.balance.demolishRefund;
   }
   b.destroyed = true;
@@ -360,7 +367,7 @@ export function recomputeFeed(world: World): void {
     if (b.destroyed) continue;
     if (b.type === 'relay') {
       // a relay carries supply as long as its piece can pay upkeep; it needs no stock
-      const relayReach = world.balance.buildings.relay.reach;
+      const relayReach = reachOf(world, b);
       const comp = world.components.get(world.component[b.cell] as number);
       if (comp && !comp.unpaid) for (const { cell, bonus } of veinCover(world, b.cell, 1.5 * relayReach, 1)) take(cell, feedAt(world, (1 - bonus) * 1.5 * relayReach, relayReach));
       continue;

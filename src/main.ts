@@ -10,7 +10,7 @@ import { Run } from './game/run';
 import { visibleDeaths } from './game/frame-events';
 import { createStorage, safeLocalStorage } from './game/storage';
 import { GameRenderer } from './render/renderer';
-import { createRound, enqueue, pendingAllocation, placePreview, readHud, roundOutcome, step } from './sim';
+import { createRound, enqueue, pendingAllocation, placePreview, readHud, roundOutcome, step, upgradeSpec } from './sim';
 import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { DebugOverlay } from './ui/debug';
@@ -249,20 +249,21 @@ async function main(): Promise<void> {
       const nearBuilding = run.world.buildings.find(
         (b) => !b.destroyed && b.moldId === PLAYER && Math.abs((b.cell % w) - (under % w)) <= 2 && Math.abs(Math.floor(b.cell / w) - Math.floor(under / w)) <= 2,
       );
-      const near = nearBuilding?.type === 'storehouse' ? nearBuilding : undefined;
+      const near = nearBuilding?.type === 'storehouse' || nearBuilding?.type === 'relay' ? nearBuilding : undefined;
+      const label = near?.type === 'relay' ? 'Relay' : 'Factory';
       const armed = nearBuilding !== undefined && input.demolishArmed === nearBuilding.cell;
       if (nearBuilding && !near && pointer) {
         buildBar.showHint(armed ? 'Right-click again to demolish!' : 'Right-click to demolish (half back)', pointer.x, pointer.y, !armed);
       }
       if (near) {
-        inspect = near.cell;
-        const spec = run.world.balance.buildings.storehouse;
+        if (near.type === 'storehouse') inspect = near.cell;
+        const spec = upgradeSpec(run.world, near.type) as NonNullable<ReturnType<typeof upgradeSpec>>;
         const cost = spec.upgradeCost[near.level - 1];
         const comp = run.world.components.get(run.world.component[near.cell] as number);
         if (pointer) {
           if (armed) buildBar.showHint('Right-click again to demolish!', pointer.x, pointer.y, false);
-          else if (cost === undefined || near.level >= spec.maxLevel) buildBar.showHint(`Factory level ${near.level}: fully upgraded. Right-click to demolish`, pointer.x, pointer.y, true);
-          else buildBar.showHint(`Factory level ${near.level}: click to upgrade for ${cost} (reach +${spec.reachPerLevel}). Right-click to demolish`, pointer.x, pointer.y, !!comp && comp.pool >= cost);
+          else if (cost === undefined || near.level >= spec.maxLevel) buildBar.showHint(`${label} level ${near.level}: fully upgraded. Right-click to demolish`, pointer.x, pointer.y, true);
+          else buildBar.showHint(`${label} level ${near.level}: click to upgrade for ${cost} (reach +${spec.reachPerLevel}). Right-click to demolish`, pointer.x, pointer.y, !!comp && comp.pool >= cost);
         }
       }
     }

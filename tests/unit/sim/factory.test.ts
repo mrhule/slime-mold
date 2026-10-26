@@ -238,3 +238,38 @@ describe('evolving and the relay', () => {
     expect(world.feed[far]).toBeCloseTo(without, 6);
   });
 });
+
+describe('relay upgrades', () => {
+  it('a relay upgrades like a factory: pays from its piece, adds reach, refunds on demolish', () => {
+    const world = createOpenWorld(110, 30, quiet);
+    const mold = addMold(world, 'player', cellOf(world, 5, 15), 400);
+    mold.tier = 2;
+    let prev = mold.core;
+    const cells: number[] = [];
+    for (let x = 6; x < 70; x++) {
+      const c = cellOf(world, x, 15);
+      if (world.owner[c] !== mold.id) addCell(world, mold.id, c, prev);
+      cells.push(c);
+      prev = c;
+    }
+    const comp = world.components.get(world.component[mold.core] as number) as Component;
+    comp.pool = 300;
+    const relay = defaultBalance.buildings.relay;
+    const at = cells[20] as number;
+    expect(placeBuilding(world, mold.id, 'relay', at)).toEqual({ ok: true });
+    recomputeFeed(world);
+    const far = cells[40] as number;
+    const before = world.feed[far] as number;
+    const pool = comp.pool;
+    expect(upgradeBuilding(world, mold.id, at)).toEqual({ ok: true });
+    expect(comp.pool).toBeCloseTo(pool - (relay.upgradeCost[0] as number), 6);
+    expect(world.buildings[0]!.level).toBe(2);
+    expect(world.feed[far]!).toBeGreaterThan(before);
+    expect(upgradeBuilding(world, mold.id, at)).toEqual({ ok: true });
+    expect(upgradeBuilding(world, mold.id, at)).toEqual({ ok: false, reason: 'max-level' });
+    const beforeDemolish = comp.pool;
+    demolishBuilding(world, mold.id, at);
+    const paid = relay.cost + (relay.upgradeCost[0] as number) + (relay.upgradeCost[1] as number);
+    expect(comp.pool).toBeCloseTo(beforeDemolish + paid * defaultBalance.demolishRefund, 6);
+  });
+});
