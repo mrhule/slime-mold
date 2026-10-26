@@ -1,6 +1,7 @@
 precision highp float;
 
 in vec2 vUV;     // x: -1..1 across the vein (lit side is u < 0), y: distance along the edge in cells
+in float vFeed;   // 1 where the vein is well fed, 0 at the far end of supply
 in vec3 vStyle;  // x: signed pulse count (0, +-1, +-2; the sign is the flow direction), y: 0 = ink outline pass, 1 = colored core, z: pulse phase
 
 out vec4 finalColor;
@@ -35,6 +36,10 @@ void main(void) {
   vec3 col = uMold * mix(1.0, 0.72, sh);
   col = mix(col, vec3(1.0), hi * 0.4);
 
+  // far from supply the vein looks starved: washed out toward a dull gray
+  float lum = dot(col, vec3(0.3, 0.59, 0.11));
+  col = mix(vec3(lum) * 0.62, col, 0.3 + 0.7 * vFeed);
+
   // the mold's ink pattern, so molds differ by more than color (FR-033)
   float pm = patternMask(int(uPattern + 0.5), vec2(vUV.y * 1.7, vUV.x * 1.3)) * (1.0 - hi);
   col = mix(col, uInk, pm * 0.5);
@@ -46,7 +51,7 @@ void main(void) {
     float t = (vUV.y + vStyle.z - sign(vStyle.x) * uTime * uPulseSpeed) * count;
     float along = 1.0 - step(0.26, fract(t));
     float across = 1.0 - step(0.5, abs(u));
-    col = mix(col, vec3(1.0, 0.95, 0.74), along * across);
+    col = mix(col, vec3(1.0, 0.95, 0.74), along * across * (0.45 + 0.55 * vFeed));
   }
   finalColor = vec4(col, 1.0);
 }

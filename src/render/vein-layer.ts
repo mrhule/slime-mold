@@ -10,7 +10,7 @@ import vertex from './shaders/vein.vert?raw';
 import fragment from './shaders/vein.frag?raw';
 import shadowFragment from './shaders/vein-shadow.frag?raw';
 
-const FLOATS = 7; // x, y, u, v, signed pulse count, kind, pulse phase
+const FLOATS = 8; // x, y, u, v, signed pulse count, kind, pulse phase, feed
 
 interface MoldMesh {
   mesh: Mesh<Geometry, Shader> | null;
@@ -131,6 +131,11 @@ export class VeinLayer {
     }
     for (const c of cells) if ((hw[c] as number) === 0) hw[c] = 1.6;
 
+    // how well fed each cell is, 0 (far from supply) to 1 (at it): thin and dull veins read as starved
+    const { trickle } = world.balance.feed;
+    const fedAt = (c: number): number => Math.min(1, Math.max(0, ((world.feed[c] as number) - trickle) / (1 - trickle || 1)));
+    const slim = (c: number): number => 0.55 + 0.45 * fedAt(c);
+
     const nodeVerts = 9; // centre + 8 around
     const cx = (c: number): number => (c % w) * CELL + CELL / 2 + (this.jitterX[c] as number);
     const cy = (c: number): number => Math.floor(c / w) * CELL + CELL / 2 + (this.jitterY[c] as number);
@@ -146,7 +151,7 @@ export class VeinLayer {
       let vo = 0;
       let io = 0;
       let vcount = 0;
-      const push = (x: number, y: number, u: number, v: number, flow: number, kind: number, phase = 0): void => {
+      const push = (x: number, y: number, u: number, v: number, flow: number, kind: number, phase = 0, fed = 1): void => {
         verts[vo++] = x + shiftX;
         verts[vo++] = y + shiftY;
         verts[vo++] = u;
@@ -154,6 +159,7 @@ export class VeinLayer {
         verts[vo++] = flow;
         verts[vo++] = kind;
         verts[vo++] = phase;
+        verts[vo++] = fed;
         vcount++;
       };
       for (const kind of kinds) {
@@ -174,15 +180,16 @@ export class VeinLayer {
           // the outline is lighter on the lit side and heavier on the shadow side (A12); +normal is the lit side when s = 1
           const padPlus = outline ? (s === 1 ? style.outline.padLit : style.outline.padShade) : 0;
           const padMinus = outline ? (s === 1 ? style.outline.padShade : style.outline.padLit) : 0;
-          const nxp = ux * (e.half + padPlus);
-          const nyp = uy * (e.half + padPlus);
-          const nxm = ux * (e.half + padMinus);
-          const nym = uy * (e.half + padMinus);
+          // each end of the edge is as thick as its own cell's feed allows, so a vein tapers as it leaves supply
+          const h1 = e.half * slim(e.a);
+          const h2 = e.half * slim(e.b);
+          const f1 = fedAt(e.a);
+          const f2 = fedAt(e.b);
           const base = vcount;
-          push(x1 + nxp, y1 + nyp, -s, 0, e.flow, kind, e.phase);
-          push(x1 - nxm, y1 - nym, s, 0, e.flow, kind, e.phase);
-          push(x2 + nxp, y2 + nyp, -s, lenCells, e.flow, kind, e.phase);
-          push(x2 - nxm, y2 - nym, s, lenCells, e.flow, kind, e.phase);
+          push(x1 + ux * (h1 + padPlus), y1 + uy * (h1 + padPlus), -s, 0, e.flow, kind, e.phase, f1);
+          push(x1 - ux * (h1 + padMinus), y1 - uy * (h1 + padMinus), s, 0, e.flow, kind, e.phase, f1);
+          push(x2 + ux * (h2 + padPlus), y2 + uy * (h2 + padPlus), -s, lenCells, e.flow, kind, e.phase, f2);
+          push(x2 - ux * (h2 + padMinus), y2 - uy * (h2 + padMinus), s, lenCells, e.flow, kind, e.phase, f2);
           idx[io++] = base;
           idx[io++] = base + 1;
           idx[io++] = base + 2;
@@ -195,15 +202,16 @@ export class VeinLayer {
           const x = cx(c);
           const y = cy(c);
           const base = vcount;
-          push(x, y, 0, 0, 0, kind);
+          const fed = fedAt(c);
+          push(x, y, 0, 0, 0, kind, 0, fed);
           for (let s = 0; s < 8; s++) {
             const ang = (s / 8) * Math.PI * 2;
             const ux = Math.cos(ang);
             const uy = Math.sin(ang);
             const u = jointU(ux, uy);
             const pad = outline ? style.outline.padLit + ((u + 1) / 2) * (style.outline.padShade - style.outline.padLit) : 0;
-            const r = (hw[c] as number) + pad;
-            push(x + ux * r, y + uy * r, u, 0, 0, kind);
+            const r = (hw[c] as number) * slim(c) + pad;
+            push(x + ux * r, y + uy * r, u, 0, 0, kind, 0, fed);
           }
           for (let s = 0; s < 8; s++) {
             idx[io++] = base;
@@ -219,6 +227,7 @@ export class VeinLayer {
           aPosition: { buffer, format: 'float32x2', stride, offset: 0 },
           aUV: { buffer, format: 'float32x2', stride, offset: 8 },
           aStyle: { buffer, format: 'float32x3', stride, offset: 16 },
+          aFeed: { buffer, format: 'float32', stride, offset: 28 },
         },
         indexBuffer: idx,
       });

@@ -51,6 +51,9 @@ const PING_SECONDS = 0.9;
 /** Inked target markers with tip state, and the rough red "X" shown for a rejected command. */
 export class FxLayer {
   readonly container = new Container();
+  /** the flow drops and coverage rings: they run along the veins but pass under the buildings */
+  readonly flowContainer = new Container();
+  private readonly flow = new Graphics();
   private readonly g = new Graphics();
   private pings: Ping[] = [];
   private landings: Landing[] = [];
@@ -62,6 +65,7 @@ export class FxLayer {
   private readonly storeFlows = new Map<number, { slot: number; cover: { cell: number; bonus: number }[]; steps: { cell: number; next: number; t: number; tNext: number }[] }>();
 
   constructor() {
+    this.flowContainer.addChild(this.flow);
     this.container.addChild(this.g);
   }
 
@@ -282,7 +286,8 @@ export class FxLayer {
   update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null, inspect: number | null = null): void {
     const g = this.g;
     g.clear();
-    this.drawStoreFlow(g, world, timeSeconds, inspect);
+    this.flow.clear();
+    this.drawStoreFlow(this.flow, world, timeSeconds, inspect);
     this.drawCuts(g, world);
     if (player) {
       for (const t of player.targets) {
