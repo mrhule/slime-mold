@@ -1,5 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
+import { cutCells } from '../sim/index';
 import { boosterCover, storeCover } from '../sim/index';
 import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
@@ -248,10 +249,41 @@ export class FxLayer {
     for (const id of this.storeFlows.keys()) if (!live.has(id)) this.storeFlows.delete(id);
   }
 
+  /** a small inked snip across every vein the player cut on purpose, so it can be found and rejoined */
+  private drawCuts(g: Graphics, world: Readonly<World>): void {
+    for (const key of world.cuts) {
+      const [a, b] = cutCells(world, key);
+      if (world.owner[a] !== 1 || world.owner[b] !== 1) continue;
+      const [ax, ay] = cellCenter(a, world.width);
+      const [bx, by] = cellCenter(b, world.width);
+      const x = (ax + bx) / 2;
+      const y = (ay + by) / 2;
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      // across the vein: the perpendicular, drawn as two short slanted ticks
+      const nx = -(by - ay) / len;
+      const ny = (bx - ax) / len;
+      const tx = (bx - ax) / len;
+      const ty = (by - ay) / len;
+      for (const off of [-2.2, 2.2]) {
+        const cx = x + tx * off;
+        const cy = y + ty * off;
+        g.moveTo(cx - nx * 5 - tx * 1.5, cy - ny * 5 - ty * 1.5).lineTo(cx + nx * 5 + tx * 1.5, cy + ny * 5 + ty * 1.5);
+      }
+      g.stroke({ width: 4.2, color: INK, cap: 'round' });
+      for (const off of [-2.2, 2.2]) {
+        const cx = x + tx * off;
+        const cy = y + ty * off;
+        g.moveTo(cx - nx * 5 - tx * 1.5, cy - ny * 5 - ty * 1.5).lineTo(cx + nx * 5 + tx * 1.5, cy + ny * 5 + ty * 1.5);
+      }
+      g.stroke({ width: 2, color: 0xe0432a, cap: 'round' });
+    }
+  }
+
   update(world: Readonly<World>, player: Mold | undefined, dt: number, timeSeconds: number, ghost: PlacementGhost | null = null, inspect: number | null = null): void {
     const g = this.g;
     g.clear();
     this.drawStoreFlow(g, world, timeSeconds, inspect);
+    this.drawCuts(g, world);
     if (player) {
       for (const t of player.targets) {
         const [x, y] = FxLayer.markerPosition(t.cell, world.width);

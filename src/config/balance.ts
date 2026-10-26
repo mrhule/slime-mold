@@ -127,6 +127,8 @@ export interface BalanceConfig {
   foodSpacing: number;
   /** pieces of one mold within this many cells (2 = one free cell apart) join up on their own */
   connectGap: number;
+  /** a loop closes between two cells of one piece only when the veins between them are at least this many steps long */
+  loopMinSteps: number;
   /** ticks between those checks */
   connectEvery: number;
   /** one food item per this many cells at foodDensity 1 */
@@ -225,6 +227,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   roughThreshold: 0.6,
   foodSpacing: 12,
   connectGap: 2,
+  loopMinSteps: 20,
   connectEvery: 10,
   foodAreaPerItem: 900,
   starterFood: 3,

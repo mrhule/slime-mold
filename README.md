@@ -64,6 +64,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 |---|---|
 | Left-click | Set a growth target (or place a building in placement mode) |
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
+| Right-click a vein | Cut it (a cut-off piece with no core or food starves); right-click the snip to rejoin |
 | `T` / `B` / `M` | Place a Store House / Booster Factory / Harvester (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |

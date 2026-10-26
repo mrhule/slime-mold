@@ -154,7 +154,9 @@ export type Command =
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
   | { type: 'setAllocation'; mold: MoldId; value: number }
-  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex };
+  | { type: 'placeBuilding'; mold: MoldId; building: BuildingType; cell: CellIndex }
+  /** cut the vein between two adjacent cells of the mold, or rejoin one it cut earlier */
+  | { type: 'toggleLink'; mold: MoldId; a: CellIndex; b: CellIndex };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -365,6 +367,8 @@ export interface World {
   feed: Float32Array;
   /** ids of pieces where a boosted tip or harvester did work this tick (store houses drain only then); not hashed, rebuilt every tick */
   supplyUse: Set<number>;
+  /** veins the player cut on purpose, as cutKey(a, b); they are not healed or bridged around until rejoined */
+  cuts: Set<number>;
   drops: DropEvent[];
   /** walkable cells reachable from the starts; drops only fall where molds can get to them */
   reachable: Uint8Array;

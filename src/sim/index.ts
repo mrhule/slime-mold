@@ -73,3 +73,4 @@ export function createRound(opts: CreateRoundOptions): World {
   updateVision(world);
   return world;
 }
+export { cutCells, cutKey } from './network';

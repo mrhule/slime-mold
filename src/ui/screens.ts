@@ -96,7 +96,7 @@ export class Screens {
         <li>Pick a building, tap a spot, then <b>Build</b></li>
       </ul>
       <ul class="keys kbd-only">
-        <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel</li>
+        <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel, a vein to cut it (again to rejoin)</li>
         <li><b>Q / E</b> or the slider: send nutrients to growth or to the fight</li>
         <li><b>T</b> build a store house &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
       </ul>

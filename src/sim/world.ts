@@ -92,6 +92,7 @@ export function createWorld(
     supplyActive: false,
     feed,
     supplyUse: new Set<number>(),
+    cuts: new Set<number>(),
     drops: [],
     reachable: new Uint8Array(cells).fill(1),
     nextDropTick: Number.MAX_SAFE_INTEGER,

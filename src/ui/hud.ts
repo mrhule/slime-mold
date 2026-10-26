@@ -58,7 +58,7 @@ export class Hud {
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
         <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
-        <div class="hint kbd-only">Click the map to grow there. Right-click a marker to cancel.</div>
+        <div class="hint kbd-only">Click the map to grow there. Right-click a marker to cancel, or a vein to cut it.</div>
       </div>
       <button type="button" class="mute-btn" data-hud="mute" aria-label="Mute" aria-pressed="false" title="Mute or unmute sound">
         <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
