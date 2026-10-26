@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { boosterCover, storeCover } from '../sim/index';
+import { boosterCover } from '../sim/index';
 import { BUILDING_OF_CODE } from '../sim/types';
 import type { Building, BuildingType, FoodSource, World } from '../sim/types';
 import { INK, moldColor } from './palette';
@@ -140,6 +140,53 @@ export function drawStoreCover(g: Graphics, width: number, cover: { cell: number
   }
 }
 
+/**
+ * Small inked droplets in the owner's color riding the veins a store house speeds up, flowing
+ * toward it; thinner out where the bonus tapers. `homeward` maps each covered cell to the
+ * neighbor one step closer to the store house.
+ */
+export function drawStoreDrops(g: Graphics, width: number, homeward: { cell: number; next: number; t: number }[], color: number, timeSeconds: number): void {
+  for (const { cell, next, t } of homeward) {
+    const seed = ((cell * 2654435761) >>> 0) / 4294967296;
+    // sparser drops where the bonus is weak
+    if (seed > 0.3 + 0.7 * t) continue;
+    const [x1, y1] = cellCenter(cell, width);
+    const [x2, y2] = cellCenter(next, width);
+    const f = (timeSeconds * 0.9 + seed * 7) % 1;
+    const x = x1 + (x2 - x1) * f;
+    const y = y1 + (y2 - y1) * f;
+    const r = 2.2 + 1.2 * t;
+    g.circle(x, y, r + 1.6).fill({ color: INK, alpha: 0.9 });
+    g.circle(x, y, r).fill({ color });
+    g.circle(x - r * 0.35, y - r * 0.35, r * 0.35).fill({ color: 0xffffff, alpha: 0.85 });
+  }
+}
+
+/** For each cell a store house covers: the neighbor one step closer to it, for drops to travel toward. */
+export function homewardSteps(width: number, cover: { cell: number; bonus: number }[]): { cell: number; next: number; t: number }[] {
+  const bonusOf = new Map<number, number>();
+  for (const c of cover) bonusOf.set(c.cell, c.bonus);
+  const max = Math.max(...cover.map((c) => c.bonus), 1e-9);
+  const out: { cell: number; next: number; t: number }[] = [];
+  for (const { cell, bonus } of cover) {
+    let best = -1;
+    let bestBonus = bonus + 1e-9;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const n = cell + dx + dy * width;
+        const b = bonusOf.get(n);
+        if (b !== undefined && b > bestBonus) {
+          best = n;
+          bestBonus = b;
+        }
+      }
+    }
+    if (best >= 0) out.push({ cell, next: best, t: bonus / max });
+  }
+  return out;
+}
+
 /** A small broken-chain mark above a goo pool whose piece has no store house. */
 export function drawUnlinked(g: Graphics, cx: number, cy: number): void {
   const y = cy - 19;
@@ -198,8 +245,7 @@ export class BuildingLayer {
     }
     for (const r of remembered) key += `m${r.cell}${r.type[0]},`;
     // the veins a booster covers keep growing, so redraw its glow a few times a second
-    if (world.buildings.some((b) => (b.type === 'booster' || b.type === 'storehouse') && !b.destroyed)) key += `t${Math.floor(world.tick / 10)}`;
-    for (const b of world.buildings) if (b.type === 'storehouse' && !b.destroyed) key += b.boosting ? 'b' : 'o';
+    if (world.buildings.some((b) => b.type === 'booster' && !b.destroyed)) key += `t${Math.floor(world.tick / 10)}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
 
@@ -217,7 +263,6 @@ export class BuildingLayer {
       const [x, y] = cellCenter(b.cell, world.width);
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
-      if (b.type === 'storehouse' && b.boosting) drawStoreCover(this.areas, world.width, storeCover(world, b.cell), world.balance.buildings.storehouse.bonus, color);
       if (b.type === 'booster') drawBoosterCover(this.areas, world.width, boosterCover(world, b.cell), boosterSpec.bonus, color);
       const food = foodOf(b);
       const idle = b.type === 'harvester' && (food?.depleted ?? true);

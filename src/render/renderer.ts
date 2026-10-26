@@ -86,7 +86,7 @@ export class GameRenderer {
     return [(core % sim.width) * CELL + CELL / 2, Math.floor(core / sim.width) * CELL + CELL / 2];
   }
 
-  update(sim: Readonly<World>, dtSeconds: number, ghost: PlacementGhost | null = null): void {
+  update(sim: Readonly<World>, dtSeconds: number, ghost: PlacementGhost | null = null, inspect: number | null = null): void {
     this.timeSeconds += dtSeconds;
     this.camera.apply(this.world);
     this.print?.setZoom(this.camera.zoom);
@@ -95,6 +95,6 @@ export class GameRenderer {
     this.veins.update(sim, this.timeSeconds, this.quality);
     this.buildings.update(sim);
     this.fog.update(sim, this.timeSeconds);
-    this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost);
+    this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost, inspect);
   }
 }

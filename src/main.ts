@@ -241,7 +241,18 @@ async function main(): Promise<void> {
     }
     if (!(input.touchActive && input.placing)) touchBar.setPlacement(null);
 
-    renderer.update(run.world, dt, ghost);
+    // hovering one of the player's store houses reveals everything it speeds up
+    let inspect: number | null = null;
+    const under = input.placing || input.touchActive ? null : input.pointerCell;
+    if (under !== null) {
+      const w = run.world.width;
+      const near = run.world.buildings.find(
+        (b) => b.type === 'storehouse' && !b.destroyed && b.moldId === PLAYER && Math.abs((b.cell % w) - (under % w)) <= 2 && Math.abs(Math.floor(b.cell / w) - Math.floor(under / w)) <= 2,
+      );
+      if (near) inspect = near.cell;
+    }
+
+    renderer.update(run.world, dt, ghost, inspect);
     const model = readHud(run.world, PLAYER);
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });
