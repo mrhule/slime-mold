@@ -73,6 +73,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 | `1` `2` `3` | Speed 1x, 2x, 3x |
 | `W` `A` `S` `D`, arrows, screen edge, middle-drag | Pan the camera |
 | Mouse wheel | Zoom (0.5x to 3x) |
+| `X` | Spore burst (press twice): once a round, after 4 minutes and for 100 nutrients, spores spring up all over the map and bloom for 90 seconds. Hold 60% of the map when the bloom ends and you win; if not, you lose |
 | `H` | Center on your core |
 | `Esc` | Pause menu (or cancel placement) |
 

@@ -158,6 +158,8 @@ export interface BalanceConfig {
   victoryControl: number;
   /** a round that drags on eases the control needed to win: after `startSeconds` it falls `perMinute` a minute, down to `floor` */
   victoryEase: { startSeconds: number; perMinute: number; floor: number };
+  /** the spore burst: a once-a-round all-in that scatters seeds over the map and blooms for a while; reach `winControl` by the end or lose */
+  burst: { minSeconds: number; cost: number; seeds: number; spacing: number; bloomSeconds: number; spreadEvery: number; spreadChance: number; winControl: number };
   defaultAllocation: number;
 
   // AI (R8)
@@ -266,6 +268,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   victoryControl: 0.75,
   victoryEase: { startSeconds: 420, perMinute: 0.025, floor: 0.5 },
+  burst: { minSeconds: 240, cost: 100, seeds: 28, spacing: 9, bloomSeconds: 90, spreadEvery: 10, spreadChance: 0.03, winControl: 0.6 },
   defaultAllocation: 0.3,
 
   aiCommandsPerThink: 3,

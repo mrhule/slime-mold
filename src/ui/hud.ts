@@ -7,6 +7,7 @@ export interface HudActions {
   onAllocation(value: number): void;
   onToggleMute(): void;
   onEvolve(): void;
+  onBurst(): void;
 }
 
 export interface HudClock {
@@ -25,6 +26,9 @@ export class Hud {
   private readonly slider: HTMLInputElement;
   private readonly speedButtons: HTMLButtonElement[];
   private sliderActive = false;
+  private burstState: HudModel['burst']['state'] = 'locked';
+  /** the time (ms) until which a first press of the burst button counts as armed */
+  private burstArmedUntil = 0;
   private toastTimer = 0;
   private rivalKey = '';
   private readonly winControl: number;
@@ -61,6 +65,7 @@ export class Hud {
         </label>
         <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
         <button type="button" class="evolve" data-hud="evolve" hidden title="Spend a fixed amount of nutrients to evolve and unlock new buildings (V). The price does not grow with your factories.">Evolve</button>
+        <button type="button" class="burst-btn" data-hud="burstBtn" hidden></button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
         <div class="warn easing" data-hud="easing" hidden></div>
         <div class="warn" data-hud="dying" hidden>VEINS DYING BACK: upkeep is more than your stock can pay. Eat food, build a Factory on a goo pool, or stop growing.</div>
@@ -80,7 +85,8 @@ export class Hud {
       <div class="toast" data-hud="toast" hidden></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
+    this.el.burstBtn!.addEventListener('click', () => this.pressBurst());
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
     this.slider = q('alloc') as HTMLInputElement;
@@ -124,6 +130,18 @@ export class Hud {
     (btn.querySelector('[data-part="waves"]') as SVGElement).style.opacity = muted ? '0.35' : '1';
   }
 
+  /** the spore burst button or its key: the first press asks to be sure, a second press soon after goes all in */
+  pressBurst(): void {
+    if (this.burstState !== 'ready') return;
+    const now = performance.now();
+    if (now < this.burstArmedUntil) {
+      this.burstArmedUntil = 0;
+      this.actions.onBurst();
+    } else {
+      this.burstArmedUntil = now + 5000;
+    }
+  }
+
   update(hud: HudModel, clock: HudClock): void {
     this.el.round!.textContent = String(hud.round);
     this.el.time!.textContent = fmtTime(hud.elapsedSeconds);
@@ -149,6 +167,26 @@ export class Hud {
     this.el.income!.classList.toggle('neg', net < 0);
     this.el.income!.classList.toggle('pos', net >= 0);
     this.el.dying!.hidden = !hud.starving;
+    const b = hud.burst;
+    this.burstState = b.state;
+    const btn = this.el.burstBtn as HTMLButtonElement;
+    const armed = performance.now() < this.burstArmedUntil;
+    btn.hidden = b.state === 'used';
+    btn.disabled = b.state !== 'ready';
+    btn.classList.toggle('armed', armed && b.state === 'ready');
+    btn.classList.toggle('blooming', b.state === 'blooming');
+    const target = Math.round(b.target * 100);
+    btn.textContent =
+      b.state === 'blooming'
+        ? `BLOOM! ${Math.ceil(b.secondsLeft)}s left: reach ${target}% control`
+        : b.state === 'locked'
+          ? `Spore burst unlocks at ${fmtTime(b.unlockIn + hud.elapsedSeconds)}`
+          : b.state === 'poor'
+            ? `Spore burst: needs ${Math.round(b.cost)} nutrients`
+            : armed
+              ? `ALL IN? Press again: cover ${target}% or lose!`
+              : 'Spore burst (X)';
+    btn.title = `A last gamble, once a round: spend ${Math.round(b.cost)} nutrients and spores spring up all over the map and bloom for a while. If you hold ${target}% of the map when the bloom ends you win; if not, you lose.`;
     this.el.control!.textContent = `${Math.round(hud.mapControl * 100)}%`;
     (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / hud.winControl) * 100)}%`;
     const goal = `${Math.round(hud.winControl * 100)}%`;

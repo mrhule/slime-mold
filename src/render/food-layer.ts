@@ -10,6 +10,15 @@ import { CELL } from './units';
 
 const GOO_LIP = 0x24351c;
 
+/** the glow under food: warm and pale, so it reads against both dark and mid floors */
+const HALO_COLOR = 0xffe9a0;
+const HALO_RING = 0xfff6d2;
+/** the amount bar fill: bright gold, easy to read against the dark track */
+const METER_FILL = 0xffd23f;
+const HALO_PAD = 9;
+/** the smallest a painted food item is drawn, so a tiny oat flake is still easy to spot */
+const MIN_FOOD_PX = 30;
+
 /** which painted food drawing each type uses (the order of the generated sheet) */
 const FOOD_SPRITE: Partial<Record<FoodSource['type'], number>> = { oatFlake: 0, breadCrumb: 1, sugarCube: 2, fruitSlice: 3 };
 
@@ -71,19 +80,23 @@ export class FoodLayer {
   /** painted food and pools, one sprite per source, when the art has loaded */
   private readonly foodSprites = new Map<number, Sprite>();
   private readonly poolSprites = new Map<number, Sprite>();
+  /** a soft pulsing glow under each item you know about, so food stands out from the floor */
+  private readonly halo = new Graphics();
+  private shown: { x: number; y: number; r: number }[] = [];
   private readonly spriteLayer = new Container();
   private readonly poolSpriteLayer = new Container();
 
   constructor() {
     this.rim.tint = INK;
     this.rim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
-    this.container.addChild(this.spriteLayer, this.rim, this.g);
+    this.container.addChild(this.halo, this.spriteLayer, this.rim, this.g);
     this.poolRim.tint = INK;
     this.poolRim.position.set(style.outline.strokeShift[0], style.outline.strokeShift[1]);
     this.poolContainer.addChild(this.poolSpriteLayer, this.poolRim, this.poolG);
   }
 
   update(world: Readonly<World>): void {
+    this.pulseHalos(world.tick);
     // redraw only when some amount changed visibly
     const known = (f: FoodSource): number | null => knownFoodLeft(world, f)?.amount ?? null;
     const amounts = new Map<number, number>();
@@ -111,6 +124,7 @@ export class FoodLayer {
     this.rim.clear();
     this.poolG.clear();
     this.poolRim.clear();
+    this.shown = [];
     for (const f of world.foodSources) {
       const st = pools.get(f.id);
       if (st) {
@@ -126,11 +140,25 @@ export class FoodLayer {
         if (sprite) sprite.visible = false;
         continue;
       }
+      this.shown.push({ x: (f.x + f.w / 2) * CELL, y: (f.y + f.h / 2) * CELL, r: (Math.max(f.w, f.h) * CELL) / 2 + HALO_PAD });
       if (!this.paintFood(f, a)) {
         this.draw(this.rim, f, a);
         this.draw(g, f, a);
       }
       this.drawMeter(g, f, a);
+    }
+  }
+
+  private pulseHalos(tick: number): void {
+    const g = this.halo;
+    g.clear();
+    const beat = 0.5 + 0.5 * Math.sin((tick / 20) * Math.PI);
+    for (const h of this.shown) {
+      // a dark ring outside the glow separates it from a busy floor, whatever the floor colour
+      g.circle(h.x, h.y, h.r + 2).stroke({ width: 3, color: INK, alpha: 0.55 });
+      g.circle(h.x, h.y, h.r).fill({ color: HALO_COLOR, alpha: 0.3 + 0.14 * beat });
+      g.circle(h.x, h.y, h.r * (0.72 + 0.1 * beat)).fill({ color: HALO_COLOR, alpha: 0.3 });
+      g.circle(h.x, h.y, h.r).stroke({ width: 3, color: HALO_RING, alpha: 0.65 + 0.3 * beat });
     }
   }
 
@@ -147,7 +175,7 @@ export class FoodLayer {
       this.foodSprites.set(f.id, sprite);
     }
     const amount = Math.sqrt(Math.max(0, remaining) / f.total);
-    const fit = Math.min((f.w * CELL * 1.15) / picture.w, (f.h * CELL * 1.15) / picture.h) * (0.55 + 0.45 * amount);
+    const fit = Math.max(Math.min((f.w * CELL * 1.7) / picture.w, (f.h * CELL * 1.7) / picture.h), MIN_FOOD_PX / Math.max(picture.w, picture.h)) * (0.6 + 0.4 * amount);
     sprite.scale.set(fit);
     sprite.position.set((f.x + f.w / 2) * CELL, (f.y + f.h / 2) * CELL);
     sprite.visible = true;
@@ -177,7 +205,7 @@ export class FoodLayer {
     const x = (f.x + f.w / 2) * CELL - w / 2;
     const y = (f.y + f.h) * CELL + 3;
     g.rect(x, y, w, METER_H).fill({ color: INK, alpha: 0.75 }).stroke({ width: 1.5, color: INK });
-    if (frac > 0) g.rect(x + 1, y + 1, (w - 2) * frac, METER_H - 2).fill(FOOD[f.type].light);
+    if (frac > 0) g.rect(x + 1, y + 1, (w - 2) * frac, METER_H - 2).fill(METER_FILL);
   }
 
   /**

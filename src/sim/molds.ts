@@ -34,6 +34,8 @@ export function addMold(
     upkeepTick: 0,
     flowTick: emptyFlow(),
     flow: emptyFlow(),
+    bloomUntil: 0,
+    burstUsed: false,
     frontCells: [],
     frontLoss: 0,
     lossTick: 0,

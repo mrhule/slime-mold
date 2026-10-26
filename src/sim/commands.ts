@@ -1,5 +1,6 @@
 import { demolishBuilding, placeBuilding, upgradeBuilding } from './buildings';
 import { addTarget } from './growth';
+import { sporeBurst } from './bloom';
 import { evolve } from './tiers';
 import { dirBetween } from './grid';
 import { cutKey, linkCells, relabelComponent, unlinkCells } from './network';
@@ -64,6 +65,11 @@ export function applyCommand(world: World, cmd: Command): void {
     case 'evolve': {
       const res = evolve(world, cmd.mold);
       if (!res.ok) reject(world, cmd.mold, res.reason);
+      return;
+    }
+    case 'sporeBurst': {
+      const reason = sporeBurst(world, cmd.mold);
+      if (reason) reject(world, cmd.mold, reason);
       return;
     }
     case 'demolishBuilding': {

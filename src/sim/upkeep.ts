@@ -1,6 +1,7 @@
 import { buildingUpkeep } from './buildings';
 import { degree, removeCell } from './network';
 import { edgeSlot, octile } from './grid';
+import { blooming } from './bloom';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { CellIndex, Component, World } from './types';
@@ -13,6 +14,7 @@ import type { CellIndex, Component, World } from './types';
 export function tickUpkeep(world: World): void {
   const rate = world.balance.upkeepPerCell * TICK_DT;
   for (const comp of [...world.components.values()]) {
+    if (blooming(world, comp.moldId)) continue; // a bloom's pieces are kept stocked and pay no upkeep
     const buildingsDue = buildingUpkeep(world, comp.id) * TICK_DT;
     const due = rate * comp.cells.length + buildingsDue;
     const paid = Math.min(due, comp.pool);

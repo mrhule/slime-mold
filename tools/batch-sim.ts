@@ -26,6 +26,8 @@ const roundTo = r1 ?? r0;
 const games = Number(arg('games', '10'));
 const aggression = Number(arg('aggr', '0.4'));
 const maxMinutes = Number(arg('max', '25'));
+/** with --burst <minute>, the player model goes all in with a spore burst at that game minute (0 = never) */
+const burstMinute = Number(arg('burst', '0'));
 const baseSeed = Number(arg('seed', '1'));
 const verbose = process.argv.includes('--verbose');
 /** how often (seconds) the player model decides what to do; a fixed, human-like pace */
@@ -97,7 +99,9 @@ function playGame(round: number, seed: number): GameResult {
   let tickMsTotal = 0;
   let ticks = 0;
   let firstPool = -1;
+  const burstTick = burstMinute > 0 ? Math.round((burstMinute * 60) / TICK_DT) : -1;
   while (world.tick < maxTicks && world.outcome === 'playing') {
+    if (world.tick === burstTick) enqueue(world, { type: 'sporeBurst', mold: 1 });
     if (world.tick % interval === 0 && world.molds[0]!.status === 'alive') {
       for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
       maybeBuildStore(world);

@@ -11,6 +11,7 @@ import { tickGrowth } from './growth';
 import { connectPieces } from './connect';
 import { fadeStrays } from './fade';
 import { decayOrphans } from './network';
+import { tickBloom } from './bloom';
 import { tickUpkeep } from './upkeep';
 import { TICK_DT } from './types';
 import type { Component, NutrientFlow, World } from './types';
@@ -59,6 +60,7 @@ export function step(world: World): void {
   tickDrops(world);
   tickIncome(world);
   tickUpkeep(world);
+  tickBloom(world);
   scanFronts(world);
   if (world.tick % world.balance.flowEvery === 0) solveFlow(world);
   tickGrowth(world);

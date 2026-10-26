@@ -394,3 +394,10 @@ export function drainStoreHouses(world: World): void {
     if (comp) comp.pool = Math.max(0, comp.pool - amount);
   }
 }
+
+/** nutrients stored across all of a mold's pieces */
+export function storeStock(world: Readonly<World>, moldId: MoldId): number {
+  let sum = 0;
+  for (const c of world.components.values()) if (c.moldId === moldId) sum += c.pool;
+  return sum;
+}

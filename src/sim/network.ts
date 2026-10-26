@@ -195,7 +195,8 @@ export function decayOrphans(world: World): void {
   const loss = world.balance.orphanDecay * TICK_DT;
   const dead: CellIndex[] = [];
   for (const comp of world.components.values()) {
-    if (!comp.orphaned) continue;
+    // a spore burst's pieces stay alive while it blooms
+    if (!comp.orphaned || (world.molds[comp.moldId - 1]?.bloomUntil ?? 0) > world.tick) continue;
     for (const cell of comp.cells) {
       const b = (world.biomass[cell] as number) - loss;
       if (b <= 0) dead.push(cell);

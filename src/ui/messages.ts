@@ -24,6 +24,9 @@ export const REASONS: Record<string, string> = {
   'not-your-building': 'That is not your building!',
   'not-a-farm': 'Only pools have an output dial!',
   'bad-level': 'That output level is not allowed!',
+  'burst-locked': 'The spore burst is not ready yet!',
+  'burst-used': 'The spore burst is already spent!',
+  'burst-cost': 'Not enough nutrients for a burst!',
 };
 
 export const FOOD_NAMES: Record<string, string> = {

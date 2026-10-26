@@ -1,5 +1,6 @@
 import { capOf, countBuildings } from './buildings';
 import { poolCounts, poolIncome } from './food';
+import { burstStatus } from './bloom';
 import { mapControl, winThreshold } from './round';
 import { evolveStatus } from './tiers';
 import { moldOf } from './world';
@@ -59,6 +60,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     allocation: mold.allocation,
     mapControl: mapControl(world, moldId),
     winControl: winThreshold(world),
+    burst: { ...burstStatus(world, moldId), cost: world.balance.burst.cost, target: world.balance.burst.winControl },
     growthStarved: mold.targets.some((t) => t.state === 'starved'),
     targets: mold.targets.map((t) => ({ id: t.id, cell: t.cell, state: t.state })),
     build: buildOptions(world, moldId),

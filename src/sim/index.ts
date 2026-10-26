@@ -13,6 +13,7 @@ import type { DifficultyProfile, World } from './types';
 export { boosterCover, canPlace, countBuildings, capOf, drainStoreHouses, placePreview, demolishBuilding, reachOf, upgradeSpec, recomputeFeed, recomputeSupply, storeCover, upgradeBuilding, veinCover, workingStoreHouses } from './buildings';
 export { enqueue, pendingAllocation } from './commands';
 export { knownFoodLeft } from './food';
+export { burstStatus, blooming } from './bloom';
 export { stateHash } from './hash';
 export { readHud } from './hud';
 export { step } from './step';

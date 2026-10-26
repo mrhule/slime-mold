@@ -81,6 +81,9 @@ export interface Mold {
   /** where nutrients came from and went, per tick and smoothed per second, for the HUD */
   flowTick: NutrientFlow;
   flow: NutrientFlow;
+  /** the tick the spore burst's bloom ends, 0 before it and -1 once it is over */
+  bloomUntil: number;
+  burstUsed: boolean;
   /** owned cells touching an enemy cell, rebuilt every tick */
   frontCells: CellIndex[];
   /** smoothed biomass per second lost on fronts, and the per-tick accumulator */
@@ -169,7 +172,9 @@ export type Command =
   /** tear down the mold's building on a cell, getting part of its cost back */
   | { type: 'demolishBuilding'; mold: MoldId; cell: CellIndex }
   /** spend most of a full stock to move up a tier */
-  | { type: 'evolve'; mold: MoldId };
+  | { type: 'evolve'; mold: MoldId }
+  /** go all in: scatter spores over the map and bloom, then reach the burst's control target or lose */
+  | { type: 'sporeBurst'; mold: MoldId };
 
 export type PlaceReason =
   | 'unknown-building'
@@ -195,6 +200,7 @@ export type SimEvent =
   | { type: 'dropWarning'; dropId: number; cell: CellIndex; foodType: FoodType }
   | { type: 'dropLanded'; dropId: number; foodSourceId: number }
   | { type: 'foodDepleted'; foodSourceId: number }
+  | { type: 'sporeBurst'; mold: MoldId; seeds: number }
   | { type: 'moldEliminated'; mold: MoldId }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
@@ -219,7 +225,8 @@ export interface DifficultyProfile {
 }
 
 export type RoundOutcome = 'playing' | 'victory' | 'defeat';
-export type VictoryReason = 'eliminated-all' | 'map-control';
+export type VictoryReason = 'eliminated-all' | 'map-control' | 'spore-burst';
+export type DefeatReason = 'eliminated' | 'burst-failed';
 
 export interface ReplayLog {
   runSeed: number;
@@ -276,6 +283,8 @@ export interface HudModel {
   mapControl: number;
   /** the control that wins right now: it eases down in a long round */
   winControl: number;
+  /** the spore burst: whether it can be used, and the bloom's clock once it has been */
+  burst: { state: 'locked' | 'poor' | 'ready' | 'blooming' | 'used'; cost: number; target: number; unlockIn: number; secondsLeft: number };
   growthStarved: boolean;
   targets: HudTarget[];
   build: BuildOption[];
@@ -433,6 +442,7 @@ export interface World {
   mapFallback: boolean;
   outcome: RoundOutcome;
   victoryReason: VictoryReason | null;
+  defeatReason: DefeatReason | null;
 
   rng: RngStreams;
   commandQueue: Command[];

@@ -154,12 +154,13 @@ export class Screens {
          <li><span>Rivals eliminated</span><b>${rivalsOut} / ${rivals}</b></li>
          <li><span>Seed</span><b>${run.runSeed}</b></li>`
       : '';
+    const burstFailed = !win && w.defeatReason === 'burst-failed';
     const buttons = win
       ? `<button class="btn" data-act="nextRound">Next round</button><button class="btn" data-act="quitToTitle">Quit to title</button>`
       : `<button class="btn" data-act="newRun">New run</button><button class="btn" data-act="quitToTitle">Quit to title</button>`;
     return `<div class="screen"><div class="panel big ${win ? 'win' : 'lose'}">
-      <h2>${win ? 'You win!' : 'You were eaten!'}</h2>
-      <p>${win ? `Round ${run.roundNumber} cleared. Round ${run.roundNumber + 1} gets harder.` : `You reached round ${run.roundNumber}. The next run starts again at round 1.`}</p>
+      <h2>${win ? 'You win!' : burstFailed ? 'The burst fell short!' : 'You were eaten!'}</h2>
+      <p>${win ? `${w.victoryReason === 'spore-burst' ? 'The spores took the dish! ' : ''}Round ${run.roundNumber} cleared. Round ${run.roundNumber + 1} gets harder.` : `${burstFailed ? 'The bloom ended before your mold held enough of the map. ' : ''}You reached round ${run.roundNumber}. The next run starts again at round 1.`}</p>
       <ul class="stats">${stats}</ul>
       <p class="best">Best round: <b>${run.bestRound}</b></p>
       ${buttons}

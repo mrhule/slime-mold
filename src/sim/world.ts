@@ -104,6 +104,7 @@ export function createWorld(
     mapFallback: false,
     outcome: 'playing',
     victoryReason: null,
+    defeatReason: null,
     rng: new RngStreams(seed),
     commandQueue: [],
     internalCommands: new WeakSet(),

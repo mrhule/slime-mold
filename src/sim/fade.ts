@@ -1,4 +1,5 @@
 import { removeCellAndSplit } from './network';
+import { blooming } from './bloom';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { CellIndex, World } from './types';
@@ -27,7 +28,7 @@ export function fadeStrays(world: World): void {
     const o = world.owner[c] as number;
     if (o === 0) continue;
     const mold = world.molds[o - 1];
-    if (!mold || mold.status !== 'alive' || c === mold.core || (world.food[c] as number) > 0 || heads.has(c) || !isStray(world, c)) {
+    if (!mold || mold.status !== 'alive' || blooming(world, o) || c === mold.core || (world.food[c] as number) > 0 || heads.has(c) || !isStray(world, c)) {
       world.strayFor[c] = 0;
       continue;
     }

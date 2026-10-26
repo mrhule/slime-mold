@@ -120,7 +120,7 @@ html, body {
 .coach {
   position: absolute;
   left: 50%;
-  bottom: 128px;
+  top: 16px;
   transform: translateX(-50%) rotate(-0.4deg);
   width: min(460px, calc(100vw - 32px));
   padding: 8px 14px 10px;
@@ -131,7 +131,7 @@ html, body {
 .coach-step { font-family: var(--display); font-size: 15px; letter-spacing: 1px; text-transform: uppercase; color: #8a5a00; }
 .coach-skip { font: inherit; font-size: 12px; font-weight: 700; background: none; border: 0; text-decoration: underline; cursor: pointer; color: var(--ink); padding: 4px; }
 .coach-text { font-weight: 700; font-size: 15px; line-height: 1.3; }
-.touch .coach { bottom: auto; top: 70px; width: min(420px, calc(100vw - 372px)); }
+.touch .coach { left: 8px; bottom: 8px; top: auto; transform: none; width: min(380px, calc(100vw - 372px)); }
 .touch .coach-skip { min-height: 36px; min-width: 44px; }
 
 .mute-btn {
@@ -180,7 +180,7 @@ html, body {
 
 .toast {
   position: absolute;
-  bottom: 28px;
+  bottom: 118px; /* above the build bar, which fills the bottom centre */
   left: 50%;
   transform: translateX(-50%) rotate(-1deg);
   padding: 8px 20px 6px;
@@ -815,3 +815,27 @@ html.touch, .touch body {
 .hud .evolve[hidden] { display: none; }
 .hud .evolve.ready { background: var(--accent); opacity: 1; animation: hint-pulse 0.9s ease-in-out infinite alternate; }
 .buildbar button.locked { filter: grayscale(1); opacity: 0.55; }
+
+/* the spore burst: a last gamble, so it looks like one */
+.hud .burst-btn {
+  display: block;
+  width: 100%;
+  margin: 6px 0 2px;
+  padding: 5px 8px 3px;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.15;
+  color: var(--ink);
+  background: #ffe9a8;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.hud .burst-btn[hidden] { display: none; }
+.hud .burst-btn:disabled { opacity: 0.6; cursor: default; font-size: 13px; }
+.hud .burst-btn:not(:disabled):hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.hud .burst-btn.armed { background: var(--danger); color: #fff; animation: hint-pulse 0.5s ease-in-out infinite alternate; }
+.hud .burst-btn.blooming { opacity: 1; background: #b9e86a; animation: hint-pulse 0.8s ease-in-out infinite alternate; }
+.touch .hud .burst-btn { min-height: 44px; font-size: 14px; }

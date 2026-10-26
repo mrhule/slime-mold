@@ -32,6 +32,7 @@ export function evaluateOutcome(world: World): void {
   if (!player) return;
   if (player.status === 'eliminated') {
     world.outcome = 'defeat';
+    world.defeatReason = 'eliminated';
     return;
   }
   const rivals = world.molds.slice(1);

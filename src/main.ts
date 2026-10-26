@@ -115,9 +115,14 @@ async function main(): Promise<void> {
       onAllocation: (value) => send({ type: 'setAllocation', mold: PLAYER, value }),
       onToggleMute: () => applySettings({ muted: !settings.muted }),
       onEvolve: () => send({ type: 'evolve', mold: PLAYER }),
+      onBurst: () => send({ type: 'sporeBurst', mold: PLAYER }),
     },
     run.world.balance.victoryControl,
   );
+  // X is the spore burst key; it needs a second press to confirm, like the button
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'x' && !e.repeat && (run.state === 'playing' || (run.state === 'paused' && run.pauseReason !== 'menu'))) hud.pressBurst();
+  });
   const input = new InputController(app.canvas, renderer, () => run.world, send, {
     canAct: () => run.state === 'playing' || run.state === 'paused',
     togglePause: () => run.togglePause(),
@@ -368,6 +373,10 @@ async function main(): Promise<void> {
         if (e.cell !== undefined) renderer.fx.addRejectPing(e.cell, run.world.width);
       }
       if (e.type === 'cellDied' && e.mold === PLAYER && e.by > 0) losses.push(run.world.tick);
+      if (e.type === 'sporeBurst' && e.mold === PLAYER) {
+        renderer.camera.addShake(8);
+        hud.toast(`SPORE BURST! ${e.seeds} spores away: cover the map before the bloom ends!`, 4);
+      }
       if (e.type === 'capLost') hud.toast('Stock lost!', 2.5);
       if (e.type === 'dropWarning') hud.toast(`${FOOD_NAMES[e.foodType] ?? 'Food'} incoming!`, 2.5);
       if (e.type === 'dropLanded') {
