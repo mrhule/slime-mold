@@ -194,24 +194,28 @@ describe('evolving and the relay', () => {
     expect(placeBuilding(world, mold.id, 'relay', cells[10] as number)).toEqual({ ok: false, reason: 'locked' });
   });
 
-  it('evolving needs a nearly full stock, spends a share of the cap, and unlocks the relay', () => {
+  it('evolving costs a fixed amount, however many factories you have', () => {
     const { world, mold, comp, cells } = setup();
-    const cap = capOf(world, comp);
-    comp.pool = cap * (tiers.fullShare - 0.05);
+    const cost = tiers.costs[0] as number;
+    comp.pool = cost - 5;
     applyCommand(world, { type: 'evolve', mold: mold.id });
     expect(mold.tier).toBe(1);
-    expect(world.events.some((e) => e.type === 'commandRejected' && e.reason === 'not-full')).toBe(true);
-    comp.pool = cap;
+    expect(world.events.some((e) => e.type === 'commandRejected' && e.reason === 'cant-afford')).toBe(true);
+    // factories raise the cap, but not the price
+    placeBuilding(world, mold.id, 'storehouse', cells[8] as number);
+    placeBuilding(world, mold.id, 'storehouse', cells[16] as number);
+    expect(capOf(world, comp)).toBeGreaterThan(defaultBalance.pool.baseCap);
+    comp.pool = cost + 40;
     applyCommand(world, { type: 'evolve', mold: mold.id });
     expect(mold.tier).toBe(2);
-    expect(comp.pool).toBeCloseTo(cap * (1 - tiers.costShare), 6);
-    expect(placeBuilding(world, mold.id, 'relay', cells[10] as number)).toEqual({ ok: true });
+    expect(comp.pool).toBeCloseTo(40, 6);
+    expect(placeBuilding(world, mold.id, 'relay', cells[24] as number)).toEqual({ ok: true });
   });
 
   it('stops at the top tier', () => {
     const { world, mold, comp } = setup();
     mold.tier = tiers.max;
-    comp.pool = capOf(world, comp);
+    comp.pool = 300;
     applyCommand(world, { type: 'evolve', mold: mold.id });
     expect(world.events.some((e) => e.type === 'commandRejected' && e.reason === 'max-tier')).toBe(true);
   });

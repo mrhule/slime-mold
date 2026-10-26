@@ -66,7 +66,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 | Right-click a marker | Cancel that target. Shift + right-click clears all |
 | Right-click a building (twice) | Demolish it and get half its cost back |
 | Right-click a vein | Cut it (a cut-off piece with no core or food starves); right-click the snip to rejoin |
-| `V` | Evolve: with your stock nearly full, spend most of it to move up a tier and unlock the Relay |
+| `V` | Evolve: spend a fixed 250 nutrients to move up a tier and unlock the Relay (the price grows only with each evolution, not with your factories) |
 | `F` / `B` / `M` / `R` | Place a Factory / Booster / Harvester / Relay (tier 2) (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |

@@ -160,8 +160,8 @@ export interface BalanceConfig {
   /** one entry per building type (002) */
   buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec; relay: RelaySpec };
 
-  /** evolving: the highest tier, the share of the stock cap that must be held to evolve, and the share it costs */
-  tiers: { max: number; fullShare: number; costShare: number };
+  /** evolving: the highest tier, and what it costs in nutrients to go up from tier n (at index n - 1). The cost is fixed: it does not grow with the factories you have built. */
+  tiers: { max: number; costs: number[] };
 
   /**
    * how far supply carries along the veins: from the core and from each working factory, in cells (a
@@ -282,7 +282,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
 
   demolishRefund: 0.5,
 
-  tiers: { max: 2, fullShare: 0.9, costShare: 0.7 },
+  tiers: { max: 2, costs: [250] },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

@@ -14,7 +14,6 @@ export const REASONS: Record<string, string> = {
   'no-vein': 'No vein there to cut!',
   'no-building': 'No building there!',
   locked: 'Evolve to unlock that!',
-  'not-full': 'Fill your stock to evolve!',
   'max-tier': 'Fully evolved!',
   'not-upgradable': "Only factories can be upgraded!",
   'max-level': 'Already fully upgraded!',

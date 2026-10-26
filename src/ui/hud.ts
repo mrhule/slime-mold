@@ -56,7 +56,7 @@ export class Hud {
           <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus fight" />
         </label>
         <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
-        <button type="button" class="evolve" data-hud="evolve" hidden title="With your stock nearly full, spend most of it to evolve and unlock new buildings (V)">Evolve</button>
+        <button type="button" class="evolve" data-hud="evolve" hidden title="Spend a fixed amount of nutrients to evolve and unlock new buildings (V). The price does not grow with your factories.">Evolve</button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
         <div class="warn" data-hud="unlinked" hidden></div>
         <div class="rivals" data-hud="rivals"></div>
@@ -127,7 +127,7 @@ export class Hud {
     const t = hud.tier;
     evolveBtn.hidden = t.current >= t.max;
     evolveBtn.classList.toggle('ready', t.ready);
-    evolveBtn.textContent = t.ready ? `Evolve to tier ${t.current + 1} (V): costs ${Math.round(t.cost)}` : `Evolve: fill your stock to ${Math.round(t.needed)}`;
+    evolveBtn.textContent = t.ready ? `Evolve to tier ${t.current + 1} (V): costs ${Math.round(t.cost)}` : `Evolve: needs ${Math.round(t.cost)} nutrients`;
     const sign = hud.netIncome >= 0 ? '+' : '';
     this.el.income!.textContent = `${sign}${hud.netIncome.toFixed(1)}/s`;
     this.el.income!.classList.toggle('neg', hud.netIncome < 0);
