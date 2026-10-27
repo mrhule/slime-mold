@@ -92,9 +92,16 @@ async function main(): Promise<void> {
   if (resolveTouch(settings.touchMode, detectedTouch)) settings = loadSettings(store, { quality: 'low' });
   const engine = new AudioEngine();
   engine.setTracks(trackUrls); // the files in public/music; none means the generated loop
-  engine.setIntro(`${import.meta.env.BASE_URL}operas/The_Kingdom_Underneath.mp3`); // plays once, first
   const director = new Director();
   const stingDirector = new StingDirector();
+  const introUrl = `${import.meta.env.BASE_URL}operas/The_Kingdom_Underneath.mp3`;
+  let introArmed = false;
+  // the intro song belongs to the embellishments: it plays once, first, when they are on as the music starts
+  const armIntro = (): void => {
+    if (introArmed || !settings.embellishments) return;
+    introArmed = true;
+    engine.setIntro(introUrl);
+  };
   const stingUrl = (file: string): string => `${import.meta.env.BASE_URL}operas/${file}`;
   engine.setSettings(settings);
   // iOS only counts a finished tap (touchend or click) as a user gesture, so those unlock too; the
@@ -102,6 +109,7 @@ async function main(): Promise<void> {
   const unlockEvents = ['pointerdown', 'touchend', 'click', 'keydown'] as const;
   const unlockAudio = (e: Event): void => {
     engine.unlock();
+    armIntro();
     engine.startMusic();
     engine.preloadStings(Object.values(STINGS).map((d) => stingUrl(d.file)));
     if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
@@ -221,6 +229,12 @@ async function main(): Promise<void> {
     settings = { ...settings, ...change };
     saveSettings(settings, store);
     engine.setSettings(settings);
+    if (change.embellishments && !introArmed) {
+      // switched on after the music started: restart it so the theme song plays now
+      armIntro();
+      engine.stopMusic();
+      engine.startMusic();
+    }
     hud.setMuted(settings.muted);
     reduceMotion();
     screens.syncSettings();
@@ -400,7 +414,7 @@ async function main(): Promise<void> {
     const rivalCells = run.world.molds.filter((m) => m.id !== PLAYER && m.status === 'alive').map((m) => m.cellCount);
     const stingId = stingDirector.update({
       seconds: model.elapsedSeconds,
-      playing: run.state === 'playing' && !tutorial.running,
+      playing: run.state === 'playing' && !tutorial.running && settings.embellishments,
       playerCells: player?.cellCount ?? 0,
       enemyCells: rivalCells.reduce((a, b) => a + b, 0),
       frontCells: player?.frontCells.length ?? 0,
