@@ -45,7 +45,7 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
   only pays while a factory is on the same vein; where two molds reach one pool, the cells each
   holds decide the split. A store
   house also speeds up tips and **Harvesters** (`M`, beside big food) along its vein, fading with
-  distance, at a small drain on the stock. **Booster Factories** (`B`) make the whole vein they sit
+  distance, at a small drain on the stock. **fortresses** (`B`) make the whole vein they sit
   on stronger in fights.
 - **Join up.** Pieces of your mold that grow within a cell of touching link up on their own (with a
   one-cell bridge if needed), so a mold spreading in several directions stays one network and shares
@@ -67,13 +67,13 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 | Right-click a building (twice) | Demolish it and get half its cost back |
 | Right-click a vein | Cut it (a cut-off piece with no core or food starves); right-click the snip to rejoin |
 | `V` | Evolve: spend a fixed 250 nutrients to move up a tier and unlock the Relay (the price grows only with each evolution, not with your factories) |
-| `F` / `B` / `M` / `R` | Place a Factory / Booster / Harvester / Relay (tier 2) (click a cell of yours; `Esc` or right-click cancels) |
+| `F` / `B` / `M` / `R` | Place a Factory / Fortress / Harvester / Relay (tier 2) (click a cell of yours; `Esc` or right-click cancels) |
 | `Q` / `E`, or the slider | Send more nutrients to growth / to the fight |
 | `Space` | Pause and resume (you can still give orders while paused) |
 | `1` `2` `3` | Speed 1x, 2x, 3x |
 | `W` `A` `S` `D`, arrows, screen edge, middle-drag | Pan the camera |
 | Mouse wheel | Zoom (0.5x to 3x) |
-| `X` | Spore burst (press twice): once a round, after 4 minutes and for 100 nutrients, spores spring up all over the map and bloom for 90 seconds. Hold 60% of the map when the bloom ends and you win; if not, you lose |
+| `X` | Spore burst (press twice): once a round, after 4 minutes and for 500 nutrients, spores spring up all over the map and bloom for 90 seconds. Hold 60% of the map when the bloom ends and you win; if not, you lose |
 | `H` | Center on your core |
 | `Esc` | Pause menu (or cancel placement) |
 
@@ -115,4 +115,4 @@ The project is organized with [Spec Kit](https://github.com/github/spec-kit): se
 spec, plan, tasks and playtest log:
 
 - `specs/001-core-game-loop`: the game itself
-- `specs/002-buildings`: farms, booster factories, harvesters, and rivals that build them
+- `specs/002-buildings`: farms, fortresses, harvesters, and rivals that build them

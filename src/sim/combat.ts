@@ -63,7 +63,7 @@ export function tickCombat(world: World): void {
       const grant = Math.min((world.pressure[cell] as number) * dt, comp.pool);
       comp.pool -= grant;
       moldOf(world, comp.moldId).flowTick.fight += grant;
-      // a booster factory in range makes this cell hit harder (FR-010)
+      // a fortress in range makes this cell hit harder (FR-010)
       const eff = (grant / dt + b.basePressure) * (world.boost[cell] as number);
       sc.eff[cell] = eff;
       const share = eff / (world.enemyAdj[cell] as number);

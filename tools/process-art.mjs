@@ -136,6 +136,9 @@ await sheet('rocks-moss', 'rocks-moss-sheet.png', 256);
 await sheet('puddles', 'puddles-sheet.png', 192);
 await sheet('factory', 'factory-sheet.png', 160);
 await sheet('relay-booster', 'relay-booster-sheet.png', 160);
+if (fs.existsSync(path.join(SRC, 'collector-sheet.png'))) await sheet('collector', 'collector-sheet.png', 160);
+if (fs.existsSync(path.join(SRC, 'fortress-sheet.png'))) await sheet('fortress', 'fortress-sheet.png', 160);
+if (fs.existsSync(path.join(SRC, 'goo-link.png'))) await sheet('goo-link', 'goo-link.png', 160);
 
 fs.writeFileSync(path.join(OUT, 'art.json'), JSON.stringify(manifest, null, 1));
 const total = fs.readdirSync(OUT).reduce((s, f) => s + fs.statSync(path.join(OUT, f)).size, 0);

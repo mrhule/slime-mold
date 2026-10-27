@@ -73,6 +73,8 @@ export class TrackPlayer {
   private started = false;
   private fadingOut = false;
   private readonly total: number;
+  /** a track played once before the playlist (the intro), then forgotten */
+  private first: string | null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -81,9 +83,11 @@ export class TrackPlayer {
     private readonly onExhausted: () => void = () => {},
     private readonly makeElement: TrackElementFactory = browserElement,
     rand: () => number = Math.random,
+    intro: string | null = null,
   ) {
     this.next = playlist(urls, rand);
-    this.total = urls.length;
+    this.first = intro;
+    this.total = urls.length + (intro ? 1 : 0);
   }
 
   get playing(): boolean {
@@ -208,7 +212,8 @@ export class TrackPlayer {
 
   private playNext(): void {
     if (!this.running || !this.el) return;
-    const url = this.next();
+    const url = this.first ?? this.next();
+    this.first = null;
     if (url === null) {
       this.fail();
       return;

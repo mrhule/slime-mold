@@ -24,7 +24,7 @@ export function addMold(
     pattern: id - 1,
     core,
     allocation: world.balance.defaultAllocation,
-    tier: 1,
+    tier: kind === 'rival' ? world.balance.tiers.max : 1, // rivals never evolve, so they start with every building open
     targets: [],
     status: 'alive',
     cellCount: 0,

@@ -9,6 +9,15 @@ import type { TrackElementFactory } from './tracks';
 
 /** music sits under the effects at the same slider position */
 const MUSIC_BUS_SCALE = 0.55;
+/** a spoken sting sits above the music */
+const STING_BUS_SCALE = 0.9;
+/** the music drops to this level under a sting, easing down and back over these seconds */
+const DUCK_LEVEL = 0.12;
+const DUCK_DOWN = 1.2;
+const DUCK_UP = 2.5;
+/** a sting fades in and out over these seconds */
+const STING_FADE_IN = 1;
+const STING_FADE_OUT = 1.5;
 
 type ContextFactory = () => AudioContext | null;
 
@@ -31,9 +40,15 @@ export class AudioEngine {
   private master: GainNode | null = null;
   private sfx: GainNode | null = null;
   private musicBus: GainNode | null = null;
+  /** between the music bus and the master: ducked under a sting */
+  private duck: GainNode | null = null;
+  private stingBus: GainNode | null = null;
+  private readonly stingBuffers = new Map<string, Promise<AudioBuffer | null>>();
+  private stingActive = false;
   private music: Music | null = null;
   private tracks: TrackPlayer | null = null;
   private trackUrls: string[] = [];
+  private introUrl: string | null = null;
   private settings: Settings = defaultSettings();
   private playing = false;
   private wantMusic = false;
@@ -48,6 +63,11 @@ export class AudioEngine {
   /** recorded tracks to play as the music (shuffled, endless); with none, or none that load, the generated loop plays */
   setTracks(urls: readonly string[]): void {
     this.trackUrls = urls.slice();
+  }
+
+  /** a recorded piece played once, before the playlist, the first time music starts */
+  setIntro(url: string | null): void {
+    this.introUrl = url;
   }
 
   /** whether sound can play at all (a context exists) */
@@ -65,8 +85,12 @@ export class AudioEngine {
         this.master = ctx.createGain();
         this.sfx = ctx.createGain();
         this.musicBus = ctx.createGain();
+        this.duck = ctx.createGain();
+        this.stingBus = ctx.createGain();
         this.sfx.connect(this.master);
-        this.musicBus.connect(this.master);
+        this.musicBus.connect(this.duck);
+        this.duck.connect(this.master);
+        this.stingBus.connect(this.master);
         this.master.connect(ctx.destination);
         this.applySettings();
       }
@@ -88,6 +112,7 @@ export class AudioEngine {
       if (this.master) this.master.gain.value = s.muted ? 0 : 1;
       if (this.sfx) this.sfx.gain.value = s.sfxVolume;
       if (this.musicBus) this.musicBus.gain.value = s.musicVolume * MUSIC_BUS_SCALE;
+      if (this.stingBus) this.stingBus.gain.value = s.musicVolume * STING_BUS_SCALE;
     } catch {
       /* ignore */
     }
@@ -126,14 +151,85 @@ export class AudioEngine {
     }
   }
 
+  /** fetch and decode stings ahead of time so they start the moment they are wanted */
+  preloadStings(urls: readonly string[]): void {
+    for (const url of urls) void this.loadSting(url);
+  }
+
+  private loadSting(url: string): Promise<AudioBuffer | null> {
+    let p = this.stingBuffers.get(url);
+    if (!p) {
+      const ctx = this.ctx;
+      p =
+        ctx && typeof fetch !== 'undefined'
+          ? fetch(url)
+              .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('missing'))))
+              .then((data) => ctx.decodeAudioData(data))
+              .catch(() => null)
+          : Promise.resolve(null);
+      this.stingBuffers.set(url, p);
+    }
+    return p;
+  }
+
+  /**
+   * Play a recorded sting over the music: the music eases down as the sting fades in, and back up
+   * after it fades out. `onStart` gets the sting's length in seconds the moment it begins. Resolves
+   * false (and plays nothing) when sound is unavailable, muted, paused, or another sting is playing.
+   */
+  async playSting(url: string, onStart?: (seconds: number) => void): Promise<boolean> {
+    const ctx = this.ctx;
+    if (!ctx || !this.stingBus || !this.duck || !this.playing || this.settings.muted || this.stingActive) return false;
+    this.stingActive = true;
+    try {
+      const buffer = await this.loadSting(url);
+      if (!buffer || !this.playing || !this.stingBus || !this.duck) {
+        this.stingActive = false;
+        return false;
+      }
+      const t = ctx.currentTime + 0.05;
+      const len = buffer.duration;
+      const voice = ctx.createGain();
+      voice.gain.setValueAtTime(0, t);
+      voice.gain.linearRampToValueAtTime(1, t + Math.min(STING_FADE_IN, len / 2));
+      voice.gain.setValueAtTime(1, t + Math.max(len - STING_FADE_OUT, len / 2));
+      voice.gain.linearRampToValueAtTime(0, t + len);
+      voice.connect(this.stingBus);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(voice);
+      src.onended = () => {
+        this.stingActive = false;
+        try {
+          voice.disconnect();
+        } catch {
+          /* ignore */
+        }
+      };
+      const duck = this.duck.gain;
+      duck.cancelScheduledValues(t);
+      duck.setValueAtTime(duck.value, t);
+      duck.linearRampToValueAtTime(DUCK_LEVEL, t + DUCK_DOWN);
+      duck.setValueAtTime(DUCK_LEVEL, t + len);
+      duck.linearRampToValueAtTime(1, t + len + DUCK_UP);
+      src.start(t);
+      onStart?.(len);
+      return true;
+    } catch {
+      this.stingActive = false;
+      return false;
+    }
+  }
+
   /** begin the music loop (once a gesture has unlocked audio) */
   startMusic(): void {
     this.wantMusic = true;
     const ctx = this.ctx;
     if (!ctx || !this.musicBus || this.music?.playing || this.tracks?.playing) return;
-    if (this.trackUrls.length > 0) {
+    if (this.trackUrls.length > 0 || this.introUrl) {
       try {
-        this.tracks = new TrackPlayer(ctx, this.musicBus, this.trackUrls, () => this.startGeneratedMusic(), this.makeTrackElement);
+        this.tracks = new TrackPlayer(ctx, this.musicBus, this.trackUrls, () => this.startGeneratedMusic(), this.makeTrackElement, Math.random, this.introUrl);
+        this.introUrl = null; // once per session
         this.tracks.start();
         if (!this.playing) this.tracks.pause();
         return;

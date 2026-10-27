@@ -17,6 +17,7 @@ const noIncome = { ...defaultBalance, coreIncome: 0, upkeepPerCell: 0, pool: { b
 function setup(foodType: 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | null, balance = noIncome) {
   const world = createOpenWorld(70, 40, balance);
   const a = addMold(world, 'player', cellOf(world, 10, 20), 200);
+  a.tier = 3;
   const src = foodType ? placeFood(world, foodType, 20, 18, 'initial')! : null;
   // a vein from the core to the cell just left of the food
   let prev = cellOf(world, 11, 20);
@@ -39,7 +40,7 @@ describe('harvester placement (FR-014)', () => {
     const onFood = cellOf(world, 20, 20);
     addCell(world, a.id, onFood, cellOf(world, 19, 20)); // grown onto the food
     expect(world.food[onFood]!).toBeGreaterThan(0);
-    expect(canPlace(world, a.id, 'booster', onFood)).toEqual({ ok: false, reason: 'on-food' });
+    expect(canPlace(world, a.id, 'fortress', onFood)).toEqual({ ok: false, reason: 'on-food' });
     expect(canPlace(world, a.id, 'harvester', onFood)).toEqual({ ok: true });
   });
 
@@ -62,6 +63,7 @@ describe('harvester placement (FR-014)', () => {
     expect(canPlace(world, a.id, 'harvester', second)).toEqual({ ok: false, reason: 'already-harvested' });
     // a rival holding another cell by the same food can harvest it
     const b = addMold(world, 'player', cellOf(world, 40, 30), 200);
+    b.tier = 3;
     const theirs = cellOf(world, 24, 19);
     addCell(world, b.id, theirs, -1);
     world.components.get(world.component[theirs]!)!.pool = 100;
@@ -116,7 +118,9 @@ describe('harvester effect (FR-015, FR-016)', () => {
   it('only speeds up the harvester owner\'s cells', () => {
     const world = createOpenWorld(70, 40, { ...noIncome, buildings: { ...defaultBalance.buildings, harvester: { ...spec, upkeep: 0 } } });
     const a = addMold(world, 'player', cellOf(world, 10, 20), 0);
+    a.tier = 3;
     const b = addMold(world, 'player', cellOf(world, 60, 20), 0);
+    b.tier = 3;
     const src = placeFood(world, 'sugarCube', 30, 18, 'initial')!;
     const ca = cellOf(world, 30, 18);
     const cb = cellOf(world, 33, 21);

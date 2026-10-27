@@ -9,7 +9,7 @@ file names shown.
 > Top-down view, as seen from directly above. Comic-book ink illustration style with cel shading:
 > heavy near-black ink outlines (slightly thicker on the lower-right edges), flat colour bands with
 > no gradients, a few hard-edged highlights, light coming from the upper left, and a small hard-edged
-> drop shadow falling to the lower right. Gritty, grimy, damp petri-dish / forest-floor mood. Muted
+> drop shadow falling to the lower right. Gritty, grimy, damp forest-floor mood (leaf litter, soil, twigs, stones, snails). Muted
 > olive, moss green, soil brown and slate grey, with warm gold as the only bright accent. No text,
 > no letters, no watermark, no border, no UI.
 
@@ -64,12 +64,12 @@ file names shown.
 > of rougher darker ground: packed brown earth and leaf mulch with scattered small stones and
 > bark flecks, slightly more contrast than open ground. The edges must wrap perfectly when tiled.
 
-## 8. Edge of the dish (dish-rim.png)
+## 8. Edge of the forest floor (dish-rim.png)
 
-> [style block] A 2048 x 512 strip showing the dark inner edge of a round glass petri dish seen from
-> above: a thick near-black rim, a thin pale glass highlight line along it, and dirt and condensation
-> smears near the edge, fading to transparent toward the inside. Horizontal strip, the rim along the
-> top edge.
+> [style block] A 2048 x 512 strip showing the dark outer edge of the play area seen from above: a
+> thick near-black border of tangled tree roots, mossy stones and packed soil, with a few twigs and
+> dead leaves along it and damp, dirty smears just inside, fading to transparent toward the inside.
+> Horizontal strip, the border along the top edge. (The file keeps the name dish-rim.png.)
 
 ## 9. Vignette (vignette.png)
 
@@ -118,6 +118,34 @@ file names shown.
 > key letter, and an empty icon area on the left. No text. Give the same card three versions side by
 > side: normal, pressed (pushed down toward the lower right, shadow shrunk), and disabled (greyed
 > out). [background rule]
+
+## 16. Collector (collector-sheet.png)
+
+> [style block] A sheet of 3 versions of a small organic sun-collecting building, drawn top-down:
+> a level of growth from small to large. Each is a round, glossy amber-gold dish like a flat
+> sunflower or a solar mushroom cap, with a warm pale-yellow glowing centre and a ring of short,
+> blunt, ray-like petals around the rim that catch the light. Short stubby root-like feet at the
+> edge, a few hard white highlights on the upper-left, a darker amber shade band on the lower
+> right, thick ink outline. It should read as "soaks up sunlight and turns it into energy",
+> friendly and chunky, not a machine. Same warm gold family as the factory but flatter and
+> brighter, with a yellow-orange glow, so the two read apart. [background rule]
+
+## 17. Fortress (fortress-sheet.png)
+
+> [style block] A sheet of 2 versions of a small organic fortress, drawn top-down, replacing the old
+> star-shaped booster: a squat ring of thick, knobbly armoured plates (like fused beetle shells or
+> a ring of bone-grey bastions) around a glowing orange-red core. A small version and a large
+> version. Pale steel-grey and bone plates with darker slate shade bands, a few cracks, hard white
+> rim light on the upper-left, thick ink outline and a hard shadow to the lower right. It should
+> read as "defensive, tough, makes the veins hit harder". [background rule]
+
+## 18. Goo link glow (goo-link.png)
+
+> [style block] A sheet of 3 small separate pieces drawn top-down: a gold glowing bead on a short
+> curved thread (a pearl of energy), a short run of five such beads fading from large to small, and
+> a soft rounded-rectangle halo ring in warm gold, hollow in the middle. Thick ink outlines on the
+> beads, a hard white highlight on each, flat colour bands. It marks the energy link between a
+> factory and a nearby goo pool. [background rule]
 
 ## Tips
 

@@ -228,14 +228,14 @@ describe('rival AI building (US4)', () => {
     expect(world.buildings.filter((b) => b.moldId === id && b.type === 'storehouse').length).toBeLessThanOrEqual(world.balance.buildings.storehouse.limit);
   });
 
-  it('builds a booster factory near a front it is losing', () => {
+  it('builds a fortress near a front it is losing', () => {
     const { world, id, state } = rich(300, 30);
     addCell(world, 1, cellOf(world, 22, 30), -1); // an enemy cell touching its east arm
     scanFronts(world);
     world.molds[id - 1]!.frontLoss = 1;
     updateVision(world);
     const cmds = placements(think(viewFor(world, id), state, new Rng(2), 3));
-    expect(cmds[0]).toMatchObject({ mold: id, building: 'booster' });
+    expect(cmds[0]).toMatchObject({ mold: id, building: 'fortress' });
   });
 
   it('builds a harvester next to big food it can see', () => {
@@ -265,9 +265,9 @@ describe('rival AI building (US4)', () => {
   it('can only ask about its own cells', () => {
     const { world, id } = rich(500, 0);
     const view = viewFor(world, id);
-    expect(view.canBuild('booster', cellOf(world, 21, 30))).toBe(true);
-    expect(view.canBuild('booster', cellOf(world, 50, 10))).toBe(false); // empty ground
-    expect(view.canBuild('booster', cellOf(world, 90, 50))).toBe(false); // the other mold's core
+    expect(view.canBuild('fortress', cellOf(world, 21, 30))).toBe(true);
+    expect(view.canBuild('fortress', cellOf(world, 50, 10))).toBe(false); // empty ground
+    expect(view.canBuild('fortress', cellOf(world, 90, 50))).toBe(false); // the other mold's core
   });
 });
 

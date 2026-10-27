@@ -30,6 +30,8 @@ export class Hud {
   /** the time (ms) until which a first press of the burst button counts as armed */
   private burstArmedUntil = 0;
   private toastTimer = 0;
+  private narrTimer = 0;
+  private announceTimer = 0;
   private rivalKey = '';
   private readonly winControl: number;
 
@@ -82,10 +84,12 @@ export class Hud {
           </g>
         </svg>
       </button>
-      <div class="toast" data-hud="toast" hidden></div>`,
+      <div class="toast" data-hud="toast" hidden></div>
+      <div class="announce" data-hud="announce" hidden><span class="announce-heading" data-hud="announceHeading"></span><span class="announce-sub" data-hud="announceSub"></span></div>
+      <div class="narration" data-hud="narration" hidden><span class="narr-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="narr-body"><span class="narr-title" data-hud="narrTitle"></span><span class="narr-text" data-hud="narrText"></span></span></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
     this.el.burstBtn!.addEventListener('click', () => this.pressBurst());
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
@@ -223,6 +227,37 @@ export class Hud {
   /** short message for a rejected command */
   reject(reason: string): void {
     this.toast(reasonText(reason));
+  }
+
+  /** a big popup in the middle of the screen for a moment that changes the game (first contact), then fading away */
+  announce(heading: string, sub: string, seconds: number): void {
+    const card = this.el.announce!;
+    this.el.announceHeading!.textContent = heading;
+    this.el.announceSub!.textContent = sub;
+    card.classList.remove('out');
+    // restart the pop-in animation when a second one comes up
+    card.hidden = true;
+    void card.offsetWidth;
+    card.hidden = false;
+    window.clearTimeout(this.announceTimer);
+    this.announceTimer = window.setTimeout(() => {
+      card.classList.add('out');
+      this.announceTimer = window.setTimeout(() => (card.hidden = true), 1000);
+    }, seconds * 1000);
+  }
+
+  /** the narrator card: shown while a spoken sting plays, with bars that dance, then fading away */
+  narrate(title: string, text: string, seconds: number): void {
+    const card = this.el.narration!;
+    this.el.narrTitle!.textContent = title;
+    this.el.narrText!.textContent = text;
+    card.classList.remove('out');
+    card.hidden = false;
+    window.clearTimeout(this.narrTimer);
+    this.narrTimer = window.setTimeout(() => {
+      card.classList.add('out');
+      this.narrTimer = window.setTimeout(() => (card.hidden = true), 1500);
+    }, seconds * 1000);
   }
 
   toast(message: string, seconds = 2): void {

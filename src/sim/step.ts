@@ -1,4 +1,4 @@
-import { clampPools, drainStoreHouses, recomputeFeed, recomputeSupply } from './buildings';
+import { clampPools, collectorWorking, drainStoreHouses, recomputeFeed, recomputePower, recomputeSupply } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
@@ -13,6 +13,7 @@ import { fadeStrays } from './fade';
 import { decayOrphans } from './network';
 import { tickBloom } from './bloom';
 import { tickUpkeep } from './upkeep';
+import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { Component, NutrientFlow, World } from './types';
 
@@ -27,6 +28,13 @@ function tickIncome(world: World): void {
     if (id < 0 || world.owner[mold.core] !== mold.id) continue;
     (world.components.get(id) as Component).pool += gain;
     mold.incomeTick += gain;
+  }
+  // collectors turn sunlight into nutrients for their piece, while it can pay their upkeep
+  const sun = world.balance.buildings.collector.income * TICK_DT;
+  for (const b of world.buildings) {
+    if (!collectorWorking(world, b)) continue;
+    (world.components.get(world.component[b.cell] as number) as Component).pool += sun;
+    moldOf(world, b.moldId).incomeTick += sun;
   }
   tickFood(world);
 }
@@ -53,6 +61,7 @@ export function step(world: World): void {
   applyQueuedCommands(world);
   world.supplyUse.clear();
   if (world.tick % world.balance.flowEvery === 0) {
+    recomputePower(world);
     recomputeSupply(world);
     recomputeFeed(world);
     fadeStrays(world);

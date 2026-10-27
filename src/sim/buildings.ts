@@ -51,6 +51,7 @@ export function canPlace(world: Readonly<World>, moldId: MoldId, type: BuildingT
   if ((world.buildingAt[cell] as number) >= 0) return { ok: false, reason: 'occupied' };
   // food cells are only for harvesters (FR-004)
   if (type !== 'harvester' && (world.food[cell] as number) > 0) return { ok: false, reason: 'on-food' };
+  if (mold.tier < (world.balance.buildings[type].minTier ?? 1)) return { ok: false, reason: 'locked' };
   if (type === 'harvester') {
     const target = harvestTarget(world, cell);
     if (!target) return { ok: false, reason: 'no-food-nearby' };
@@ -58,7 +59,6 @@ export function canPlace(world: Readonly<World>, moldId: MoldId, type: BuildingT
     if (harvested(world, moldId, target.id)) return { ok: false, reason: 'already-harvested' };
   }
   const spec = world.balance.buildings[type];
-  if (mold.tier < (spec.minTier ?? 1)) return { ok: false, reason: 'locked' };
   if (countBuildings(world, moldId, type) >= spec.limit) return { ok: false, reason: 'limit-reached' };
   const comp = world.components.get(world.component[cell] as number);
   if (!comp || comp.pool < spec.cost) return { ok: false, reason: 'cant-afford' };
@@ -85,7 +85,8 @@ export function placeBuilding(world: World, moldId: MoldId, type: BuildingType, 
   world.buildings.push(building);
   world.buildingAt[cell] = building.id;
   world.events.push({ type: 'buildingPlaced', id: building.id, building: type, mold: moldId, cell });
-  if (type === 'booster') recomputeBoost(world);
+  if (type === 'fortress') recomputeBoost(world);
+  if (type === 'collector') repower(world);
   if (type === 'storehouse') {
     clampPools(world); // records the higher cap
     recomputeSupply(world);
@@ -139,7 +140,8 @@ export function demolishBuilding(world: World, moldId: MoldId, cell: CellIndex):
   b.destroyed = true;
   world.buildingAt[cell] = -1;
   world.events.push({ type: 'buildingDestroyed', id: b.id, building: b.type, mold: moldId, cell });
-  if (b.type === 'booster') recomputeBoost(world); // its bonus ends at once
+  if (b.type === 'fortress') recomputeBoost(world); // its bonus ends at once
+  if (b.type === 'collector') repower(world); // and so does a collector's power
   if (b.type === 'storehouse') {
     clampPools(world); // its cap ends at once
     recomputeSupply(world); // and so does its boost
@@ -168,9 +170,9 @@ export function buildingUpkeep(world: Readonly<World>, compId: number): number {
   return sum;
 }
 
-/** Is this booster factory working? It stops while its piece cannot pay upkeep (FR-011). */
-export function boosterWorking(world: Readonly<World>, b: Building): boolean {
-  if (b.destroyed || b.type !== 'booster') return false;
+/** Is this fortress working? It stops while its piece cannot pay upkeep (FR-011). */
+export function fortressWorking(world: Readonly<World>, b: Building): boolean {
+  if (b.destroyed || b.type !== 'fortress') return false;
   const comp = world.components.get(world.component[b.cell] as number);
   return !!comp && !comp.unpaid;
 }
@@ -178,7 +180,7 @@ export function boosterWorking(world: Readonly<World>, b: Building): boolean {
 /**
  * The cells a building at `start` strengthens along the vein network it is wired into, and how
  * much: fading linearly with distance along the veins (not through the air), from `bonus` at the
- * building to nothing at `reach` cells. Shared by booster factories and store houses.
+ * building to nothing at `reach` cells. Shared by fortresses and store houses.
  */
 export function veinCover(world: Readonly<World>, start: CellIndex, reach: number, bonus: number): { cell: CellIndex; bonus: number }[] {
   const w = world.width;
@@ -202,29 +204,70 @@ export function veinCover(world: Readonly<World>, start: CellIndex, reach: numbe
   return out;
 }
 
-/** The cells a booster factory at `start` strengthens (FR-010, FR-012). */
-export function boosterCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
-  const spec = world.balance.buildings.booster;
+/** Is this collector working? It stops while its piece cannot pay upkeep, like a fortress. */
+export function collectorWorking(world: Readonly<World>, b: Building): boolean {
+  if (b.destroyed || b.type !== 'collector') return false;
+  const comp = world.components.get(world.component[b.cell] as number);
+  return !!comp && !comp.unpaid;
+}
+
+/** The cells a collector at `start` powers along its veins, and how much (a fraction of extra output). */
+export function collectorCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
+  const spec = world.balance.buildings.collector;
   return veinCover(world, start, spec.reach, spec.bonus);
 }
 
 /**
- * Rebuild the combat strength multiplier from the working booster factories: each adds its taper
+ * Rebuild the output multiplier from the working collectors: each adds its taper to the cells its
+ * veins reach, capped at +`stackCap` in total. Factories, fortresses, harvesters and goo pools take
+ * the multiplier standing on their cells.
+ */
+export function recomputePower(world: World): void {
+  const spec = world.balance.buildings.collector;
+  let any = false;
+  for (const b of world.buildings) if (b.type === 'collector' && !b.destroyed) any = true;
+  if (!any && !world.powerActive) return;
+  world.power.fill(1);
+  world.powerActive = false;
+  for (const b of world.buildings) {
+    if (!collectorWorking(world, b)) continue;
+    world.powerActive = true;
+    for (const { cell, bonus } of collectorCover(world, b.cell)) {
+      world.power[cell] = Math.min(1 + spec.stackCap, (world.power[cell] as number) + bonus);
+    }
+  }
+}
+
+/** a collector came or went: the multipliers that read its power change at once */
+function repower(world: World): void {
+  recomputePower(world);
+  recomputeBoost(world);
+  recomputeSupply(world);
+}
+
+/** The cells a fortress at `start` strengthens (FR-010, FR-012). */
+export function fortressCover(world: Readonly<World>, start: CellIndex): { cell: CellIndex; bonus: number }[] {
+  const spec = world.balance.buildings.fortress;
+  return veinCover(world, start, spec.reach, spec.bonus);
+}
+
+/**
+ * Rebuild the combat strength multiplier from the working fortresses: each adds its taper
  * to the cells its veins reach, capped at +`stackCap` in total. Cheap enough to run every tick (a
  * handful of factories, each covering at most a few hundred cells).
  */
 export function recomputeBoost(world: World): void {
-  const spec = world.balance.buildings.booster;
+  const spec = world.balance.buildings.fortress;
   let any = false;
-  for (const b of world.buildings) if (b.type === 'booster' && !b.destroyed) any = true;
+  for (const b of world.buildings) if (b.type === 'fortress' && !b.destroyed) any = true;
   if (!any && !world.boostActive) return;
   world.boost.fill(1);
   world.boostActive = false;
   for (const b of world.buildings) {
-    if (!boosterWorking(world, b)) continue;
+    if (!fortressWorking(world, b)) continue;
     world.boostActive = true;
-    for (const { cell, bonus } of boosterCover(world, b.cell)) {
-      world.boost[cell] = Math.min(1 + spec.stackCap, (world.boost[cell] as number) + bonus);
+    for (const { cell, bonus } of fortressCover(world, b.cell)) {
+      world.boost[cell] = Math.min(1 + spec.stackCap, (world.boost[cell] as number) + bonus * (world.power[b.cell] as number));
     }
   }
 }
@@ -309,7 +352,7 @@ export function recomputeSupply(world: World): void {
     if (!b.boosting) continue;
     world.supplyActive = true;
     for (const { cell, bonus } of storeCover(world, b.cell)) {
-      world.supply[cell] = Math.min(1 + spec.stackCap, (world.supply[cell] as number) + bonus);
+      world.supply[cell] = Math.min(1 + spec.stackCap, (world.supply[cell] as number) + bonus * (world.power[b.cell] as number));
     }
   }
 }

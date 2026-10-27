@@ -13,11 +13,11 @@ export const Terrain = { Open: 0, Rough: 1, Obstacle: 2, Wall: 3 } as const;
 
 export type FoodType = 'oatFlake' | 'breadCrumb' | 'sugarCube' | 'fruitSlice' | 'goo';
 
-export type BuildingType = 'booster' | 'harvester' | 'storehouse' | 'relay';
+export type BuildingType = 'fortress' | 'harvester' | 'storehouse' | 'relay' | 'collector';
 
 /** what `Mold.memBuilding` stores for each building type (0 = none) */
-export const BUILDING_CODE: Record<BuildingType, number> = { booster: 1, harvester: 2, storehouse: 3, relay: 4 };
-export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'booster', 'harvester', 'storehouse', 'relay'];
+export const BUILDING_CODE: Record<BuildingType, number> = { fortress: 1, harvester: 2, storehouse: 3, relay: 4, collector: 5 };
+export const BUILDING_OF_CODE: (BuildingType | null)[] = [null, 'fortress', 'harvester', 'storehouse', 'relay', 'collector'];
 
 export type TipState = 'growing' | 'starved' | 'blocked' | 'arrived';
 
@@ -93,7 +93,7 @@ export interface Mold {
   vision: Uint8Array;
   memOwner: Uint8Array;
   memFood: Float32Array;
-  /** last-seen building on each cell: 0 none, 1 booster, 2 harvester, 3 store house */
+  /** last-seen building on each cell: 0 none, 1 fortress, 2 harvester, 3 store house */
   memBuilding: Uint8Array;
   /** for the player: enemy cells currently in view (HUD rival list) */
   seenCells: Uint32Array;
@@ -111,7 +111,7 @@ export interface Component {
   orphaned: boolean;
   /** leaf cell currently starving because upkeep cannot be paid, or -1 */
   starveCell: CellIndex;
-  /** true while the piece could not pay this tick's upkeep (booster factories stop working) */
+  /** true while the piece could not pay this tick's upkeep (fortresses stop working) */
   unpaid: boolean;
   /** the cap the pool was last clamped to (lets a falling cap be noticed) */
   cap: number;
@@ -414,14 +414,18 @@ export interface World {
   buildings: Building[];
   /** building id on each cell, or -1 */
   buildingAt: Int16Array;
-  /** combat strength multiplier from booster factories (1 = none) */
+  /** combat strength multiplier from fortresses (1 = none) */
   boost: Float32Array;
-  /** true while any working booster factory is boosting some cells (lets recomputing be skipped) */
+  /** true while any working fortress is boosting some cells (lets recomputing be skipped) */
   boostActive: boolean;
   /** growth and harvest speed multiplier from working store houses (1 = none) */
   supply: Float32Array;
   /** true while any working store house boosts some cell (lets rebuilding be skipped) */
   supplyActive: boolean;
+  /** output multiplier from working collectors for the buildings and goo pools in their range (1 = none) */
+  power: Float32Array;
+  /** true while any working collector powers some cell (lets rebuilding be skipped) */
+  powerActive: boolean;
   /** growth speed (trickle..1) from how far each cell is along the veins from the core or a working store house; 1 = right at supply */
   feed: Float32Array;
   /** seconds each cell has been out of every supply's reach (it starts dying back after the grace period) */

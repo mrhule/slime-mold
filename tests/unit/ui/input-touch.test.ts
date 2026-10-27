@@ -113,17 +113,17 @@ describe('touch placement: preview, then Confirm (FR-007)', () => {
 
   it('a tap while placing only previews: no command until Confirm, then exactly one placeBuilding', () => {
     const { input, sent, fire } = rig();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     tap(fire, 8 * CELL + 3, 9 * CELL + 3);
     expect(sent).toEqual([]);
     expect(input.pendingCell).toBe(9 * 160 + 8);
     input.confirmPlacement();
-    expect(sent).toEqual([{ type: 'placeBuilding', mold: 1, building: 'booster', cell: 9 * 160 + 8 }]);
+    expect(sent).toEqual([{ type: 'placeBuilding', mold: 1, building: 'fortress', cell: 9 * 160 + 8 }]);
   });
 
   it('tapping again moves the pending spot', () => {
     const { input, sent, fire } = rig();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     tap(fire, 2 * CELL + 1, 2 * CELL + 1);
     tap(fire, 4 * CELL + 1, 4 * CELL + 1, 500);
     expect(input.pendingCell).toBe(4 * 160 + 4);
@@ -132,14 +132,14 @@ describe('touch placement: preview, then Confirm (FR-007)', () => {
 
   it('Cancel, or choosing another building, sends nothing and clears the spot', () => {
     const { input, sent, fire } = rig();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     tap(fire, 5 * CELL + 1, 5 * CELL + 1);
     input.cancelPlacement();
     expect(input.placing).toBeNull();
     expect(input.pendingCell).toBeNull();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     tap(fire, 5 * CELL + 1, 5 * CELL + 1, 500);
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     expect(input.pendingCell).toBeNull();
     input.confirmPlacement();
     expect(sent).toEqual([]);
@@ -147,7 +147,7 @@ describe('touch placement: preview, then Confirm (FR-007)', () => {
 
   it('panning keeps the pending spot', () => {
     const { input, fire } = rig();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     tap(fire, 6 * CELL + 1, 6 * CELL + 1);
     fire('pointerdown', 1, 300, 300, 1000);
     fire('pointermove', 1, 360, 300, 1050);
@@ -157,7 +157,7 @@ describe('touch placement: preview, then Confirm (FR-007)', () => {
 
   it('confirm with nothing chosen does nothing', () => {
     const { input, sent } = rig();
-    input.togglePlacing('booster');
+    input.togglePlacing('fortress');
     input.confirmPlacement();
     expect(sent).toEqual([]);
   });

@@ -1,8 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { hash2 } from '../sim/noise';
 import { cutCells } from '../sim/index';
-import { boosterCover, reachOf, storeCover, veinCover } from '../sim/index';
-import { cellCenter, drawBuilding, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
+import { collectorCover, fortressCover, poolFactories, reachOf, storeCover, veinCover, workingStoreHouses } from '../sim/index';
+import { cellCenter, drawBuilding, drawGooLink, drawStoreCover, drawStoreDrops, homewardSteps } from './building-layer';
 import type { BuildingType, Mold, World } from '../sim/types';
 import { INK, moldColor } from './palette';
 import { style } from './style';
@@ -25,6 +25,8 @@ const GHOST_OK = 0x2ea84a;
 const GHOST_BAD = 0xe0432a;
 const BOOST_DROP = 0xdfe6ea;
 const BOOST_BOLT = 0xffd23a;
+const SUN_DROP = 0xf2a01e;
+const SUN_CORE = 0xfff1a8;
 
 interface Landing {
   x: number;
@@ -236,13 +238,18 @@ export class FxLayer {
       live.add(b.id);
       let entry = this.storeFlows.get(b.id);
       if (!entry || entry.slot !== slot) {
-        const cover = b.type === 'booster' ? boosterCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, reachOf(world, b), 1) : storeCover(world, b.cell);
+        const cover = b.type === 'collector' ? collectorCover(world, b.cell) : b.type === 'fortress' ? fortressCover(world, b.cell) : b.type === 'relay' ? veinCover(world, b.cell, reachOf(world, b), 1) : storeCover(world, b.cell);
         entry = { slot, cover, steps: homewardSteps(world.width, cover) };
         this.storeFlows.set(b.id, entry);
       }
       const mold = world.molds[b.moldId - 1];
       const color = moldColor(mold ? mold.color : 0);
-      if (b.type === 'booster') {
+      if (b.type === 'collector') {
+        // warm drops flowing out to the veins whose buildings it powers up
+        drawStoreDrops(g, world.width, entry.steps, SUN_DROP, timeSeconds, SUN_CORE);
+        continue;
+      }
+      if (b.type === 'fortress') {
         // steel drops flowing out to the veins it strengthens, apart from the owner-colored drops flowing in to a store house
         drawStoreDrops(g, world.width, entry.steps, BOOST_DROP, timeSeconds, BOOST_BOLT);
         continue;
@@ -251,6 +258,29 @@ export class FxLayer {
       drawStoreDrops(g, world.width, entry.steps, color, timeSeconds);
     }
     for (const id of this.storeFlows.keys()) if (!live.has(id)) this.storeFlows.delete(id);
+    this.drawGooLinks(g, world, timeSeconds);
+  }
+
+  /** a gold chain from each of the player's working factories to every goo pool near it that the piece holds a cell of */
+  private drawGooLinks(g: Graphics, world: Readonly<World>, timeSeconds: number): void {
+    for (const src of world.foodSources) {
+      if (src.depleted || !world.balance.foodTypes[src.type].infinite) continue;
+      for (const b of poolFactories(world, src)) {
+        if (b.moldId !== 1) continue;
+        const comp = world.components.get(world.component[b.cell] as number);
+        if (!comp || workingStoreHouses(world, comp) === 0) continue;
+        let held = false;
+        for (let y = src.y; y < src.y + src.h && !held; y++) {
+          for (let x = src.x; x < src.x + src.w; x++) {
+            if (world.owner[y * world.width + x] === 1 && world.component[y * world.width + x] === comp.id) {
+              held = true;
+              break;
+            }
+          }
+        }
+        if (held) drawGooLink(g, cellCenter(b.cell, world.width), src, timeSeconds);
+      }
+    }
   }
 
   /** a small inked snip across every vein the player cut on purpose, so it can be found and rejoined */
@@ -319,7 +349,20 @@ export class FxLayer {
       const [gx, gy] = cellCenter(ghost.cell, world.width);
       const color = ghost.ok ? GHOST_OK : GHOST_BAD;
       g.rect(gx - CELL / 2, gy - CELL / 2, CELL, CELL).stroke({ width: 2, color, alpha: 0.9 });
-      if (ghost.type === 'booster') drawStoreDrops(g, world.width, homewardSteps(world.width, boosterCover(world, ghost.cell)), BOOST_DROP, timeSeconds, BOOST_BOLT);
+      if (ghost.type === 'fortress') drawStoreDrops(g, world.width, homewardSteps(world.width, fortressCover(world, ghost.cell)), BOOST_DROP, timeSeconds, BOOST_BOLT);
+      if (ghost.type === 'collector') drawStoreDrops(g, world.width, homewardSteps(world.width, collectorCover(world, ghost.cell)), SUN_DROP, timeSeconds, SUN_CORE);
+      if (ghost.type === 'storehouse') {
+        // preview which goo pools this factory would speed up
+        const range = world.balance.gooFactory.range;
+        const gx2 = ghost.cell % world.width;
+        const gy2 = Math.floor(ghost.cell / world.width);
+        for (const src of world.foodSources) {
+          if (src.depleted || !world.balance.foodTypes[src.type].infinite) continue;
+          const dx = Math.max(src.x - gx2, 0, gx2 - (src.x + src.w - 1));
+          const dy = Math.max(src.y - gy2, 0, gy2 - (src.y + src.h - 1));
+          if (Math.max(dx, dy) <= range) drawGooLink(g, [gx, gy], src, timeSeconds, false);
+        }
+      }
       if (ghost.type === 'storehouse') drawStoreCover(g, world.width, storeCover(world, ghost.cell), world.balance.buildings.storehouse.bonus, color, 0.8);
       drawBuilding(g, ghost.type, gx, gy, moldColor(player.color), { ghost: color, t: timeSeconds, fill: 0.5 });
     }

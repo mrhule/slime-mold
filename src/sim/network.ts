@@ -1,4 +1,4 @@
-import { clampPools, recomputeBoost, recomputeSupply } from './buildings';
+import { clampPools, recomputeBoost, recomputePower, recomputeSupply } from './buildings';
 import { DX, DY, dirBetween, edgeSlot, neighbor, popcount8 } from './grid';
 import { moldOf } from './world';
 import type { Building, CellIndex, Component, MoldId, World } from './types';
@@ -105,7 +105,12 @@ export function removeCell(world: World, cell: CellIndex): void {
     building.destroyed = true;
     world.buildingAt[cell] = -1;
     world.events.push({ type: 'buildingDestroyed', id: building.id, building: building.type, mold: moldId, cell });
-    if (building.type === 'booster') recomputeBoost(world); // its bonus ends at once
+    if (building.type === 'fortress') recomputeBoost(world); // its bonus ends at once
+    if (building.type === 'collector') {
+      recomputePower(world); // and a collector's power
+      recomputeBoost(world);
+      recomputeSupply(world);
+    }
     if (building.type === 'storehouse') {
       clampPools(world); // its cap ends at once
       recomputeSupply(world); // and so does its boost

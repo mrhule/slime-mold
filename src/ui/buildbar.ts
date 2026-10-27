@@ -1,26 +1,40 @@
 import type { BuildOption, BuildingType } from '../sim/types';
 
-const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvester', relay: 'Relay' };
-const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', booster: 'Booster', harvester: 'Harvest', relay: 'Relay' };
+const NAMES: Record<BuildingType, string> = { storehouse: 'Factory', fortress: 'Fortress', harvester: 'Harvester', relay: 'Relay', collector: 'Collector' };
+const SHORT: Record<BuildingType, string> = { storehouse: 'Factory', fortress: 'Fortress', harvester: 'Harvester', relay: 'Relay', collector: 'Collector' };
 /** what each building does, for the button tooltip */
 const BLURB: Record<BuildingType, string> = {
   storehouse: 'Keeps nearby veins alive and growing fast, holds more nutrients, and goo pools on the vein pay into it. Veins out of reach of a factory or your core fade and die. Click one to upgrade its range.',
-  booster: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
-  harvester: 'Place beside big food to absorb it faster (same total).',
+  fortress: 'Strengthens the whole vein it sits on in fights, fading with distance along the vein.',
+  harvester: 'Place beside big food to absorb it faster (same total). Needs tier 3.',
   relay: 'Carries supply along its vein like a small factory, but stores nothing. Keeps far veins alive and growing. Unlocked by evolving.',
+  collector: 'Gathers sunlight into nutrients, and powers up the factories, fortresses, harvesters and goo pools along its vein. Short range. Needs tier 2.',
 };
 /** hotkeys shown on the buttons and handled by the input controller */
-export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'booster', m: 'harvester', r: 'relay' };
+export const BUILD_HOTKEYS: Record<string, BuildingType> = { f: 'storehouse', b: 'fortress', m: 'harvester', r: 'relay', c: 'collector' };
 
 const ICONS: Record<BuildingType, string> = {
   storehouse: '',
-  booster: '',
+  fortress: '',
   harvester: '',
   relay: '',
+  collector: '',
 };
 
+// a sun dish: a warm disc with short rays, drawn flat
+const COLLECTOR_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+    <ellipse cx="21" cy="33" rx="13" ry="3" fill="#14110f" opacity=".45"/>
+    <g stroke="#14110f" stroke-linecap="round" fill="none">
+      <path d="M21 4 L21 8 M21 28 L21 32 M7 18 L11 18 M31 18 L35 18 M11 8 L14 11 M28 25 L31 28 M31 8 L28 11 M14 25 L11 28" stroke-width="4.2"/>
+      <path d="M21 4 L21 8 M21 28 L21 32 M7 18 L11 18 M31 18 L35 18 M11 8 L14 11 M28 25 L31 28 M31 8 L28 11 M14 25 L11 28" stroke="#ffd23a" stroke-width="1.8"/>
+    </g>
+    <circle cx="21" cy="18" r="8.6" fill="#f2a01e" stroke="#14110f" stroke-width="2.4"/>
+    <circle cx="21" cy="18" r="5.2" fill="#ffe27a"/>
+    <circle cx="19" cy="16" r="1.6" fill="#ffffff"/>
+  </svg>`;
+
 // the same shapes as the map art: a pulse node, a digestor and a sac, drawn flat (the map ones move)
-const BOOSTER_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
+const FORTRESS_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true">
     <ellipse cx="21" cy="33" rx="14" ry="3.2" fill="#14110f" opacity=".45"/>
     <g stroke="#14110f" stroke-width="2.4" stroke-linejoin="round">
       <polygon points="21,3 25,15 37,18 25,21 21,32 17,21 5,18 17,15" fill="#c9c27a"/>
@@ -84,8 +98,9 @@ const RELAY_ICON = `<svg viewBox="0 0 40 36" width="40" height="36" aria-hidden=
 
 ICONS.relay = RELAY_ICON;
 ICONS.storehouse = STOREHOUSE_ICON;
-ICONS.booster = BOOSTER_ICON;
+ICONS.fortress = FORTRESS_ICON;
 ICONS.harvester = HARVESTER_ICON;
+ICONS.collector = COLLECTOR_ICON;
 
 /** Comic build bar (R19): one button per building, showing cost and count/limit. */
 export class BuildBar {
