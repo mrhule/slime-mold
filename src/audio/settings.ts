@@ -12,6 +12,8 @@ export interface Settings {
   printTexture: boolean;
   /** touch layout and controls: follow the device (auto), or force on or off (007) */
   touchMode: 'auto' | 'on' | 'off';
+  /** the extras: the intro song, the narrator's spoken stings and their popups */
+  embellishments: boolean;
 }
 
 export type SettingsStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -44,6 +46,7 @@ export function defaultSettings(): Settings {
     quality: 'auto',
     printTexture: false,
     touchMode: 'auto',
+    embellishments: false,
   };
 }
 
@@ -66,6 +69,7 @@ export function loadSettings(store: SettingsStore | null = browserStore(), defau
       quality: p.quality === 'high' || p.quality === 'low' || p.quality === 'auto' ? p.quality : base.quality,
       printTexture: flag(p.printTexture, base.printTexture),
       touchMode: p.touchMode === 'on' || p.touchMode === 'off' || p.touchMode === 'auto' ? p.touchMode : base.touchMode,
+      embellishments: flag(p.embellishments, base.embellishments),
     };
   } catch {
     return base;

@@ -40,6 +40,10 @@ export class Screens {
     parent.insertAdjacentHTML('beforeend', '<div class="screens"></div>');
     this.root = parent.querySelector('.screens') as HTMLElement;
     this.root.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('[data-docu-close]')) {
+        this.root.querySelector('.docu')?.remove();
+        return;
+      }
       const btn = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
       if (!btn) {
         if ((e.target as HTMLElement).closest('.focus-overlay')) this.actions.resume();
@@ -54,12 +58,39 @@ export class Screens {
       const el = e.target as HTMLInputElement | HTMLSelectElement;
       const key = el.dataset?.setting as keyof Settings | undefined;
       if (!key) return;
-      if (el instanceof HTMLInputElement && el.type === 'checkbox') this.settings.set({ [key]: el.checked } as Partial<Settings>);
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        this.settings.set({ [key]: el.checked } as Partial<Settings>);
+        if (key === 'embellishments' && el.checked && e.type === 'change') this.showDocumentary();
+      }
       else if (el instanceof HTMLInputElement && el.type === 'range') this.settings.set({ [key]: Number(el.value) } as Partial<Settings>);
       else this.settings.set({ [key]: el.value } as Partial<Settings>);
     };
     this.root.addEventListener('input', onSetting);
     this.root.addEventListener('change', onSetting);
+  }
+
+  /** the mockumentary popup shown when the embellishments are switched on: what the player is in for */
+  private showDocumentary(): void {
+    this.root.querySelector('.docu')?.remove();
+    this.root.insertAdjacentHTML('beforeend', `<div class="docu" role="dialog" aria-label="What you are in for">
+      <div class="docu-card">
+        <div class="docu-rec"><i></i>REC &middot; A NATURE DOCUMENTARY (SORT OF)</div>
+        <div class="docu-head">
+          <span class="docu-name">Mortimer P. Mold</span>
+          <span class="docu-role">Fungus. Aspiring conqueror.</span>
+        </div>
+        <p class="docu-quote">&ldquo;They said a mold couldn't take over a forest floor. I said, watch me. Then I sat there for several days, because that is how mold works.&rdquo;</p>
+        <p class="docu-lead">Here is what you are in for:</p>
+        <ul class="docu-list">
+          <li>A narrator who takes this far, far too seriously</li>
+          <li>A theme song, deployed on cue</li>
+          <li>Dramatic announcements when rivals appear</li>
+          <li>Music that reacts to how it's going. Poorly, if you're losing.</li>
+        </ul>
+        <button type="button" class="btn" data-docu-close>I accept my fate</button>
+        <p class="docu-fine">(You can switch this off any time in Settings.)</p>
+      </div>
+    </div>`);
   }
 
   update(run: Run): void {
@@ -91,6 +122,7 @@ export class Screens {
       <div class="dots">${dots}</div>
       <p>Grow your mold across the map. Eat, build, and beat the rival molds.</p>
       ${best}
+      <label class="setting embellish" title="A theme song, a very serious narrator and dramatic announcements"><span>Small embellishments?</span><input type="checkbox" data-setting="embellishments" ${this.settings.get().embellishments ? 'checked' : ''} /></label>
       <button class="btn" data-act="start">Start</button>
       <ul class="keys touch-only">
         <li><b>Tap</b> the map to grow there &middot; <b>press and hold</b> a marker to cancel</li>
@@ -113,6 +145,7 @@ export class Screens {
       <label class="setting"><span>Sound</span>${slider('sfxVolume', s.sfxVolume)}</label>
       <label class="setting"><span>Music</span>${slider('musicVolume', s.musicVolume)}</label>
       <label class="setting"><span>Mute all</span><input type="checkbox" data-setting="muted" ${s.muted ? 'checked' : ''} /></label>
+      <label class="setting" title="The theme song, the narrator's spoken stings and their popups"><span>Small embellishments</span><input type="checkbox" data-setting="embellishments" ${s.embellishments ? 'checked' : ''} /></label>
       <label class="setting" title="Turns off screen shake and flashing or bouncing effects"><span>Reduce motion</span><input type="checkbox" data-setting="reduceMotion" ${s.reduceMotion ? 'checked' : ''} /></label>
       <label class="setting" title="Auto drops to Low when the frame rate stays low and returns when it recovers"><span>Quality</span><select data-setting="quality">${(['auto', 'high', 'low'] as const).map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0]?.toUpperCase()}${q.slice(1)}</option>`).join('')}</select></label>
       <label class="setting" title="Touch controls and layout for phones and tablets. Auto follows your device."><span>Touch mode</span><select data-setting="touchMode">${(['auto', 'on', 'off'] as const).map((q) => `<option value="${q}" ${s.touchMode === q ? 'selected' : ''}>${q[0]?.toUpperCase()}${q.slice(1)}</option>`).join('')}</select></label>
