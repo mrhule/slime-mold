@@ -364,7 +364,7 @@ async function main(): Promise<void> {
     while (losses.length > 0 && (losses[0] as number) < run.world.tick - FRONT_WINDOW_TICKS) losses.shift();
     if (losses.length >= FRONT_LOSS_CELLS && run.world.tick - lastFrontAlert > FRONT_ALERT_GAP_TICKS) {
       lastFrontAlert = run.world.tick;
-      hud.toast('Your front is collapsing! Send more to the fight (E) or build a Booster (B)', 4);
+      hud.toast('Your front is collapsing! Send more to the fight (E) or build a Fortress (B)', 4);
     }
 
     for (const e of frameEvents) {

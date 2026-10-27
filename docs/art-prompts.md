@@ -119,6 +119,34 @@ file names shown.
 > side: normal, pressed (pushed down toward the lower right, shadow shrunk), and disabled (greyed
 > out). [background rule]
 
+## 16. Collector (collector-sheet.png)
+
+> [style block] A sheet of 3 versions of a small organic sun-collecting building, drawn top-down:
+> a level of growth from small to large. Each is a round, glossy amber-gold dish like a flat
+> sunflower or a solar mushroom cap, with a warm pale-yellow glowing centre and a ring of short,
+> blunt, ray-like petals around the rim that catch the light. Short stubby root-like feet at the
+> edge, a few hard white highlights on the upper-left, a darker amber shade band on the lower
+> right, thick ink outline. It should read as "soaks up sunlight and turns it into energy",
+> friendly and chunky, not a machine. Same warm gold family as the factory but flatter and
+> brighter, with a yellow-orange glow, so the two read apart. [background rule]
+
+## 17. Fortress (fortress-sheet.png)
+
+> [style block] A sheet of 2 versions of a small organic fortress, drawn top-down, replacing the old
+> star-shaped booster: a squat ring of thick, knobbly armoured plates (like fused beetle shells or
+> a ring of bone-grey bastions) around a glowing orange-red core. A small version and a large
+> version. Pale steel-grey and bone plates with darker slate shade bands, a few cracks, hard white
+> rim light on the upper-left, thick ink outline and a hard shadow to the lower right. It should
+> read as "defensive, tough, makes the veins hit harder". [background rule]
+
+## 18. Goo link glow (goo-link.png)
+
+> [style block] A sheet of 3 small separate pieces drawn top-down: a gold glowing bead on a short
+> curved thread (a pearl of energy), a short run of five such beads fading from large to small, and
+> a soft rounded-rectangle halo ring in warm gold, hollow in the middle. Thick ink outlines on the
+> beads, a hard white highlight on each, flat colour bands. It marks the energy link between a
+> factory and a nearby goo pool. [background rule]
+
 ## Tips
 
 - If Gemini adds text or labels, ask for "no text anywhere" again; it often sneaks in.

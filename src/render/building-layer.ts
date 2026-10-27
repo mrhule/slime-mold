@@ -50,7 +50,7 @@ const still = (style: BuildingStyle): boolean => style.stale === true || style.g
  * An inked pulse node: a four-pointed muscular knot with a bright core that beats like a heart
  * (a quick double beat), so it reads as the thing that drives the veins it sits on.
  */
-export function drawBooster(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
+export function drawFortress(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
   const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
   const ink = style.ghost ?? INK;
   const S = 1.3;
@@ -252,16 +252,81 @@ export function drawStoreHouse(g: Graphics, cx: number, cy: number, flag: number
   if (!style.stale) g.circle(cx + topR * 0.62, cy - 0.6 * S - topR * 0.8, 2.2 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
 }
 
+const SUN = 0xf2a01e;
+const SUN_SHADE = 0xa8620c;
+const SUN_LIGHT = 0xffe27a;
+const SUN_RAY = 0xffd23a;
+
+/**
+ * An inked sun dish: a warm disc ringed with rays that slowly turn and shimmer, so it reads as the
+ * thing soaking up light and feeding the buildings around it.
+ */
+export function drawCollector(g: Graphics, cx: number, cy: number, flag: number, style: BuildingStyle = {}): void {
+  const alpha = style.ghost !== undefined ? 0.6 : style.stale ? 0.55 : 1;
+  const ink = style.ghost ?? INK;
+  const S = 1.3;
+  const w = style.ghost !== undefined ? 2.5 : 3;
+  const t = style.t ?? 0;
+  const turn = still(style) ? 0 : t * 0.5;
+  const shimmer = still(style) ? 0 : 0.5 + 0.5 * Math.sin(t * 3);
+  g.ellipse(cx + look.shadow.groundOffset[0], cy + 8 * S, 10 * S, 3.2 * S).fill({ color: INK, alpha: look.shadow.groundAlpha * 1.5 * alpha });
+  const rays = 8;
+  const ray = (len: number): void => {
+    for (let i = 0; i < rays; i++) {
+      const ang = turn + (i * Math.PI * 2) / rays;
+      g.moveTo(cx + Math.cos(ang) * 7.6 * S, cy + Math.sin(ang) * 7.6 * S).lineTo(cx + Math.cos(ang) * len * S, cy + Math.sin(ang) * len * S);
+    }
+  };
+  ray(11 + shimmer * 1.2);
+  g.stroke({ width: 4.6, color: ink, alpha, cap: 'round' });
+  ray(11 + shimmer * 1.2);
+  g.stroke({ width: 2, color: style.stale ? STALE_GREY : SUN_RAY, alpha, cap: 'round' });
+  g.circle(cx, cy, 7 * S).fill({ color: style.stale ? STALE_GREY : SUN, alpha }).stroke({ width: w, color: ink, alpha });
+  if (!style.stale) g.circle(cx, cy, 4.2 * S).fill({ color: SUN_LIGHT, alpha: (0.7 + 0.3 * shimmer) * alpha });
+  g.moveTo(cx + Math.cos(0.2) * 5.6 * S, cy + Math.sin(0.2) * 5.6 * S).arc(cx, cy, 5.6 * S, 0.2, 1.5).stroke({ width: 2, color: style.stale ? STALE_GREY : SUN_SHADE, alpha: 0.8 * alpha, cap: 'round' });
+  g.circle(cx - 2.2 * S, cy - 2.4 * S, 1.3 * S).fill({ color: 0xffffff, alpha: style.stale ? 0 : alpha });
+  // owner's color: a small spore on the rim
+  if (!style.stale) g.circle(cx + 6.2 * S, cy - 6.2 * S, 2.2 * S).fill({ color: flag, alpha }).stroke({ width: 1.8, color: ink, alpha });
+}
+
+/**
+ * A goo link: a gold chain of beads running from a factory to a goo pool it speeds up, drifting
+ * toward the factory, with a glowing rim round the pool's footprint. `strong` is a live link;
+ * otherwise (a placement preview) it is drawn fainter.
+ */
+export function drawGooLink(g: Graphics, from: [number, number], pool: { x: number; y: number; w: number; h: number }, timeSeconds: number, strong = true): void {
+  const px = (pool.x + pool.w / 2) * CELL;
+  const py = (pool.y + pool.h / 2) * CELL;
+  const dx = from[0] - px;
+  const dy = from[1] - py;
+  const len = Math.hypot(dx, dy) || 1;
+  const a = strong ? 1 : 0.6;
+  const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 3);
+  g.roundRect(pool.x * CELL - 3, pool.y * CELL - 3, pool.w * CELL + 6, pool.h * CELL + 6, 10).stroke({ width: 4, color: INK, alpha: 0.35 * a });
+  g.roundRect(pool.x * CELL - 3, pool.y * CELL - 3, pool.w * CELL + 6, pool.h * CELL + 6, 10).stroke({ width: 2.2, color: SUN_RAY, alpha: (0.45 + 0.4 * pulse) * a });
+  const beads = Math.max(2, Math.floor(len / 22));
+  for (let i = 0; i < beads; i++) {
+    const f = ((i + ((timeSeconds * 0.6) % 1)) / beads) % 1;
+    const x = px + dx * f;
+    const y = py + dy * f;
+    const r = 2 + 1.6 * f;
+    g.circle(x, y, r + 1.4).fill({ color: INK, alpha: 0.85 * a });
+    g.circle(x, y, r).fill({ color: SUN_RAY, alpha: a });
+    g.circle(x - r * 0.3, y - r * 0.3, r * 0.35).fill({ color: 0xffffff, alpha: 0.8 * a });
+  }
+}
+
 /** draw any building by type */
 export function drawBuilding(g: Graphics, type: BuildingType, cx: number, cy: number, color: number, style: BuildingStyle = {}): void {
-  if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
+  if (type === 'collector') drawCollector(g, cx, cy, color, style);
+  else if (type === 'storehouse') drawStoreHouse(g, cx, cy, color, style);
   else if (type === 'relay') drawRelay(g, cx, cy, color, style);
-  else if (type === 'booster') drawBooster(g, cx, cy, color, style);
+  else if (type === 'fortress') drawFortress(g, cx, cy, color, style);
   else drawHarvester(g, cx, cy, color, style);
 }
 
 /**
- * Rings along every vein a store house speeds up, fading with its taper. Rings, not the booster's
+ * Rings along every vein a store house speeds up, fading with its taper. Rings, not the fortress's
  * filled glow, so the two read apart (growth and harvest versus combat).
  */
 export function drawStoreCover(g: Graphics, width: number, cover: { cell: number; bonus: number }[], maxBonus: number, color: number, alpha = 1): void {

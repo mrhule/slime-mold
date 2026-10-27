@@ -10,6 +10,7 @@ const TWENTY_MINUTES = 20 * 60 * 20;
 /** An AI-driven "player" (acting only through ordinary commands) against the round's rivals. */
 function playToTheEnd(seed: number, round: number): { world: World; ticks: number } {
   const world = createRound({ runSeed: seed, roundNumber: round });
+  world.molds[0]!.tier = world.balance.tiers.max; // the AI stands in for a player who has evolved
   const state: AiState = { aggression: 0.5, debug: [] };
   const rng = new Rng(seed ^ 0x5a5a);
   const interval = Math.round(1.2 / 0.05);

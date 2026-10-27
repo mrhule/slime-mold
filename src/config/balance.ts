@@ -43,12 +43,23 @@ export interface RelaySpec extends BuildingSpec {
   upgradeCost: number[];
 }
 
-export interface BoosterSpec extends BuildingSpec {
+export interface FortressSpec extends BuildingSpec {
   /** how far along the veins the boost reaches, in cells; it tapers off linearly to nothing */
   reach: number;
   /** extra combat strength per factory right at the factory, as a fraction (0.5 = +50%) */
   bonus: number;
   /** most extra strength overlapping factories can add together */
+  stackCap: number;
+}
+
+export interface CollectorSpec extends BuildingSpec {
+  /** nutrients per second of sunlight it adds to its piece while it works */
+  income: number;
+  /** how far along the veins its power reaches, in cells; it tapers off linearly to nothing */
+  reach: number;
+  /** extra output right at the collector for factories, fortresses, harvesters and goo pools, as a fraction (0.4 = +40%) */
+  bonus: number;
+  /** most extra output overlapping collectors can add together */
   stackCap: number;
 }
 
@@ -168,7 +179,9 @@ export interface BalanceConfig {
   foodTypes: Record<FoodType, FoodTypeSpec>;
 
   /** one entry per building type (002) */
-  buildings: { booster: BoosterSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec; relay: RelaySpec };
+  buildings: { fortress: FortressSpec; harvester: HarvesterSpec; storehouse: StoreHouseSpec; relay: RelaySpec; collector: CollectorSpec };
+  /** a working factory this close to a goo pool (cells from its footprint, straight line) makes each held goo cell pay `bonus` more (a fraction) */
+  gooFactory: { range: number; bonus: number };
 
   /** evolving: the highest tier, and what it costs in nutrients to go up from tier n (at index n - 1). The cost is fixed: it does not grow with the factories you have built. */
   tiers: { max: number; costs: number[] };
@@ -286,15 +299,18 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   buildings: {
     storehouse: { cost: 25, upkeep: 0.2, limit: 6, capacity: 300, perPiece: 3, reach: 20, bonus: 0.5, stackCap: 1.0, drain: 0.5, lowStock: 15, maxLevel: 3, reachPerLevel: 12, upgradeCost: [35, 55] },
     relay: { cost: 15, upkeep: 0.1, limit: 6, minTier: 2, reach: 16, maxLevel: 3, reachPerLevel: 8, upgradeCost: [20, 35] },
-    booster: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
-    harvester: { cost: 25, upkeep: 0.1, limit: 4, minFoodCells: 9, rateMult: 2 },
+    fortress: { cost: 40, upkeep: 0.15, limit: 4, reach: 24, bonus: 0.75, stackCap: 1.0 },
+    harvester: { cost: 25, upkeep: 0.1, limit: 4, minTier: 3, minFoodCells: 9, rateMult: 2 },
+    collector: { cost: 30, upkeep: 0.1, limit: 4, minTier: 2, income: 0.6, reach: 18, bonus: 0.4, stackCap: 0.8 },
   },
+
+  gooFactory: { range: 8, bonus: 0.25 },
 
   feed: { coreReach: 40, trickle: 0.5, floor: 0.04, graceSeconds: 30, fadeSeconds: 60 },
 
   demolishRefund: 0.5,
 
-  tiers: { max: 2, costs: [250] },
+  tiers: { max: 3, costs: [250, 500] },
 
   pool: { baseCap: 300 },
   pools: { contested: 3, nearMin: 11, nearMax: 19, spacing: 8 },

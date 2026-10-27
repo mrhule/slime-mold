@@ -60,6 +60,7 @@ export function createWorld(
   buildingAt.fill(-1);
   const boost = new Float32Array(cells).fill(1);
   const supply = new Float32Array(cells).fill(1);
+  const power = new Float32Array(cells).fill(1);
   const feed = new Float32Array(cells).fill(1);
   const strayFor = new Float32Array(cells);
   return {
@@ -91,6 +92,8 @@ export function createWorld(
     boostActive: false,
     supply,
     supplyActive: false,
+    power,
+    powerActive: false,
     feed,
     strayFor,
     supplyUse: new Set<number>(),

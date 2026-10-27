@@ -12,8 +12,8 @@ const EXPLORE_SAMPLES = 10;
 const BUILD_TRIES = 80;
 /** what a goo pool nobody holds is worth when scoring growth targets (an oat flake is 40, a bread crumb 120) */
 const POOL_VALUE = 150;
-/** a booster factory this close to a front (as the crow flies) strengthens it well along the veins */
-const BOOSTER_REACH = 10;
+/** a fortress this close to a front (as the crow flies) strengthens it well along the veins */
+const FORTRESS_REACH = 10;
 /** food worth a harvester: roughly bread crumb size and up */
 const HARVEST_WORTH = 100;
 
@@ -38,21 +38,21 @@ function planBuild(view: MoldView, state: AiState): Command | null {
   const place = (type: BuildingType, cell: CellIndex): Command => ({ type: 'placeBuilding', mold: me, building: type, cell });
   const affords = (type: BuildingType, spare: number): boolean => rich >= view.buildCost(type) + reserve * spare;
 
-  // under pressure on a front: a booster factory close behind it
-  if (view.self.frontCells.length > 0 && view.self.frontLoss > 0.15 && affords('booster', 0.4)) {
+  // under pressure on a front: a fortress close behind it
+  if (view.self.frontCells.length > 0 && view.self.frontLoss > 0.15 && affords('fortress', 0.4)) {
     const front = view.self.frontCells[0] as CellIndex;
     let best = -1;
     let bestD = Infinity;
     for (let i = 0; i < Math.min(own.length, BUILD_TRIES * 4); i++) {
       const c = own[i] as CellIndex;
       const d = octile(w, c, front);
-      if (d < bestD && d <= BOOSTER_REACH && view.canBuild('booster', c)) {
+      if (d < bestD && d <= FORTRESS_REACH && view.canBuild('fortress', c)) {
         bestD = d;
         best = c;
       }
     }
     if (best >= 0) {
-      return place('booster', best);
+      return place('fortress', best);
     }
   }
 

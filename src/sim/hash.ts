@@ -41,6 +41,7 @@ export function stateHash(world: World): number {
   h.array(world.food);
   h.array(world.buildingAt);
   h.array(world.supply);
+  h.array(world.power);
   h.array(world.feed);
   h.array(world.strayFor);
   for (const k of [...world.cuts].sort((x, y) => x - y)) h.num(k);

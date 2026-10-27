@@ -13,10 +13,13 @@ import type { World } from '../../../src/sim/types';
 import { cellOf, createOpenWorld, createWorldWithMold, withStoreHouse } from '../../helpers';
 
 const RATE = defaultBalance.foodTypes.goo.absorbRate; // per cell per second
+const FACTORY_BONUS = defaultBalance.gooFactory.bonus;
+const plainGoo = (b: typeof defaultBalance): typeof defaultBalance => ({ ...b, gooFactory: { ...b.gooFactory, bonus: 0 } });
 
 /** a mold whose east arm reaches a goo pool at (14..17, 19..21); returns the world and the arm's last cell */
 function reachPool(): { world: World; mold: { id: number }; arm: number; pool: ReturnType<typeof placeFood> } {
   const { world, mold } = createWorldWithMold(60, 40, 10, 20, 100);
+  world.balance = plainGoo(world.balance); // these tests measure the plain rate; the factory bonus has its own tests
   const pool = placeFood(world, 'goo', 14, 19, 'initial');
   let prev = cellOf(world, 11, 20);
   for (let x = 12; x <= 13; x++) {
@@ -90,6 +93,7 @@ describe('goo pools (008)', () => {
   it('a harvester is never placed on a pool', () => {
     const { world, mold, arm } = reachPool();
     for (const c of world.components.values()) c.pool = 500;
+    world.molds[mold.id - 1]!.tier = 3;
     expect(canPlace(world, mold.id, 'harvester', arm)).toEqual({ ok: false, reason: 'no-food-nearby' });
   });
 
@@ -108,6 +112,7 @@ describe('contested goo pools (008 US3)', () => {
   /** two molds, each holding one half of a pool, each on its own piece */
   function contested(): { world: World; a: number; b: number; cellA: number; cellB: number } {
     const world = createOpenWorld(60, 40);
+    world.balance = plainGoo(world.balance);
     const ma = addMold(world, 'player', cellOf(world, 10, 20), 100);
     const mb = addMold(world, 'rival', cellOf(world, 30, 20), 100);
     placeFood(world, 'goo', 17, 19, 'initial');
@@ -154,6 +159,7 @@ describe('contested goo pools (008 US3)', () => {
 
   it('nobody earns from a pool nobody holds', () => {
     const world = createOpenWorld(60, 40);
+    world.balance = plainGoo(world.balance);
     const m = addMold(world, 'player', cellOf(world, 10, 20), 100);
     placeFood(world, 'goo', 30, 10, 'initial');
     withStoreHouse(world, m.id, cellOf(world, 10, 20));

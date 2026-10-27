@@ -3,7 +3,7 @@ import { workingStoreHouses } from './buildings';
 import { addCell } from './network';
 import { moldOf } from './world';
 import { TICK_DT, Terrain } from './types';
-import type { CellIndex, Component, FoodSource, FoodType, MoldId, World } from './types';
+import type { Building, CellIndex, Component, FoodSource, FoodType, MoldId, World } from './types';
 
 const walkable = (world: World, cell: CellIndex): boolean => {
   const t = world.terrain[cell];
@@ -110,16 +110,18 @@ export function tickFood(world: World): void {
     if (spec.infinite) {
       // a goo pool: each held cell pays a fixed rate into its piece, but only while that piece has a
       // store house; nothing is ever taken from the cells and the pool never depletes (008)
+      const near = poolFactories(world, src);
       for (const c of foodCells(world, src)) {
         const owner = world.owner[c] as number;
         if (owner === 0) continue;
         const compId = world.component[c] as number;
         if (!paying(compId)) continue;
         const comp = world.components.get(compId) as Component;
-        comp.pool += baseRate;
+        const gain = baseRate * gooBoost(world, near, owner, compId, c);
+        comp.pool += gain;
         const mold = moldOf(world, owner);
-        mold.stats.nutrientsGathered += baseRate;
-        mold.incomeTick += baseRate;
+        mold.stats.nutrientsGathered += gain;
+        mold.incomeTick += gain;
       }
       continue;
     }
@@ -129,7 +131,8 @@ export function tickFood(world: World): void {
       if (left <= 0 || owner === 0) continue;
       const harvesting = harvested.has(owner * 65536 + src.id);
       const boost = harvesting ? (world.supply[c] as number) : 1; // store house on this vein (S8)
-      const amount = Math.min(left, harvesting ? baseRate * mult * boost : baseRate);
+      const power = harvesting ? (world.power[c] as number) : 1; // collector in range
+      const amount = Math.min(left, harvesting ? baseRate * mult * boost * power : baseRate);
       world.food[c] = left - amount;
       src.remaining -= amount;
       const comp = world.components.get(world.component[c] as number) as Component;
@@ -187,13 +190,39 @@ export function poolIncome(world: Readonly<World>, moldId: MoldId): number {
   for (const src of world.foodSources) {
     const spec = world.balance.foodTypes[src.type];
     if (!spec.infinite) continue;
+    const near = poolFactories(world, src);
     for (const c of foodCells(world as World, src)) {
       if (world.owner[c] !== moldId) continue;
       const comp = world.components.get(world.component[c] as number);
-      if (comp && workingStoreHouses(world, comp) > 0) sum += spec.absorbRate;
+      if (comp && workingStoreHouses(world, comp) > 0) sum += spec.absorbRate * gooBoost(world, near, moldId, comp.id, c);
     }
   }
   return sum;
+}
+
+/** the store houses (factories) standing within `gooFactory.range` cells of a goo pool's footprint, working or not */
+export function poolFactories(world: Readonly<World>, src: FoodSource): Building[] {
+  const { range } = world.balance.gooFactory;
+  const w = world.width;
+  const out: Building[] = [];
+  for (const b of world.buildings) {
+    if (b.destroyed || b.type !== 'storehouse') continue;
+    const x = b.cell % w;
+    const y = Math.floor(b.cell / w);
+    const dx = Math.max(src.x - x, 0, x - (src.x + src.w - 1));
+    const dy = Math.max(src.y - y, 0, y - (src.y + src.h - 1));
+    if (Math.max(dx, dy) <= range) out.push(b);
+  }
+  return out;
+}
+
+/**
+ * How much more a held goo cell pays: a working factory of the same piece close to the pool adds
+ * `gooFactory.bonus`, and a collector's power on the cell multiplies the lot. 1 = the plain rate.
+ */
+export function gooBoost(world: Readonly<World>, near: readonly Building[], moldId: MoldId, compId: number, cell: CellIndex): number {
+  const linked = near.some((b) => b.moldId === moldId && world.component[b.cell] === compId);
+  return (linked ? 1 + world.balance.gooFactory.bonus : 1) * (world.power[cell] as number);
 }
 
 /** how many goo pools a mold holds some of, and how many of those have a held cell on a piece with no store house */

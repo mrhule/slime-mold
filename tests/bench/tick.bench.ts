@@ -62,7 +62,7 @@ function buildingsWorld(round: number): World {
   for (let c = 0; c < world.owner.length; c++) if (world.owner[c] === 1 && (world.food[c] as number) <= 0 && world.buildingAt[c]! < 0) own.push(c);
   const plan: [BuildingType, number][] = [
     ['storehouse', spec.storehouse.limit],
-    ['booster', spec.booster.limit],
+    ['fortress', spec.fortress.limit],
   ];
   let k = 0;
   const stride = Math.floor(own.length / 20);

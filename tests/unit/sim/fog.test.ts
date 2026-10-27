@@ -92,10 +92,10 @@ describe('remembered buildings (US4)', () => {
     const theirs = cellOf(world, 28, 20);
     addCell(world, rival.id, theirs, -1);
     world.components.get(world.component[theirs]!)!.pool = 100;
-    placeBuilding(world, rival.id, 'booster', theirs);
+    placeBuilding(world, rival.id, 'fortress', theirs);
     updateVision(world);
-    expect(me.memBuilding[theirs]).toBe(1); // a booster
-    // the player pulls back; the booster is destroyed meanwhile, but the player does not know
+    expect(me.memBuilding[theirs]).toBe(1); // a fortress
+    // the player pulls back; the fortress is destroyed meanwhile, but the player does not know
     for (const comp of [...world.components.values()]) {
       if (comp.moldId !== me.id) continue;
       for (const c of [...comp.cells]) removeCell(world, c);

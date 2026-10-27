@@ -64,7 +64,7 @@ describe('factory upgrades', () => {
     expect(upgradeBuilding(world, 2, at)).toEqual({ ok: false, reason: 'not-your-cell' });
     expect(upgradeBuilding(world, mold.id, cells[20] as number)).toEqual({ ok: false, reason: 'no-building' });
     comp.pool = 200;
-    placeBuilding(world, mold.id, 'booster', cells[30] as number);
+    placeBuilding(world, mold.id, 'fortress', cells[30] as number);
     expect(upgradeBuilding(world, mold.id, cells[30] as number)).toEqual({ ok: false, reason: 'not-upgradable' });
   });
 
