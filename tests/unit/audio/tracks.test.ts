@@ -91,6 +91,22 @@ describe('TrackPlayer', () => {
     return { player, els, exhausted: () => exhausted };
   }
 
+  it('plays the intro once before the playlist', () => {
+    const els: FakeEl[] = [];
+    const player = new TrackPlayer(fakeCtx(), {} as AudioNode, ['a'], () => {}, () => {
+      const el = new FakeEl();
+      els.push(el);
+      return el;
+    }, seq(5), 'intro');
+    player.start();
+    const el = els[0]!;
+    expect(el.src).toBe('intro');
+    el.fire('ended');
+    expect(el.src).toBe('a');
+    el.fire('ended');
+    expect(el.src).toBe('a');
+  });
+
   it('plays on one element: the next track is a new src on the same element, and it keeps going', () => {
     const { player, els } = make(['a', 'b']);
     player.start();

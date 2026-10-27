@@ -2,6 +2,7 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
+import { STINGS, StingDirector } from './audio/stings';
 import trackUrls from 'virtual:music-tracks';
 import { loadSettings, saveSettings } from './audio/settings';
 import type { Settings } from './audio/settings';
@@ -91,7 +92,10 @@ async function main(): Promise<void> {
   if (resolveTouch(settings.touchMode, detectedTouch)) settings = loadSettings(store, { quality: 'low' });
   const engine = new AudioEngine();
   engine.setTracks(trackUrls); // the files in public/music; none means the generated loop
+  engine.setIntro(`${import.meta.env.BASE_URL}operas/The_Kingdom_Underneath.mp3`); // plays once, first
   const director = new Director();
+  const stingDirector = new StingDirector();
+  const stingUrl = (file: string): string => `${import.meta.env.BASE_URL}operas/${file}`;
   engine.setSettings(settings);
   // iOS only counts a finished tap (touchend or click) as a user gesture, so those unlock too; the
   // listeners come off once a tap or key press has found audio available
@@ -99,6 +103,7 @@ async function main(): Promise<void> {
   const unlockAudio = (e: Event): void => {
     engine.unlock();
     engine.startMusic();
+    engine.preloadStings(Object.values(STINGS).map((d) => stingUrl(d.file)));
     if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
   };
   for (const t of unlockEvents) window.addEventListener(t, unlockAudio, { passive: true });
@@ -257,6 +262,7 @@ async function main(): Promise<void> {
       renderer.build(run.world);
       input.placing = null;
       director.rebase();
+      stingDirector.rebase();
     }
 
     loop.speed = run.loopSpeed;
@@ -390,6 +396,24 @@ async function main(): Promise<void> {
     // reads one snapshot per rendered frame (so fast-forward cannot multiply cues)
     engine.setRunning(run.state === 'playing' && !document.hidden);
     const player = run.world.molds[PLAYER - 1];
+    // spoken stings at the big turns of a round: the music eases down under them, and a narrator card shows
+    const rivalCells = run.world.molds.filter((m) => m.id !== PLAYER && m.status === 'alive').map((m) => m.cellCount);
+    const stingId = stingDirector.update({
+      seconds: model.elapsedSeconds,
+      playing: run.state === 'playing' && !tutorial.running,
+      playerCells: player?.cellCount ?? 0,
+      enemyCells: rivalCells.reduce((a, b) => a + b, 0),
+      frontCells: player?.frontCells.length ?? 0,
+    });
+    if (stingId) {
+      const def = STINGS[stingId];
+      void engine.playSting(stingUrl(def.file), (seconds) => {
+        hud.narrate(def.title, def.caption, seconds);
+        if (def.announce) hud.announce(def.announce.heading, def.announce.sub, 4);
+      }).then((ok) => {
+        if (!ok) stingDirector.release(stingId);
+      });
+    }
     if (player) {
       const requests = director.update({
         playerId: PLAYER,
