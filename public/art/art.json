@@ -252,6 +252,52 @@
     "w": 160,
     "h": 160
    }
+  ],
+  "collector": [
+   {
+    "file": "collector-0.webp",
+    "w": 154,
+    "h": 160
+   },
+   {
+    "file": "collector-1.webp",
+    "w": 160,
+    "h": 156
+   },
+   {
+    "file": "collector-2.webp",
+    "w": 160,
+    "h": 160
+   }
+  ],
+  "fortress": [
+   {
+    "file": "fortress-0.webp",
+    "w": 160,
+    "h": 160
+   },
+   {
+    "file": "fortress-1.webp",
+    "w": 160,
+    "h": 160
+   }
+  ],
+  "goo-link": [
+   {
+    "file": "goo-link-0.webp",
+    "w": 78,
+    "h": 160
+   },
+   {
+    "file": "goo-link-1.webp",
+    "w": 160,
+    "h": 140
+   },
+   {
+    "file": "goo-link-2.webp",
+    "w": 160,
+    "h": 104
+   }
   ]
  },
  "images": {

@@ -9,7 +9,7 @@ file names shown.
 > Top-down view, as seen from directly above. Comic-book ink illustration style with cel shading:
 > heavy near-black ink outlines (slightly thicker on the lower-right edges), flat colour bands with
 > no gradients, a few hard-edged highlights, light coming from the upper left, and a small hard-edged
-> drop shadow falling to the lower right. Gritty, grimy, damp petri-dish / forest-floor mood. Muted
+> drop shadow falling to the lower right. Gritty, grimy, damp forest-floor mood (leaf litter, soil, twigs, stones, snails). Muted
 > olive, moss green, soil brown and slate grey, with warm gold as the only bright accent. No text,
 > no letters, no watermark, no border, no UI.
 
