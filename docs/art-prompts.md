@@ -64,12 +64,12 @@ file names shown.
 > of rougher darker ground: packed brown earth and leaf mulch with scattered small stones and
 > bark flecks, slightly more contrast than open ground. The edges must wrap perfectly when tiled.
 
-## 8. Edge of the dish (dish-rim.png)
+## 8. Edge of the forest floor (dish-rim.png)
 
-> [style block] A 2048 x 512 strip showing the dark inner edge of a round glass petri dish seen from
-> above: a thick near-black rim, a thin pale glass highlight line along it, and dirt and condensation
-> smears near the edge, fading to transparent toward the inside. Horizontal strip, the rim along the
-> top edge.
+> [style block] A 2048 x 512 strip showing the dark outer edge of the play area seen from above: a
+> thick near-black border of tangled tree roots, mossy stones and packed soil, with a few twigs and
+> dead leaves along it and damp, dirty smears just inside, fading to transparent toward the inside.
+> Horizontal strip, the border along the top edge. (The file keeps the name dish-rim.png.)
 
 ## 9. Vignette (vignette.png)
 
