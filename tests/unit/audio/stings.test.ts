@@ -49,6 +49,17 @@ describe('StingDirector', () => {
     expect(r.update(snap({ seconds: 1000, frontCells: 2 }))).toBeNull();
   });
 
+  it('plays the last stand, not the rally, when the first contact is an attack on a smaller mold', () => {
+    const d = new StingDirector();
+    expect(d.update(snap({ seconds: 30, playerCells: 30, enemyCells: 100, frontCells: 3 }))).toBe('stand');
+    expect(d.update(snap({ seconds: 300, playerCells: 30, enemyCells: 100, frontCells: 9 }))).not.toBe('rally');
+  });
+
+  it('plays the fading sting when rivals hold far more, even if the mold never shrank', () => {
+    const d = new StingDirector();
+    expect(d.update(snap({ seconds: 100, playerCells: 20, enemyCells: 100 }))).toBe('fading');
+  });
+
   it('can retry a sting that could not play, and starts over each round', () => {
     const d = new StingDirector();
     expect(d.update(snap({ frontCells: 2 }))).toBe('rally');
