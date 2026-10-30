@@ -302,6 +302,8 @@ export interface HudModel {
     pattern: number;
     status: 'alive' | 'eliminated';
     visibleCells: number | null;
+    /** share of the map this rival holds; null until the player has seen any of it, so the fog still hides rivals never met */
+    control: number | null;
   }[];
   elapsedSeconds: number;
 }

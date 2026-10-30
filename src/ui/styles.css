@@ -338,8 +338,17 @@ html, body {
   background: #fff6dc;
   border: 3px solid var(--ink);
 }
-.hud .meter-fill { height: 100%; background: var(--accent); width: 0; }
-.hud .meter-goal { position: absolute; right: -3px; top: -5px; bottom: -5px; width: 3px; background: var(--ink); }
+.hud .meter { display: flex; }
+.hud .meter-fill { height: 100%; background: var(--accent); width: 0; flex: none; border-right: 2px solid var(--ink); box-sizing: border-box; }
+.hud .meter-rivals { display: flex; height: 100%; flex: none; }
+.hud .meter-rivals .seg { height: 100%; flex: none; background-color: #ccc; border-right: 2px solid var(--ink); box-sizing: border-box; }
+.hud .meter-rivals .seg.c0 { background-color: #f2c744; }
+.hud .meter-rivals .seg.c1 { background-color: #e8872b; }
+.hud .meter-rivals .seg.c2 { background-color: #4fb0e8; }
+.hud .meter-rivals .seg.c3 { background-color: #1fae7b; }
+.hud .meter-rivals .seg.c4 { background-color: #e0432a; }
+.hud .meter-rivals .seg.c5 { background-color: #c4709f; }
+.hud .meter-goal { position: absolute; left: 100%; margin-left: -3px; top: -5px; bottom: -5px; width: 3px; background: var(--ink); }
 
 .hud .clock { display: flex; gap: 6px; margin: 6px 0; }
 .hud .clock button {

@@ -76,6 +76,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
         pattern: m.pattern,
         status: m.status,
         visibleCells: (mold.seenCells[m.id] as number) > 0 ? (mold.seenCells[m.id] as number) : null,
+        control: (mold.seenCells[m.id] as number) > 0 ? mapControl(world, m.id) : null,
       })),
     elapsedSeconds: world.tick * TICK_DT,
   };

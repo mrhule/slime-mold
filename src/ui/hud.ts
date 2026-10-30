@@ -33,6 +33,7 @@ export class Hud {
   private narrTimer = 0;
   private announceTimer = 0;
   private rivalKey = '';
+  private controlKey = '';
   private readonly winControl: number;
 
   constructor(
@@ -54,7 +55,7 @@ export class Hud {
         <div class="row flow" data-hud="fightRow" hidden title="Nutrients spent per second fighting at the fronts"><span class="label">Fighting</span><span class="value out" data-hud="fight">-0.0/s</span></div>
         <div class="row net" title="Income minus everything you spend, per second. Below zero and your stock drains."><span class="label">Net</span><span class="value pos" data-hud="income">+0.0/s</span></div>
         <div class="row" data-hud="controlRow" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
-        <div class="meter" data-hud="controlMeter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-goal"></div></div>
+        <div class="meter" data-hud="controlMeter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-rivals" data-hud="controlRivals"></div><div class="meter-goal" data-hud="controlGoal"></div></div>
         <div class="clock" role="group" aria-label="Game speed">
           <button type="button" data-speed="pause" title="Pause (Space)">❚❚</button>
           <button type="button" data-speed="1" title="Normal speed (1)">1x</button>
@@ -89,7 +90,7 @@ export class Hud {
       <div class="narration" data-hud="narration" hidden><span class="narr-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="narr-body"><span class="narr-title" data-hud="narrTitle"></span><span class="narr-text" data-hud="narrText"></span></span></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRivals', 'controlGoal', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
     this.el.burstBtn!.addEventListener('click', () => this.pressBurst());
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
@@ -192,7 +193,10 @@ export class Hud {
               : 'Spore burst (X)';
     btn.title = `A last gamble, once a round: spend ${Math.round(b.cost)} nutrients and spores spring up all over the map and bloom for a while. If you hold ${target}% of the map when the bloom ends you win; if not, you lose.`;
     this.el.control!.textContent = `${Math.round(hud.mapControl * 100)}%`;
-    (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, (hud.mapControl / hud.winControl) * 100)}%`;
+    // the bar is the whole map: you first, then each rival you have met in its own colour, with a tick at the win line
+    (this.el.controlFill as HTMLElement).style.width = `${Math.min(100, hud.mapControl * 100)}%`;
+    (this.el.controlGoal as HTMLElement).style.left = `${Math.min(100, hud.winControl * 100)}%`;
+    this.renderControlRivals(hud);
     const goal = `${Math.round(hud.winControl * 100)}%`;
     (this.el.controlRow as HTMLElement).title = `Share of the map you hold. Win at ${goal}, or eliminate every rival.`;
     (this.el.controlMeter as HTMLElement).title = `Win at ${goal}`;
@@ -212,13 +216,24 @@ export class Hud {
     this.renderRivals(hud);
   }
 
+  /** a coloured piece of the control bar for each rival the player has met */
+  private renderControlRivals(hud: HudModel): void {
+    const shown = hud.rivals.filter((r) => r.status === 'alive' && r.control !== null && r.control > 0);
+    const key = shown.map((r) => `${r.id}:${((r.control as number) * 100).toFixed(1)}`).join('|');
+    if (key === this.controlKey) return;
+    this.controlKey = key;
+    this.el.controlRivals!.innerHTML = shown
+      .map((r) => `<span class="seg c${r.color}" style="width:${Math.min(100, (r.control as number) * 100)}%" title="Rival ${r.id - 1}: ${Math.round((r.control as number) * 100)}% of the map"></span>`)
+      .join('');
+  }
+
   private renderRivals(hud: HudModel): void {
-    const key = hud.rivals.map((r) => `${r.id}:${r.status}:${r.visibleCells === null ? '?' : r.visibleCells}`).join('|');
+    const key = hud.rivals.map((r) => `${r.id}:${r.status}:${r.control === null ? '?' : Math.round(r.control * 100)}`).join('|');
     if (key === this.rivalKey) return;
     this.rivalKey = key;
     this.el.rivals!.innerHTML = hud.rivals
       .map((r) => {
-        const state = r.status === 'eliminated' ? 'Eliminated' : r.visibleCells === null ? '?' : `${r.visibleCells} seen`;
+        const state = r.status === 'eliminated' ? 'Eliminated' : r.control === null ? '?' : `${Math.round(r.control * 100)}%`;
         return `<div class="rival ${r.status}" title="Rival ${r.id - 1}: ${state}"><span class="swatch c${r.color} p${r.pattern}"></span><span class="rname">Rival ${r.id - 1}</span><span class="rstate">${state}</span></div>`;
       })
       .join('');
