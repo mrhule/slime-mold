@@ -63,6 +63,22 @@ Paste the **style block** at the start of every prompt.
 > for the mold. They come... for YOU." A sudden loud orchestral stab on "you", then a long
 > ominous fade. [length rule]
 
+## 6. Round 2 first contact, the rivals remember (rally-round2.mp3)
+
+Plays instead of the rally the first time the molds meet in round 2 (and later rounds, if you want
+it to keep). It answers "The Spores Remember", the song that opens the round: the mold remembers,
+and so do the rivals. Same triumphant major key as the rally, but with a knowing, wary edge.
+
+> [style block] A veteran commander, calm and a little amused, over low rolling drums, steady brass
+> and a rising choir. Not a surprise this time: the narrator has seen all this before. "They
+> remember too, little mold... the rivals have grown. But so... have we." A short pause and one
+> timpani beat, then louder and building: "Spread! Spread, and let them REMEMBER... the weight of
+> the mold!" A big brass flourish and a bright, victorious final chord. Major key, confident and
+> thrilling, with a hint of mischief, not sad. [length rule]
+
+Variation if the first take is too close to the rally: ask Gemini to start with a hushed line,
+"The spores remember... and so do the rivals", before the drums come in.
+
 ## Tips
 
 - If Gemini starts singing the words, add "spoken word only, the voice never sings".
@@ -76,4 +92,4 @@ Paste the **style block** at the start of every prompt.
 - Keep every sting at a similar loudness so none of them jumps out of the mix. Normalise them to the
   same level after generating.
 - Export as mp3 or ogg and put them in `public/operas/` next to the intro as `doom-fading.mp3`,
-  `doom-stand.mp3`, `doom-observer.mp3`, `doom-rally.mp3` and `doom-prophecy.mp3`.
+  `doom-stand.mp3`, `doom-observer.mp3`, `doom-rally.mp3`, `doom-prophecy.mp3` and `rally-round2.mp3`.
