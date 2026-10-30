@@ -927,3 +927,10 @@ html.touch, .touch body {
 .hud .burst-btn.armed { background: var(--danger); color: #fff; animation: hint-pulse 0.5s ease-in-out infinite alternate; }
 .hud .burst-btn.blooming { opacity: 1; background: #b9e86a; animation: hint-pulse 0.8s ease-in-out infinite alternate; }
 .touch .hud .burst-btn { min-height: 44px; font-size: 14px; }
+
+/* the intro video, full screen over everything until it ends or is skipped */
+.intro-video { transition: opacity 3s linear; pointer-events: auto; position: fixed; inset: 0; z-index: 100; background: #000; display: flex; align-items: center; justify-content: center; }
+.intro-video video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.intro-video .intro-skip { position: absolute; right: 16px; bottom: 16px; width: auto; min-width: 0; padding: 8px 22px; opacity: 0.85; }
+.intro-video.fading { opacity: 0; pointer-events: none; }
+.intro-video.fading .intro-skip { display: none; }
