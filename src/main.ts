@@ -2,6 +2,7 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
+import { INTRO_FADE_SECONDS, playIntroVideo } from './ui/intro-video';
 import { ROUND_SONG, STINGS, StingDirector } from './audio/stings';
 import trackUrls from 'virtual:music-tracks';
 import { loadSettings, saveSettings } from './audio/settings';
@@ -29,6 +30,8 @@ import { TouchBar } from './ui/touch-bar';
 import { applyTouchClass, detectTouch, resolveTouch } from './ui/touch-mode';
 
 const PLAYER = 1;
+/** sound effect volume is brought down to this when the embellishments are switched on (it is never raised) */
+const EMBELLISH_SFX = 0.4;
 
 const freshSeed = (): number => (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
 
@@ -166,8 +169,15 @@ async function main(): Promise<void> {
   const buildBar = new BuildBar(ui, (type) => input.togglePlacing(type));
   const screens = new Screens(ui, {
     start: () => {
-      run.start();
-      if (!tutorial.seen && run.world.roundNumber === 1) startTutorial();
+      // the intro video plays first, once per page load; the round begins when it ends or is skipped
+      const begin = (fadeIn = false): void => {
+        // the video fades out as the round begins, and the theme song fades up under it
+        if (fadeIn) engine.fadeInMusic(INTRO_FADE_SECONDS);
+        run.start();
+        if (!tutorial.seen && run.world.roundNumber === 1) startTutorial();
+      };
+      if (dev && params.has('nointro')) begin();
+      else playIntroVideo(ui, `${import.meta.env.BASE_URL}video/part1_intro.mp4`, begin);
     },
     tutorial: () => {
       run.closeMenu();
@@ -232,6 +242,9 @@ async function main(): Promise<void> {
   };
   applySettings = (change) => {
     settings = { ...settings, ...change };
+    // switching the embellishments on makes room for the narrator and the songs: effects down, music up to its maximum
+    // (the sliders move to show it, and can be changed again afterwards)
+    if (change.embellishments === true) settings = { ...settings, sfxVolume: Math.min(settings.sfxVolume, EMBELLISH_SFX), musicVolume: 1 };
     saveSettings(settings, store);
     engine.setSettings(settings);
     if (change.embellishments && !introArmed) {

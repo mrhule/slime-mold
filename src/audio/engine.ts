@@ -308,6 +308,22 @@ export class AudioEngine {
     }
   }
 
+  /** bring the music up from silence to its set level over `seconds` (the intro video ending) */
+  fadeInMusic(seconds: number): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.musicBus) return;
+    try {
+      const gain = this.musicBus.gain;
+      const target = this.settings.musicVolume * MUSIC_BUS_SCALE;
+      const t = ctx.currentTime;
+      gain.cancelScheduledValues(t);
+      gain.setValueAtTime(0, t);
+      gain.linearRampToValueAtTime(target, t + seconds);
+    } catch {
+      /* ignore */
+    }
+  }
+
   stopMusic(): void {
     this.wantMusic = false;
     this.tracks?.stop();
