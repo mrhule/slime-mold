@@ -2,7 +2,7 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
-import { STINGS, StingDirector } from './audio/stings';
+import { ROUND_SONG, STINGS, StingDirector } from './audio/stings';
 import trackUrls from 'virtual:music-tracks';
 import { loadSettings, saveSettings } from './audio/settings';
 import type { Settings } from './audio/settings';
@@ -63,6 +63,10 @@ async function main(): Promise<void> {
   await loadArt(); // the painted look; the game draws its plain procedural look if this fails
   const renderer = new GameRenderer(app, run.world);
   let builtVersion = run.worldVersion;
+  let songRound = run.roundNumber;
+  let lastState = run.state;
+  /** frames left in which to start the round song */
+  let songTries = 0;
   const frameEvents: SimEvent[] = [];
   let tickMs = 0;
   let ticksPerFrame = 0;
@@ -111,7 +115,7 @@ async function main(): Promise<void> {
     engine.unlock();
     armIntro();
     engine.startMusic();
-    engine.preloadStings(Object.values(STINGS).map((d) => stingUrl(d.file)));
+    engine.preloadStings([...Object.values(STINGS), ROUND_SONG].map((d) => stingUrl(d.file)));
     if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
   };
   for (const t of unlockEvents) window.addEventListener(t, unlockAudio, { passive: true });
@@ -224,6 +228,7 @@ async function main(): Promise<void> {
     renderer.camera.reduceMotion = settings.reduceMotion;
     renderer.setPrintTexture(settings.printTexture);
     document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);
+    renderer.critterStill = settings.reduceMotion;
   };
   applySettings = (change) => {
     settings = { ...settings, ...change };
@@ -247,7 +252,9 @@ async function main(): Promise<void> {
   // the clock stops when the tab is hidden or loses focus (FR-027)
   // (`?nopause` turns this off in dev builds, for testing in a window that keeps losing focus)
   if (!(dev && params.has('nopause'))) {
-    const autoPause = (): void => run.pause('focus');
+    const autoPause = (): void => {
+      if (!settings.keepRunning) run.pause('focus');
+    };
     document.addEventListener('visibilitychange', () => document.hidden && autoPause());
     window.addEventListener('blur', autoPause);
   }
@@ -277,6 +284,12 @@ async function main(): Promise<void> {
       input.placing = null;
       director.rebase();
       stingDirector.rebase();
+      // a round after a victory begins with its own song, under the embellishments
+      if (run.roundNumber > songRound && settings.embellishments) {
+        engine.stopSting(0.4, true); // normally already faded at the win; this covers a very quick click
+        songTries = 120;
+      }
+      songRound = run.roundNumber;
     }
 
     loop.speed = run.loopSpeed;
@@ -408,7 +421,22 @@ async function main(): Promise<void> {
 
     // sound: the engine only runs while the game is playing and the tab is visible, and the director
     // reads one snapshot per rendered frame (so fast-forward cannot multiply cues)
+    // a won round fades out whatever is playing (a sting, or the music), so the next round's song can start
+    if (run.state === 'roundEnd' && lastState !== 'roundEnd' && run.outcome === 'victory' && settings.embellishments) engine.stopSting(1.2, true);
+    lastState = run.state;
     engine.setRunning(run.state === 'playing' && !document.hidden);
+    // the round song is asked for once the engine is running again; it is retried for a couple of seconds if it could not start
+    if (songTries > 0) {
+      songTries--;
+      if (run.state === 'playing') {
+        void engine
+          .playSting(stingUrl(ROUND_SONG.file), (seconds) => {
+            songTries = 0;
+            hud.narrate(ROUND_SONG.title, ROUND_SONG.caption, seconds);
+            if (ROUND_SONG.announce) hud.announce(ROUND_SONG.announce.heading, ROUND_SONG.announce.sub, 4);
+          }, { silenceMusic: true });
+      }
+    }
     const player = run.world.molds[PLAYER - 1];
     // spoken stings at the big turns of a round: the music eases down under them, and a narrator card shows
     const rivalCells = run.world.molds.filter((m) => m.id !== PLAYER && m.status === 'alive').map((m) => m.cellCount);
@@ -421,9 +449,10 @@ async function main(): Promise<void> {
     });
     if (stingId) {
       const def = STINGS[stingId];
+      const reason = stingDirector.lastReason;
       void engine.playSting(stingUrl(def.file), (seconds) => {
         hud.narrate(def.title, def.caption, seconds);
-        if (def.announce) hud.announce(def.announce.heading, def.announce.sub, 4);
+        if (def.announce) hud.announce(def.announce.heading, reason || def.announce.sub, 4);
       }).then((ok) => {
         if (!ok) stingDirector.release(stingId);
       });

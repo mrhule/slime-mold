@@ -44,7 +44,7 @@ describe('settings (contracts/settings.md, A15)', () => {
 
   it('round-trips a saved value', () => {
     const { store, data } = memory();
-    const s: Settings = { muted: true, sfxVolume: 0.3, musicVolume: 0.9, reduceMotion: true, quality: 'low', printTexture: true, touchMode: 'on', embellishments: true };
+    const s: Settings = { muted: true, sfxVolume: 0.3, musicVolume: 0.9, reduceMotion: true, quality: 'low', printTexture: true, touchMode: 'on', embellishments: true, keepRunning: true };
     saveSettings(s, store);
     expect(data.has(SETTINGS_KEY)).toBe(true);
     expect(loadSettings(store)).toEqual(s);

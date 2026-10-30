@@ -45,6 +45,10 @@ export class AudioEngine {
   private stingBus: GainNode | null = null;
   private readonly stingBuffers = new Map<string, Promise<AudioBuffer | null>>();
   private stingActive = false;
+  /** the sting that is playing now, so it can be faded out early */
+  private stingNow: { voice: GainNode; src: AudioBufferSourceNode } | null = null;
+  /** the context is not suspended before this time (a sting is fading out) */
+  private holdUntil = 0;
   private music: Music | null = null;
   private tracks: TrackPlayer | null = null;
   private trackUrls: string[] = [];
@@ -131,7 +135,7 @@ export class AudioEngine {
       if (this.playing) {
         void ctx.resume?.();
         this.tracks?.resume();
-      } else {
+      } else if (this.now() >= this.holdUntil) {
         void ctx.suspend?.();
         this.tracks?.pause();
       }
@@ -177,7 +181,7 @@ export class AudioEngine {
    * after it fades out. `onStart` gets the sting's length in seconds the moment it begins. Resolves
    * false (and plays nothing) when sound is unavailable, muted, paused, or another sting is playing.
    */
-  async playSting(url: string, onStart?: (seconds: number) => void): Promise<boolean> {
+  async playSting(url: string, onStart?: (seconds: number) => void, opts: { silenceMusic?: boolean } = {}): Promise<boolean> {
     const ctx = this.ctx;
     if (!ctx || !this.stingBus || !this.duck || !this.playing || this.settings.muted || this.stingActive) return false;
     this.stingActive = true;
@@ -187,7 +191,9 @@ export class AudioEngine {
         this.stingActive = false;
         return false;
       }
-      const t = ctx.currentTime + 0.05;
+      // with silenceMusic the music fades fully away first (it may already have), then the sting begins
+      const lead = opts.silenceMusic ? this.duck.gain.value * DUCK_DOWN : 0;
+      const t = ctx.currentTime + 0.05 + lead;
       const len = buffer.duration;
       const voice = ctx.createGain();
       voice.gain.setValueAtTime(0, t);
@@ -198,8 +204,14 @@ export class AudioEngine {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.connect(voice);
+      const playing = { voice, src };
+      this.stingNow = playing;
       src.onended = () => {
-        this.stingActive = false;
+        // a sting that was faded out early must not clear the flag of the one that replaced it
+        if (this.stingNow === playing) {
+          this.stingNow = null;
+          this.stingActive = false;
+        }
         try {
           voice.disconnect();
         } catch {
@@ -207,10 +219,12 @@ export class AudioEngine {
         }
       };
       const duck = this.duck.gain;
-      duck.cancelScheduledValues(t);
-      duck.setValueAtTime(duck.value, t);
-      duck.linearRampToValueAtTime(DUCK_LEVEL, t + DUCK_DOWN);
-      duck.setValueAtTime(DUCK_LEVEL, t + len);
+      const level = opts.silenceMusic ? 0 : DUCK_LEVEL;
+      duck.cancelScheduledValues(ctx.currentTime);
+      duck.setValueAtTime(duck.value, ctx.currentTime);
+      if (opts.silenceMusic) duck.linearRampToValueAtTime(0, t);
+      else duck.linearRampToValueAtTime(level, t + DUCK_DOWN);
+      duck.setValueAtTime(level, t + len);
       duck.linearRampToValueAtTime(1, t + len + DUCK_UP);
       src.start(t);
       onStart?.(len);
@@ -218,6 +232,39 @@ export class AudioEngine {
     } catch {
       this.stingActive = false;
       return false;
+    }
+  }
+
+  /**
+   * Fade out the sting that is playing, if any, over `seconds`, and bring the music back up (or with
+   * `silenceMusic`, fade the music out too and leave it down until the next sting ends). The
+   * sound context stays running until the fade is done, even if the game has stopped playing.
+   * Another sting may start at once.
+   */
+  stopSting(seconds = 1, silenceMusic = false): void {
+    const ctx = this.ctx;
+    const now = this.stingNow;
+    if (!ctx || (!now && !silenceMusic)) return;
+    this.stingNow = null;
+    this.stingActive = false;
+    try {
+      const t = ctx.currentTime;
+      if (now) {
+        now.voice.gain.cancelScheduledValues(t);
+        now.voice.gain.setValueAtTime(now.voice.gain.value, t);
+        now.voice.gain.linearRampToValueAtTime(0, t + seconds);
+        now.src.stop(t + seconds + 0.05);
+      }
+      if (this.duck) {
+        // the music comes back up, or with silenceMusic it fades away too and stays down
+        this.duck.gain.cancelScheduledValues(t);
+        this.duck.gain.setValueAtTime(this.duck.gain.value, t);
+        this.duck.gain.linearRampToValueAtTime(silenceMusic ? 0 : 1, t + seconds);
+      }
+      this.holdUntil = this.now() + seconds * 1000 + 100;
+      setTimeout(() => this.syncRunning(), seconds * 1000 + 150);
+    } catch {
+      /* ignore */
     }
   }
 

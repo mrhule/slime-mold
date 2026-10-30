@@ -14,6 +14,8 @@ export interface Settings {
   touchMode: 'auto' | 'on' | 'off';
   /** the extras: the intro song, the narrator's spoken stings and their popups */
   embellishments: boolean;
+  /** keep the game running when the window loses focus or the tab is hidden, instead of pausing it (FR-027) */
+  keepRunning: boolean;
 }
 
 export type SettingsStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -47,6 +49,7 @@ export function defaultSettings(): Settings {
     printTexture: false,
     touchMode: 'auto',
     embellishments: false,
+    keepRunning: false,
   };
 }
 
@@ -70,6 +73,7 @@ export function loadSettings(store: SettingsStore | null = browserStore(), defau
       printTexture: flag(p.printTexture, base.printTexture),
       touchMode: p.touchMode === 'on' || p.touchMode === 'off' || p.touchMode === 'auto' ? p.touchMode : base.touchMode,
       embellishments: flag(p.embellishments, base.embellishments),
+      keepRunning: flag(p.keepRunning, base.keepRunning),
     };
   } catch {
     return base;

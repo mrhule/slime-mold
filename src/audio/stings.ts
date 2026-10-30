@@ -15,7 +15,7 @@ export interface StingDef {
   title: string;
   /** the narrator card's text (the words of the recording) */
   caption: string;
-  /** a big popup shown as the sting starts, to say why the music changed */
+  /** a big popup shown as the sting starts, to say why the music changed; an empty `sub` is filled with the director's reason */
   announce?: { heading: string; sub: string };
 }
 
@@ -25,20 +25,31 @@ export const STINGS: Record<StingId, StingDef> = {
     file: 'doom-fading.mp3',
     title: 'The light is fading',
     caption: 'The veins grow thin... the light grows dim... and still, the mold endures. But for how long?',
+    announce: { heading: 'The light is fading', sub: '' },
   },
   stand: {
     id: 'stand',
     file: 'doom-stand.mp3',
     title: 'The last stand',
     caption: 'They have taken our fields. They have taken our roots. But they will NOT take... THE KINGDOM.',
+    announce: { heading: 'The last stand', sub: '' },
   },
   rally: {
     id: 'rally',
     file: 'doom-rally.mp3',
     title: 'The tide has turned',
     caption: 'Mold! The tide has turned! The leaves tremble! The snails retreat! Spread, and the whole forest floor shall be OURS!',
-    announce: { heading: 'First contact!', sub: 'Deploying the theme song.' },
+    announce: { heading: 'First contact!', sub: '' },
   },
+};
+
+/** the song played as a new round begins after a victory; the director never picks it, main.ts plays it on the round change */
+export const ROUND_SONG: StingDef = {
+  id: 'rally',
+  file: 'The_Spores_Remember.mp3',
+  title: 'The spores remember',
+  caption: 'The battle is over... the fields lie quiet... and beneath the leaves, the mold rests. But the spores... the spores remember. Rise, little mold! The forest floor awaits! Spread... and spread... AGAIN!',
+  announce: { heading: 'A new round', sub: 'The spores remember.' },
 };
 
 /** what the director reads each frame: plain values */
@@ -65,6 +76,10 @@ const FADING_PEAK = 25;
 /** the last stand: the player's share of all living veins (theirs plus the enemies') gained this much, then lost this much from the top */
 const STAND_GAIN = 0.04;
 const STAND_LOSS = 0.03;
+/** first contact while the player holds less than this share of all veins is an attack, not a rally: the last stand plays instead */
+const CONTACT_LOSING = 0.4;
+/** fading also plays when the player is down to this share against rivals who hold at least FADING_PEAK cells */
+const OUTGUNNED_SHARE = 0.25;
 
 export class StingDirector {
   /** the rally has played this round */
@@ -76,6 +91,8 @@ export class StingDirector {
   private peakCells = 0;
   private low = Infinity;
   private high = 0;
+  /** why the last sting was picked, in words for the player */
+  lastReason = '';
 
   /** a new round: everything may play again */
   rebase(): void {
@@ -114,10 +131,28 @@ export class StingDirector {
     // first contact with an enemy mold ("the tide has turned") may come at any time, even early
     const contact = s.frontCells > 0 && !this.rallied;
     if (s.seconds - this.lastAt < COOLDOWN || (s.seconds < QUIET_START && !contact)) return null;
+    // losing by a lot to rivals, whatever the mold's own best size was
+    const outgunned = s.enemyCells >= FADING_PEAK && share <= OUTGUNNED_SHARE;
     let pick: StingId | null = null;
-    if (contact) pick = 'rally';
-    else if (this.peakCells >= FADING_PEAK && s.playerCells <= this.peakCells * FADING_SHARE && this.recovered) pick = 'fading';
-    else if (pushedBack) pick = 'stand';
+    let reason = '';
+    const shrunk = this.peakCells >= FADING_PEAK && s.playerCells <= this.peakCells * FADING_SHARE;
+    if (contact) {
+      // met while already behind: the enemy is attacking, so the last stand plays and the rally is used up
+      if (share < CONTACT_LOSING) {
+        this.rallied = true;
+        pick = 'stand';
+        reason = `A rival hit you while you were behind: you hold ${Math.round(share * 100)}% of the veins.`;
+      } else {
+        pick = 'rally';
+        reason = 'Your mold has made first contact with a rival mold.';
+      }
+    } else if ((shrunk || outgunned) && this.recovered) {
+      pick = 'fading';
+      reason = shrunk ? 'Your mold has shrunk to a fraction of its best size.' : `Rivals hold far more than you: you have ${Math.round(share * 100)}% of the veins.`;
+    } else if (pushedBack) {
+      pick = 'stand';
+      reason = 'A rival pushed you back from ground you had won.';
+    }
     if (!pick) return null;
     if (pick === 'rally') {
       if (this.rallied) return null;
@@ -129,6 +164,7 @@ export class StingDirector {
       if (pick === 'fading') this.recovered = false;
     }
     this.lastAt = s.seconds;
+    this.lastReason = reason;
     return pick;
   }
 }
