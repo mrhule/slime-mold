@@ -15,7 +15,7 @@ export function updateVision(world: World): void {
 
 function visionFor(world: World, mold: Mold): void {
   const { width: w, height: h } = world;
-  const r = world.balance.visionRadius;
+  const r = Math.max(2, Math.round(world.balance.visionRadius * world.climate.vision));
   const owner = world.owner;
   const tmp = world.scratch.fogTmp;
   const prefix = world.scratch.prefix;

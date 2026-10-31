@@ -13,10 +13,10 @@ import type { CellIndex, Component, World } from './types';
  * cell starves and dies, one at a time, until income covers the upkeep again.
  */
 export function tickUpkeep(world: World): void {
-  const rate = world.balance.upkeepPerCell * TICK_DT;
+  const rate = world.balance.upkeepPerCell * TICK_DT * world.climate.upkeep;
   for (const comp of [...world.components.values()]) {
     if (blooming(world, comp.moldId)) continue; // a bloom's pieces are kept stocked and pay no upkeep
-    const buildingsDue = buildingUpkeep(world, comp.id) * TICK_DT;
+    const buildingsDue = buildingUpkeep(world, comp.id) * TICK_DT * world.climate.upkeep;
     const mold = moldOf(world, comp.moldId);
     // all-out war bleeds the mold: veins cost several times as much, so the stock drains and the weakest cells die back
     const war = atWar(world, mold);

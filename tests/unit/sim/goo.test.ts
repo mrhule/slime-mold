@@ -74,7 +74,8 @@ describe('goo pools (008)', () => {
     expect(pool!.depleted).toBe(false);
     expect(pool!.remaining).toBe(pool!.total);
     expect(world.food[cellOf(world, 15, 20)]).toBeGreaterThan(0);
-    expect(poolIncome(world, mold.id)).toBeCloseTo(first);
+    // the weather moves what a pool pays; take it out and the pool itself is unchanged
+    expect(poolIncome(world, mold.id) / world.climate.pool).toBeCloseTo(first);
   });
 
   it('stops paying a piece that is cut off from its store house, and pays again with a new one', () => {

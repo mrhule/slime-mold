@@ -117,7 +117,7 @@ export function tickFood(world: World): void {
         const compId = world.component[c] as number;
         if (!paying(compId)) continue;
         const comp = world.components.get(compId) as Component;
-        const gain = baseRate * gooBoost(world, near, owner, compId, c);
+        const gain = baseRate * gooBoost(world, near, owner, compId, c) * world.climate.pool;
         comp.pool += gain;
         const mold = moldOf(world, owner);
         mold.stats.nutrientsGathered += gain;
@@ -194,7 +194,7 @@ export function poolIncome(world: Readonly<World>, moldId: MoldId): number {
     for (const c of foodCells(world as World, src)) {
       if (world.owner[c] !== moldId) continue;
       const comp = world.components.get(world.component[c] as number);
-      if (comp && workingStoreHouses(world, comp) > 0) sum += spec.absorbRate * gooBoost(world, near, moldId, comp.id, c);
+      if (comp && workingStoreHouses(world, comp) > 0) sum += spec.absorbRate * gooBoost(world, near, moldId, comp.id, c) * world.climate.pool;
     }
   }
   return sum;

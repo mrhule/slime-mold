@@ -2,6 +2,7 @@ import { clampPools, collectorWorking, drainStoreHouses, recomputeFeed, recomput
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
 import { tickExplore } from './explore';
+import { tickSeasons } from './seasons';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
 import { applyQueuedCommands } from './commands';
 import { updateVision } from './fog';
@@ -31,7 +32,7 @@ function tickIncome(world: World): void {
     mold.incomeTick += gain;
   }
   // collectors turn sunlight into nutrients for their piece, while it can pay their upkeep
-  const sun = world.balance.buildings.collector.income * TICK_DT;
+  const sun = world.balance.buildings.collector.income * TICK_DT * world.climate.collector;
   for (const b of world.buildings) {
     if (!collectorWorking(world, b)) continue;
     (world.components.get(world.component[b.cell] as number) as Component).pool += sun;
@@ -67,6 +68,7 @@ export function step(world: World): void {
     recomputeFeed(world);
     fadeStrays(world);
   }
+  tickSeasons(world);
   tickDrops(world);
   tickIncome(world);
   tickUpkeep(world);
