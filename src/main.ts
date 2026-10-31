@@ -2,6 +2,7 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
+import { CELL } from './render/units';
 import { INTRO_FADE_SECONDS, playClip, playIntroVideo } from './ui/intro-video';
 import { AGAIN_FILES, ROUND_SONG, STINGS, StingDirector } from './audio/stings';
 import trackUrls from 'virtual:music-tracks';
@@ -30,6 +31,7 @@ import { TouchBar } from './ui/touch-bar';
 import { applyTouchClass, detectTouch, resolveTouch } from './ui/touch-mode';
 
 const PLAYER = 1;
+const SEASON_TOAST = { spring: 'Spring: the rains come and veins grow fast', summer: 'Summer: bright and warm, collectors pay more', fall: 'Fall: it gets darker and growth slows', winter: 'Winter: upkeep is up and growth is slow' } as const;
 /** sound effect volume is brought down to this when the embellishments are switched on (it is never raised) */
 const EMBELLISH_SFX = 0.4;
 
@@ -48,11 +50,11 @@ async function main(): Promise<void> {
     storage: createStorage(),
     newSeed: freshSeed,
     // on a touch device the map takes the screen's shape rather than being cropped by it
-    createWorld: (runSeed, roundNumber) => {
+    createWorld: (runSeed, roundNumber, seasonOffset) => {
       const touch = resolveTouch(loadSettings(safeLocalStorage()).touchMode, detectTouch());
       const long = Math.max(window.innerWidth, window.innerHeight);
       const short = Math.max(1, Math.min(window.innerWidth, window.innerHeight));
-      return createRound({ runSeed, roundNumber, ...(touch ? { aspect: long / short } : {}) });
+      return createRound({ runSeed, roundNumber, ...(seasonOffset ? { seasonOffset } : {}), ...(touch ? { aspect: long / short } : {}) });
     },
   });
 
@@ -432,6 +434,11 @@ async function main(): Promise<void> {
         const src = run.world.foodSources[e.foodSourceId];
         if (src) renderer.fx.addLanding(src.y * run.world.width + src.x, run.world.width, (Math.max(src.w, src.h) * 8) / 2 + 6);
       }
+      if (e.type === 'lightning' && !settings.reduceMotion) {
+        const [sx, sy] = renderer.camera.worldToScreen((e.cell % run.world.width) * CELL + CELL / 2, Math.floor(e.cell / run.world.width) * CELL + CELL / 2);
+        renderer.weather.flash(sx, sy);
+      }
+      if (e.type === 'seasonChanged' && run.world.tick > 1) hud.toast(`${SEASON_TOAST[e.season]}`, 3);
       if (e.type === 'moldEliminated' && e.mold !== PLAYER) hud.toast(`Rival ${e.mold - 1} was eaten!`, 3);
     }
 

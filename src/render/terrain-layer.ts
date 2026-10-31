@@ -110,6 +110,7 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
   const ink = rgb(INK);
   const floor = painted ? new FloorSampler(painted, pw, ph) : null;
   const out: Rgb = [0, 0, 0];
+  const variants = painted ? GROUND_VARIANTS.flatMap((v) => (painted.ground[v.name] ? [{ ...v, img: painted.ground[v.name] as ImageData }] : [])) : [];
 
   const at = (f: Float32Array, x: number, y: number): number => {
     const xx = x < 0 ? 0 : x >= pw ? pw - 1 : x;
@@ -130,6 +131,15 @@ function paintGround(img: ImageData, rough: Float32Array, glass: Float32Array, p
       if (floor) {
         floor.sample(floor.open, x, y, out);
         [r, g, b] = out;
+        // patches of other ground where slow noise is high: mud, fallen needles, gravel
+        for (const v of variants) {
+          const a = smooth(v.lo, v.lo + 0.04, valueNoise(x / v.scale, y / v.scale, v.seed)) * 0.9;
+          if (a < 0.01) continue;
+          floor.sample(v.img, x, y, out);
+          r += (out[0] - r) * a;
+          g += (out[1] - g) * a;
+          b += (out[2] - b) * a;
+        }
       }
 
       const mixIn = (c: Rgb, a: number): void => {
@@ -288,6 +298,13 @@ class FloorSampler {
   }
 }
 
+/** the other kinds of ground laid over the open floor in soft patches: slow noise picks where, and a higher `lo` means a rarer patch */
+const GROUND_VARIANTS = [
+  { name: 'floor-mud', seed: 301, scale: 230, lo: 0.63 },
+  { name: 'floor-needles', seed: 302, scale: 260, lo: 0.64 },
+  { name: 'floor-gravel', seed: 303, scale: 200, lo: 0.7 },
+] as const;
+
 const isObstacle = (world: Readonly<World>, cell: number): boolean => world.terrain[cell] === Terrain.Obstacle;
 const isFloor = (world: Readonly<World>, cell: number): boolean => world.terrain[cell] === Terrain.Open || world.terrain[cell] === Terrain.Rough;
 
@@ -315,6 +332,10 @@ function paintProps(world: Readonly<World>, ctx: CanvasRenderingContext2D, paint
   const litter = painted.sprites.litter ?? [];
   const twigs = painted.sprites.twigs ?? [];
   const rocks = [...(painted.sprites.rocks ?? []), ...(painted.sprites['rocks-moss'] ?? [])];
+  const trees = painted.sprites.trees ?? [];
+  const landmarks = painted.sprites.landmarks ?? [];
+  const wood = painted.sprites.wood ?? [];
+  const life = painted.sprites['floor-life'] ?? [];
 
   for (let cy = 2; cy < h - 2; cy++) {
     for (let cx = 2; cx < w - 2; cx++) {
@@ -328,11 +349,26 @@ function paintProps(world: Readonly<World>, ctx: CanvasRenderingContext2D, paint
         stamp(ctx, litter[Math.floor(hash2(cx, cy, world.seed + 75) * litter.length)] as ArtSprite, x, y, 12 + hash2(cx, cy, world.seed + 76) * 8, angle, 0.9);
       } else if (roll > 1 - 1 / 260 && twigs.length > 0) {
         stamp(ctx, twigs[Math.floor(hash2(cx, cy, world.seed + 77) * twigs.length)] as ArtSprite, x, y, 26 + hash2(cx, cy, world.seed + 78) * 26, angle, 0.85);
+      } else if (roll > 0.5 && roll < 0.5 + 1 / 160 && life.length > 0) {
+        // the lasting small things (lichen, snail shells, roots); the ones that come and go with the seasons are in the seasonal layer
+        const lasting = [5, 13, 14].filter((i) => life[i]);
+        if (lasting.length > 0) stamp(ctx, life[lasting[Math.floor(hash2(cx, cy, world.seed + 79) * lasting.length)] as number] as ArtSprite, x, y, 14 + hash2(cx, cy, world.seed + 80) * 8, angle, 0.9);
+      } else if (roll > 0.25 && roll < 0.25 + 1 / 400 && wood.length > 0) {
+        stamp(ctx, wood[Math.floor(hash2(cx, cy, world.seed + 85) * wood.length)] as ArtSprite, x, y, 34 + hash2(cx, cy, world.seed + 86) * 26, angle, 0.95);
       }
     }
   }
 
   if (rocks.length === 0) return;
+  // mostly rocks, with the odd treetop, landmark or log among them so blocked ground is not all stone
+  const pick = (list: ArtSprite[], cx: number, cy: number, salt: number): ArtSprite => list[Math.floor(hash2(cx, cy, world.seed + salt) * list.length)] as ArtSprite;
+  const pile = (cx: number, cy: number): ArtSprite => {
+    const roll = hash2(cx, cy, world.seed + 87);
+    if (roll < 0.14 && trees.length > 0) return pick(trees, cx, cy, 88);
+    if (roll < 0.22 && landmarks.length > 0) return pick(landmarks, cx, cy, 89);
+    if (roll < 0.3 && wood.length > 0) return pick(wood, cx, cy, 90);
+    return pick(rocks, cx, cy, 82);
+  };
   // cover each obstacle cell with a rock: raster order, each rock marking the cells it hides
   const covered = new Uint8Array(w * h);
   const placed: { x: number; y: number; size: number; sprite: ArtSprite }[] = [];
@@ -349,7 +385,7 @@ function paintProps(world: Readonly<World>, ctx: CanvasRenderingContext2D, paint
           if ((xx - mx) ** 2 + (yy - my) ** 2 <= radius * radius) covered[yy * w + xx] = 1;
         }
       }
-      placed.push({ x: (mx + 0.5 + (hash2(cx, cy, world.seed + 83) - 0.5) * 1.1) * CELL, y: (my + 0.5 + (hash2(cx, cy, world.seed + 84) - 0.5) * 1.1) * CELL, size: radius * 2.3 * CELL, sprite: rocks[Math.floor(hash2(cx, cy, world.seed + 82) * rocks.length)] as ArtSprite });
+      placed.push({ x: (mx + 0.5 + (hash2(cx, cy, world.seed + 83) - 0.5) * 1.1) * CELL, y: (my + 0.5 + (hash2(cx, cy, world.seed + 84) - 0.5) * 1.1) * CELL, size: radius * 2.3 * CELL, sprite: pile(cx, cy) });
     }
   }
   // lower rocks in front, so piles overlap the way they would seen from above and to the side

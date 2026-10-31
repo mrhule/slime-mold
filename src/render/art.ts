@@ -16,6 +16,10 @@ export interface Art {
   tile: number;
   sprites: Record<string, ArtSprite[]>;
   vignette: Texture;
+  /** the extra ground tiles (mud, needles, gravel, wet, snow), by manifest name, as pixels like `open` */
+  ground: Record<string, ImageData>;
+  /** weather overlays: white marks that are see-through everywhere else, by manifest name (`overlay-rain` and so on) */
+  overlays: Record<string, Texture>;
 }
 
 interface Manifest {
@@ -66,7 +70,20 @@ export async function loadArt(baseUrl: string = import.meta.env.BASE_URL): Promi
       }),
     );
     const tile = 512;
-    loaded = { open: pixels(open as HTMLImageElement, tile), rough: pixels(rough as HTMLImageElement, tile), tile, sprites, vignette: Texture.from(vignette as HTMLImageElement) };
+    // the second set of art is optional: a manifest without it still loads
+    const ground: Art['ground'] = {};
+    const overlays: Art['overlays'] = {};
+    await Promise.all(
+      Object.entries(manifest.images).map(async ([name, entry]) => {
+        if (name.startsWith('floor-') && name !== 'floor-open' && name !== 'floor-rough') ground[name] = pixels(await image(dir + entry.file), tile);
+        else if (name.startsWith('overlay-')) {
+          const texture = Texture.from(await image(dir + entry.file));
+          texture.source.addressMode = 'repeat';
+          overlays[name] = texture;
+        }
+      }),
+    );
+    loaded = { open: pixels(open as HTMLImageElement, tile), rough: pixels(rough as HTMLImageElement, tile), tile, sprites, vignette: Texture.from(vignette as HTMLImageElement), ground, overlays };
     return loaded;
   } catch {
     loaded = null;

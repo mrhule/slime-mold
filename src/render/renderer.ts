@@ -14,7 +14,9 @@ import type { PlacementGhost } from './fx-layer';
 import { bakeTerrain } from './terrain-layer';
 import { style } from './style';
 import type { QualityLevel } from './style';
+import { SeasonLayer } from './season-layer';
 import { VeinLayer } from './vein-layer';
+import { WeatherLayer } from './weather-layer';
 import { CELL } from './units';
 
 /**
@@ -34,7 +36,10 @@ export class GameRenderer {
   fog!: FogLayer;
   fx!: FxLayer;
   critters!: CritterLayer;
-  /** reduced motion: snails stay where they are */
+  seasons!: SeasonLayer;
+  /** the season wash and weather over the map, in screen space; it lives as long as the renderer, not the round */
+  readonly weather = new WeatherLayer();
+  /** reduced motion: snails stay where they are, and the weather holds still with no lightning flash */
   critterStill = false;
   private timeSeconds = 0;
   /** the quality level layers read to decide which passes to draw (A14) */
@@ -47,6 +52,7 @@ export class GameRenderer {
   constructor(readonly app: Application, sim: Readonly<World>) {
     this.camera = new Camera(sim.width * CELL, sim.height * CELL);
     this.app.stage.addChild(this.world);
+    this.app.stage.addChild(this.weather.container);
     const painted = art();
     if (painted) {
       // dark, hand-inked corners over the map, under the interface
@@ -71,7 +77,8 @@ export class GameRenderer {
     this.fx = new FxLayer();
     this.fx.setSplatScale(style.quality[this.quality].splatScale);
     this.critters = new CritterLayer(sim);
-    this.world.addChild(bakeTerrain(sim), this.film.container, this.critters.container, this.food.container, this.veins.container, this.fx.flowContainer, this.buildings.container, this.fog.container, this.food.poolContainer, this.fx.container);
+    this.seasons = new SeasonLayer(sim);
+    this.world.addChild(bakeTerrain(sim), this.seasons.container, this.film.container, this.critters.container, this.food.container, this.veins.container, this.fx.flowContainer, this.buildings.container, this.fog.container, this.food.poolContainer, this.fx.container);
     const core = sim.molds[0]?.core ?? 0;
     this.camera.zoom = 1.2;
     this.camera.centerOn((core % sim.width) * CELL, Math.floor(core / sim.width) * CELL);
@@ -118,9 +125,11 @@ export class GameRenderer {
     this.film.update(sim, this.timeSeconds);
     this.food.update(sim);
     this.critters.update(sim, dtSeconds, this.timeSeconds, this.critterStill);
+    this.seasons.update(sim, dtSeconds, this.critterStill);
     this.veins.update(sim, this.timeSeconds, this.quality);
     this.buildings.update(sim, this.timeSeconds);
     this.fog.update(sim, this.timeSeconds);
     this.fx.update(sim, sim.molds[0], dtSeconds, this.timeSeconds, ghost, inspect);
+    this.weather.update(sim, dtSeconds, this.app.screen.width, this.app.screen.height, this.quality === 'low', this.critterStill);
   }
 }
