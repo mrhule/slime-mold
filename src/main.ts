@@ -2,8 +2,8 @@ import './ui/styles.css';
 import { Application } from 'pixi.js';
 import { Director } from './audio/director';
 import { AudioEngine } from './audio/engine';
-import { INTRO_FADE_SECONDS, playIntroVideo } from './ui/intro-video';
-import { ROUND_SONG, STINGS, StingDirector } from './audio/stings';
+import { INTRO_FADE_SECONDS, playClip, playIntroVideo } from './ui/intro-video';
+import { AGAIN_FILES, ROUND_SONG, STINGS, StingDirector } from './audio/stings';
 import trackUrls from 'virtual:music-tracks';
 import { loadSettings, saveSettings } from './audio/settings';
 import type { Settings } from './audio/settings';
@@ -68,6 +68,8 @@ async function main(): Promise<void> {
   let builtVersion = run.worldVersion;
   let songRound = run.roundNumber;
   let lastState = run.state;
+  /** the round whose first-contact video has played (it plays once, in round 2) */
+  let contactClipRound = 0;
   /** frames left in which to start the round song */
   let songTries = 0;
   const frameEvents: SimEvent[] = [];
@@ -118,7 +120,7 @@ async function main(): Promise<void> {
     engine.unlock();
     armIntro();
     engine.startMusic();
-    engine.preloadStings([...Object.values(STINGS), ROUND_SONG].map((d) => stingUrl(d.file)));
+    engine.preloadStings([...Object.values(STINGS), ROUND_SONG].map((d) => stingUrl(d.file)).concat(AGAIN_FILES.map(stingUrl)));
     if (engine.available && e.type !== 'pointerdown') for (const t of unlockEvents) window.removeEventListener(t, unlockAudio);
   };
   for (const t of unlockEvents) window.addEventListener(t, unlockAudio, { passive: true });
@@ -297,6 +299,7 @@ async function main(): Promise<void> {
       input.placing = null;
       director.rebase();
       stingDirector.rebase();
+      if (run.roundNumber !== 2) contactClipRound = 0;
       // a round after a victory begins with its own song, under the embellishments
       if (run.roundNumber > songRound && settings.embellishments) {
         engine.stopSting(0.4, true); // normally already faded at the win; this covers a very quick click
@@ -410,7 +413,7 @@ async function main(): Promise<void> {
     while (losses.length > 0 && (losses[0] as number) < run.world.tick - FRONT_WINDOW_TICKS) losses.shift();
     if (losses.length >= FRONT_LOSS_CELLS && run.world.tick - lastFrontAlert > FRONT_ALERT_GAP_TICKS) {
       lastFrontAlert = run.world.tick;
-      hud.toast('Your front is collapsing! Send more to the fight (E) or build a Fortress (B)', 4);
+      hud.toast('Your front is collapsing! Send more to the war (E) or build a Fortress (B)', 4);
     }
 
     for (const e of frameEvents) {
@@ -453,6 +456,16 @@ async function main(): Promise<void> {
     const player = run.world.molds[PLAYER - 1];
     // spoken stings at the big turns of a round: the music eases down under them, and a narrator card shows
     const rivalCells = run.world.molds.filter((m) => m.id !== PLAYER && m.status === 'alive').map((m) => m.cellCount);
+    // the first time the molds touch in round 2 the game pauses for a video, which stands in for the rally and the last stand
+    if (run.state === 'playing' && run.roundNumber === 2 && contactClipRound !== 2 && (player?.frontCells.length ?? 0) > 0) {
+      contactClipRound = 2;
+      stingDirector.useContact(model.elapsedSeconds);
+      engine.stopSting(0.4);
+      run.pause('video');
+      playClip(ui, `${import.meta.env.BASE_URL}video/round_2_first_contact.mp4`, () => {
+        if (run.state === 'paused' && run.pauseReason === 'video') run.resume();
+      });
+    }
     const stingId = stingDirector.update({
       seconds: model.elapsedSeconds,
       playing: run.state === 'playing' && !tutorial.running && settings.embellishments,
@@ -463,7 +476,7 @@ async function main(): Promise<void> {
     if (stingId) {
       const def = STINGS[stingId];
       const reason = stingDirector.lastReason;
-      void engine.playSting(stingUrl(def.file), (seconds) => {
+      void engine.playSting(stingUrl(stingId === 'again' ? (stingDirector.lastFile ?? def.file) : def.file), (seconds) => {
         hud.narrate(def.title, def.caption, seconds);
         if (def.announce) hud.announce(def.announce.heading, reason || def.announce.sub, 4);
       }).then((ok) => {

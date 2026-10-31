@@ -41,6 +41,24 @@ export function scanFronts(world: World): void {
   }
 }
 
+/** how hard a mold's front cells hit at this slider setting: weak near Growth, strong near War */
+export function stanceAttack(world: Readonly<World>, allocation: number): number {
+  const s = world.balance.stance;
+  return stanceAt(world.balance.defaultAllocation, allocation, s.attackAtGrowth, s.attackAtWar);
+}
+
+/** how much of the damage aimed at a mold's cells lands at this slider setting: more near Growth, less near War */
+export function stanceTaken(world: Readonly<World>, allocation: number): number {
+  const s = world.balance.stance;
+  return stanceAt(world.balance.defaultAllocation, allocation, s.takenAtGrowth, s.takenAtWar);
+}
+
+/** straight lines from the Growth end to the default setting (exactly 1) and on to the War end */
+function stanceAt(mid: number, allocation: number, atGrowth: number, atWar: number): number {
+  if (allocation >= mid) return 1 + (atWar - 1) * ((allocation - mid) / (1 - mid));
+  return atGrowth + (1 - atGrowth) * (allocation / mid);
+}
+
 /**
  * Battle resolution (every tick, R6). Each front cell turns the nutrients delivered to it (plus a
  * small base pressure) into damage on its enemy neighbors. All damage is worked out from the
@@ -64,7 +82,7 @@ export function tickCombat(world: World): void {
       comp.pool -= grant;
       moldOf(world, comp.moldId).flowTick.fight += grant;
       // a fortress in range makes this cell hit harder (FR-010)
-      const eff = (grant / dt + b.basePressure) * (world.boost[cell] as number);
+      const eff = (grant / dt + b.basePressure) * (world.boost[cell] as number) * stanceAttack(world, mold.allocation);
       sc.eff[cell] = eff;
       const share = eff / (world.enemyAdj[cell] as number);
       const dmg = share * b.attackEff * dt;
@@ -94,7 +112,7 @@ export function tickCombat(world: World): void {
     const defender = moldOf(world, world.owner[n] as number);
     const before = world.biomass[n] as number;
     // ...and tougher: damage taken is divided by the same multiplier
-    const dmg = (sc.damage[n] as number) / (world.boost[n] as number);
+    const dmg = ((sc.damage[n] as number) / (world.boost[n] as number)) * stanceTaken(world, defender.allocation);
     defender.lossTick += Math.min(before, dmg);
     world.biomass[n] = before - dmg;
     if (before - dmg <= 0) dead.push(n);

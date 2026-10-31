@@ -189,7 +189,7 @@ describe('eliminations', () => {
   it('a mold with no cells left is eliminated: event, no targets', () => {
     const { world, b: bId } = twoMolds();
     const bm = world.molds[bId - 1]!;
-    bm.targets.push({ id: 1, moldId: bId, cell: 5, path: [5], pos: 0, progress: 0, createdTick: 0, state: 'growing', starvedFor: 0, rate: 0 });
+    bm.targets.push({ id: 1, moldId: bId, cell: 5, path: [5], pos: 0, progress: 0, createdTick: 0, state: 'growing', speed: 1, starvedFor: 0, rate: 0 });
     for (const c of [...world.components.values()].filter((c) => c.moldId === bId)) for (const cell of [...c.cells]) removeCell(world, cell);
     expect(bm.cellCount).toBe(0);
     world.events = [];

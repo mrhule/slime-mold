@@ -34,6 +34,8 @@ export interface GrowthTarget {
   progress: number;
   createdTick: number;
   state: TipState;
+  /** share of normal growth speed: 1 for a target the player chose, less for one the veins picked on their own */
+  speed: number;
   /** seconds the stock has been (nearly) empty, so growth runs on income alone */
   starvedFor: number;
   /** nutrients/s the flow solve currently routes to this tip */
@@ -160,7 +162,8 @@ export interface DropEvent {
 }
 
 export type Command =
-  | { type: 'setTarget'; mold: MoldId; cell: CellIndex }
+  /** `speed` slows the tip to that share of normal growth; the slider's explore end uses it, a player's click leaves it out */
+  | { type: 'setTarget'; mold: MoldId; cell: CellIndex; speed?: number }
   | { type: 'cancelTarget'; mold: MoldId; targetId: number }
   | { type: 'clearTargets'; mold: MoldId }
   | { type: 'setAllocation'; mold: MoldId; value: number }
@@ -280,6 +283,8 @@ export interface HudModel {
   /** some piece cannot pay its upkeep, so its veins are dying back */
   starving: boolean;
   allocation: number;
+  /** the slider's two ends: at or below exploreMax the veins explore on their own, at or above warMin the mold bleeds */
+  zones: { exploreMax: number; warMin: number };
   mapControl: number;
   /** the control that wins right now: it eases down in a long round */
   winControl: number;

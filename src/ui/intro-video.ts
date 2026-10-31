@@ -59,3 +59,34 @@ export function playIntroVideo(parent: HTMLElement, url: string, begin: (fadeIn:
   parent.appendChild(overlay);
   video.play().catch(skip);
 }
+
+/**
+ * Play a clip full screen over the game and call `done` when it ends or is skipped (Skip, Space,
+ * Enter or Escape). Unlike the intro it can play any number of times, and it does not fade. A clip
+ * that cannot play calls `done` at once, so the game is never held up.
+ */
+export function playClip(parent: HTMLElement, url: string, done: () => void): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'intro-video';
+  overlay.innerHTML = `<video playsinline preload="auto" src="${url}"></video><button type="button" class="btn intro-skip">Skip</button>`;
+  const video = overlay.querySelector('video') as HTMLVideoElement;
+  let finished = false;
+  function onKey(e: KeyboardEvent): void {
+    e.stopPropagation();
+    if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') finish();
+  }
+  function finish(): void {
+    if (finished) return;
+    finished = true;
+    video.pause();
+    overlay.remove();
+    window.removeEventListener('keydown', onKey, true);
+    done();
+  }
+  video.addEventListener('ended', finish);
+  video.addEventListener('error', finish);
+  overlay.querySelector('.intro-skip')?.addEventListener('click', finish);
+  window.addEventListener('keydown', onKey, true);
+  parent.appendChild(overlay);
+  video.play().catch(finish);
+}

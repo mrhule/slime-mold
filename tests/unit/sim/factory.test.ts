@@ -110,7 +110,7 @@ describe('veins out of every reach fade and die', () => {
   it('spares the head of a growing tip, and the core', () => {
     const { world, mold, cells } = longVein(70);
     const tipHead = cells[69] as number;
-    mold.targets.push({ id: 99, cell: tipHead, path: [tipHead], pos: 0, progress: 0, rate: 0, state: 'growing', starvedFor: 0 } as never);
+    mold.targets.push({ id: 99, cell: tipHead, path: [tipHead], pos: 0, progress: 0, rate: 0, state: 'growing', speed: 1, starvedFor: 0 } as never);
     age(world, graceSeconds + fadeSeconds * 2);
     expect(world.owner[tipHead]).toBe(mold.id);
     expect(world.owner[mold.core]).toBe(mold.id);

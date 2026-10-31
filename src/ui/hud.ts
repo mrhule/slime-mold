@@ -52,7 +52,7 @@ export class Hud {
         <div class="row flow" title="Nutrients arriving per second: your core, food you have eaten, and goo pools with a store house"><span class="label">Income</span><span class="value pos" data-hud="inflow">+0.0/s</span></div>
         <div class="row flow" data-hud="upkeepRow" title="Upkeep owed per second: every vein cell and building costs a little to keep alive"><span class="label">Upkeep</span><span class="value out" data-hud="upkeep">-0.0/s</span></div>
         <div class="row flow" data-hud="growthRow" hidden title="Nutrients spent per second pushing your veins outward"><span class="label">Growing</span><span class="value out" data-hud="growth">-0.0/s</span></div>
-        <div class="row flow" data-hud="fightRow" hidden title="Nutrients spent per second fighting at the fronts"><span class="label">Fighting</span><span class="value out" data-hud="fight">-0.0/s</span></div>
+        <div class="row flow" data-hud="fightRow" hidden title="Nutrients spent per second on the war at the fronts"><span class="label">At war</span><span class="value out" data-hud="fight">-0.0/s</span></div>
         <div class="row net" title="Income minus everything you spend, per second. Below zero and your stock drains."><span class="label">Net</span><span class="value pos" data-hud="income">+0.0/s</span></div>
         <div class="row" data-hud="controlRow" title="Share of the map you hold. Win at ${Math.round(winControl * 100)}%, or eliminate every rival."><span class="label">Map control</span><span class="value" data-hud="control">0%</span></div>
         <div class="meter" data-hud="controlMeter" title="Win at ${Math.round(winControl * 100)}%"><div class="meter-fill" data-hud="controlFill"></div><div class="meter-rivals" data-hud="controlRivals"></div><div class="meter-goal" data-hud="controlGoal"></div></div>
@@ -62,11 +62,12 @@ export class Hud {
           <button type="button" data-speed="2" title="Double speed (2)">2x</button>
           <button type="button" data-speed="3" title="Triple speed (3)">3x</button>
         </div>
-        <label class="slider" title="Where nutrients go. Growth builds veins faster, Fight sends more to battle fronts. Q / E to nudge.">
-          <span class="slider-labels"><span>Growth</span><span>Fight</span></span>
-          <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus fight" />
+        <label class="slider" data-hud="sliderBox" title="Where nutrients go. Growth builds veins faster; War sends more to battle fronts, and your veins hit harder and take less damage. Close to Growth your fronts are weak and easy to lose. Q / E to nudge. The hatched ends are special: all the way to Growth and your veins explore on their own; all the way to War and your mold bleeds nutrients and its veins die back.">
+          <span class="slider-labels"><span>Growth</span><span>War</span></span>
+          <input type="range" min="0" max="1" step="0.05" value="0.3" data-hud="alloc" aria-label="Growth versus war" />
+          <span class="zone-note" data-hud="zoneNote" hidden></span>
         </label>
-        <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus fight: tap to change">Fight 30%</button>
+        <button type="button" class="alloc-chip" data-hud="chip" title="Growth versus war: tap to change">War 30%</button>
         <button type="button" class="evolve" data-hud="evolve" hidden title="Spend a fixed amount of nutrients to evolve and unlock new buildings (V). The price does not grow with your factories.">Evolve</button>
         <button type="button" class="burst-btn" data-hud="burstBtn" hidden></button>
         <div class="burst" data-hud="starved" hidden>GROWTH STARVED!</div>
@@ -90,7 +91,7 @@ export class Hud {
       <div class="narration" data-hud="narration" hidden><span class="narr-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="narr-body"><span class="narr-title" data-hud="narrTitle"></span><span class="narr-text" data-hud="narrText"></span></span></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRivals', 'controlGoal', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'evolve', 'burstBtn']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRivals', 'controlGoal', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'sliderBox', 'zoneNote', 'evolve', 'burstBtn']) this.el[k] = q(k);
     this.el.burstBtn!.addEventListener('click', () => this.pressBurst());
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
@@ -171,7 +172,9 @@ export class Hud {
     this.el.income!.textContent = `${net >= 0 ? '+' : '-'}${Math.abs(net).toFixed(1)}/s`;
     this.el.income!.classList.toggle('neg', net < 0);
     this.el.income!.classList.toggle('pos', net >= 0);
-    this.el.dying!.hidden = !hud.starving;
+    const atWarNow = hud.allocation >= hud.zones.warMin;
+    this.el.dying!.hidden = !hud.starving && !atWarNow;
+    this.el.dying!.textContent = hud.starving ? 'VEINS DYING BACK: upkeep is more than your stock can pay. Eat food, build a Factory on a goo pool, or stop growing.' : 'ALL-OUT WAR: your mold bleeds nutrients and its veins are dying back. Slide toward Growth to stop it.';
     const b = hud.burst;
     this.burstState = b.state;
     const btn = this.el.burstBtn as HTMLButtonElement;
@@ -208,7 +211,18 @@ export class Hud {
     this.el.unlinked!.hidden = waiting === 0;
     if (waiting > 0) this.el.unlinked!.textContent = `${waiting} goo ${waiting === 1 ? 'pool is' : 'pools are'} waiting: build a Factory (F) on the same vein`;
     if (!this.sliderActive && document.activeElement !== this.slider) this.slider.value = String(hud.allocation);
-    this.el.chip!.textContent = `Fight ${Math.round(hud.allocation * 100)}%`;
+    this.el.chip!.textContent = `War ${Math.round(hud.allocation * 100)}%`;
+    // the two hatched ends of the slider: how far they reach, and what the mold is doing in one of them
+    const box = this.el.sliderBox as HTMLElement;
+    box.style.setProperty('--z-explore', `${hud.zones.exploreMax * 100}%`);
+    box.style.setProperty('--z-war', `${(1 - hud.zones.warMin) * 100}%`);
+    const exploring = hud.allocation <= hud.zones.exploreMax;
+    const atWar = hud.allocation >= hud.zones.warMin;
+    this.el.zoneNote!.hidden = !(exploring || atWar);
+    this.el.zoneNote!.textContent = exploring ? 'Veins are exploring on their own' : atWar ? 'All-out war: nutrients bleed, veins die back' : '';
+    this.el.zoneNote!.classList.toggle('war', atWar);
+    this.el.chip!.classList.toggle('war', atWar);
+    this.el.chip!.classList.toggle('explore', exploring);
     for (const b of this.speedButtons) {
       const v = b.dataset.speed;
       b.classList.toggle('on', v === 'pause' ? clock.paused : !clock.paused && Number(v) === clock.speed);

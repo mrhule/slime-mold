@@ -36,7 +36,7 @@ export function applyCommand(world: World, cmd: Command): void {
   if (mold.status !== 'alive') return reject(world, cmd.mold, 'mold-eliminated');
   switch (cmd.type) {
     case 'setTarget': {
-      const res = addTarget(world, cmd.mold, cmd.cell);
+      const res = addTarget(world, cmd.mold, cmd.cell, cmd.speed);
       if (!res.ok) reject(world, cmd.mold, res.reason, cmd.cell);
       return;
     }

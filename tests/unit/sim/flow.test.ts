@@ -52,7 +52,7 @@ describe('flow', () => {
     world.conductivity[thin] = 0.01;
     mold.targets.push({
       id: 77, moldId: mold.id, cell: cellOf(world, 55, 20), path: [end, cellOf(world, end % world.width + 1, 20), cellOf(world, 55, 20)],
-      pos: 0, progress: 0, createdTick: 0, state: 'growing', starvedFor: 0, rate: 0,
+      pos: 0, progress: 0, createdTick: 0, state: 'growing', speed: 1, starvedFor: 0, rate: 0,
     });
     solveFlow(world);
     expect(mold.targets[0]!.rate).toBeLessThanOrEqual(defaultBalance.capacityPerD * 0.02);

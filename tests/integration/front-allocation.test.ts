@@ -7,7 +7,7 @@ import { cellOf, createOpenWorld } from '../helpers';
 
 /**
  * Two identical molds with identical stock push toward each other. They differ only in the
- * growth/fight slider. Playing it twice with the sides swapped shows the slider, not the
+ * growth/war slider (kept off its two special ends, which explore or bleed). Playing it twice with the sides swapped shows the slider, not the
  * position, decides the front.
  */
 function duel(allocLeft: number, allocRight: number, ticks = 3600): { left: number; right: number; world: World; mostFronts: number } {
@@ -36,15 +36,15 @@ describe('the growth/fight slider (US2 independent test)', () => {
   });
 
   it('the side that sends more nutrients to the front wins it', () => {
-    const fightLeft = duel(0.9, 0.1);
+    const fightLeft = duel(0.85, 0.15);
     expect(fightLeft.left).toBeGreaterThan(fightLeft.right);
   });
 
   it('decides the front from either side of the map', () => {
     // pathfinding breaks ties toward lower cell indices, so mirrored duels are not exactly equal;
     // what matters is that the side sending more nutrients to the front wins in both orientations
-    const a = duel(0.9, 0.1);
-    const b = duel(0.1, 0.9);
+    const a = duel(0.85, 0.15);
+    const b = duel(0.15, 0.85);
     expect(a.left).toBeGreaterThan(a.right);
     expect(b.right).toBeGreaterThan(b.left);
   });
@@ -60,7 +60,7 @@ describe('the growth/fight slider (US2 independent test)', () => {
     const world = createOpenWorld(91, 41);
     const left = addMold(world, 'player', cellOf(world, 18, 20), 300);
     const right = addMold(world, 'player', cellOf(world, 72, 20), 300);
-    enqueue(world, { type: 'setAllocation', mold: left.id, value: 0 });
+    enqueue(world, { type: 'setAllocation', mold: left.id, value: 0.15 });
     enqueue(world, { type: 'setAllocation', mold: right.id, value: 0.8 });
     enqueue(world, { type: 'setTarget', mold: left.id, cell: cellOf(world, 72, 20) });
     enqueue(world, { type: 'setTarget', mold: right.id, cell: cellOf(world, 18, 20) });
@@ -71,8 +71,8 @@ describe('the growth/fight slider (US2 independent test)', () => {
 
     // a windfall for both sides, so the slider has nutrients to send
     for (const comp of world.components.values()) comp.pool = 300;
-    enqueue(world, { type: 'setAllocation', mold: left.id, value: 1 });
-    enqueue(world, { type: 'setAllocation', mold: right.id, value: 0 });
+    enqueue(world, { type: 'setAllocation', mold: left.id, value: 0.85 });
+    enqueue(world, { type: 'setAllocation', mold: right.id, value: 0.15 });
     for (let t = 0; t < 1800; t++) step(world);
     const swing = left.cellCount - right.cellCount - (leftBefore - rightBefore);
     expect(swing).toBeGreaterThan(0); // the balance moved toward the side that now fights
