@@ -58,6 +58,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     flow: { ...mold.flow },
     starving: [...world.components.values()].some((c) => c.moldId === moldId && c.unpaid),
     allocation: mold.allocation,
+    zones: { exploreMax: world.balance.allocationZones.exploreMax, warMin: world.balance.allocationZones.warMin },
     mapControl: mapControl(world, moldId),
     winControl: winThreshold(world),
     burst: { ...burstStatus(world, moldId), cost: world.balance.burst.cost, target: world.balance.burst.winControl },

@@ -1,6 +1,7 @@
 import { clampPools, collectorWorking, drainStoreHouses, recomputeFeed, recomputePower, recomputeSupply } from './buildings';
 import { tickAi } from './ai-driver';
 import { tickDrops } from './drops';
+import { tickExplore } from './explore';
 import { checkEliminations, scanFronts, tickCombat } from './combat';
 import { applyQueuedCommands } from './commands';
 import { updateVision } from './fog';
@@ -82,6 +83,7 @@ export function step(world: World): void {
   if (world.tick % world.balance.fogEvery === 0) updateVision(world);
   if (world.tick % 10 === 0) evaluateOutcome(world);
   tickAi(world);
+  tickExplore(world);
   settleNetIncome(world);
   world.tick++;
 }

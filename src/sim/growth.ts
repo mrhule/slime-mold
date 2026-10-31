@@ -127,7 +127,7 @@ export function planTarget(world: World, moldId: MoldId, cell: CellIndex): PlanR
 }
 
 /** Add a growth target; the oldest is replaced when the mold already has the maximum. */
-export function addTarget(world: World, moldId: MoldId, cell: CellIndex): PlanResult {
+export function addTarget(world: World, moldId: MoldId, cell: CellIndex, speed = 1): PlanResult {
   const plan = planTarget(world, moldId, cell);
   if (!plan.ok) return plan;
   const mold = moldOf(world, moldId);
@@ -147,6 +147,7 @@ export function addTarget(world: World, moldId: MoldId, cell: CellIndex): PlanRe
     progress: 0,
     createdTick: world.tick,
     state: 'growing',
+    speed,
     starvedFor: 0,
     rate: 0,
   });
@@ -220,7 +221,7 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
     if (!delivered) {
       delivered = true;
       const comp = world.components.get(world.component[head] as number) as Component;
-      const grant = Math.min(tip.rate * dt, comp.pool);
+      const grant = Math.min(tip.rate * dt * tip.speed, comp.pool);
       if (grant > 1e-9) {
         comp.pool -= grant;
         mold.flowTick.growth += grant;

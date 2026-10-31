@@ -103,7 +103,10 @@ function playGame(round: number, seed: number): GameResult {
   while (world.tick < maxTicks && world.outcome === 'playing') {
     if (world.tick === burstTick) enqueue(world, { type: 'sporeBurst', mold: 1 });
     if (world.tick % interval === 0 && world.molds[0]!.status === 'alive') {
-      for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
+      for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) {
+        // the stand-in player stays off the slider's two special ends (exploring alone, bleeding at war)
+        enqueue(world, cmd.type === 'setAllocation' ? { ...cmd, value: Math.min(0.85, Math.max(0.15, cmd.value)) } : cmd);
+      }
       maybeBuildStore(world);
     }
     const t0 = performance.now();

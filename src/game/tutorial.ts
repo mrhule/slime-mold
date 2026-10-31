@@ -49,7 +49,7 @@ export const STEPS: readonly TutorialStep[] = [
   },
   {
     id: 'fight',
-    text: (touch) => `A rival! Where molds touch there is a fight. ${touch ? 'The slider' : 'Q / E or the slider'} sends nutrients to growth or to the fight, and a Fortress makes your veins hit harder.`,
+    text: (touch) => `A rival! Where molds touch there is a war. ${touch ? 'The slider' : 'Q / E or the slider'} sends nutrients to growth or to the war, and a Fortress makes your veins hit harder.`,
     // with no rival in sight the lesson waits a while, then moves on rather than stalling
     done: (s, since) => (s.rivalSeen && since >= 12) || since >= 150,
   },

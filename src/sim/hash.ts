@@ -58,6 +58,7 @@ export function stateHash(world: World): number {
       h.num(t.pos);
       h.num(t.progress);
       h.num(t.rate);
+      h.num(t.speed);
       h.num(t.starvedFor);
     }
   }

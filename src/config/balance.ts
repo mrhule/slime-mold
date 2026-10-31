@@ -130,6 +130,12 @@ export interface BalanceConfig {
 
   // combat (R6)
   attackEff: number;
+  /**
+   * How the Growth/War slider changes a mold's stance in a fight, by straight lines from the Growth end
+   * (allocation 0) to the War end (1): how hard its front cells hit, and how much of the damage aimed at
+   * them lands. Both read exactly 1 at the default allocation, so a mold that leaves the slider alone fights as before.
+   */
+  stance: { attackAtGrowth: number; attackAtWar: number; takenAtGrowth: number; takenAtWar: number };
   /** pressure every front cell exerts even with no nutrients delivered, so contact always grinds */
   basePressure: number;
   consumeRefund: number;
@@ -172,6 +178,13 @@ export interface BalanceConfig {
   /** the spore burst: a once-a-round all-in that scatters seeds over the map and blooms for a while; reach `winControl` by the end or lose */
   burst: { minSeconds: number; cost: number; seeds: number; spacing: number; bloomSeconds: number; spreadEvery: number; spreadChance: number; winControl: number };
   defaultAllocation: number;
+  /**
+   * The ends of the Growth/War slider. At `exploreMax` or less the player's veins splinter off by
+   * themselves, one new target every `exploreEvery` ticks, wandering at `exploreSpeed` of normal growth speed; once food or a goo pool has been revealed they head for it at `seekSpeed`. At
+   * `warMin` or more the mold bleeds: every vein cell costs `1 + warUpkeep` times its usual upkeep.
+   * Rival AIs are not affected by either end.
+   */
+  allocationZones: { exploreMax: number; warMin: number; exploreEvery: number; warUpkeep: number; exploreSpeed: number; seekSpeed: number };
 
   // AI (R8)
   aiCommandsPerThink: number;
@@ -252,6 +265,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   targetSnapRadius: 6,
 
   attackEff: 0.12,
+  stance: { attackAtGrowth: 0.6, attackAtWar: 1.6, takenAtGrowth: 1.3, takenAtWar: 0.5 },
   basePressure: 0.4,
   consumeRefund: 0.4,
   biomassRegen: 0.2,
@@ -283,6 +297,7 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   victoryEase: { startSeconds: 420, perMinute: 0.025, floor: 0.5 },
   burst: { minSeconds: 240, cost: 500, seeds: 28, spacing: 9, bloomSeconds: 90, spreadEvery: 10, spreadChance: 0.03, winControl: 0.6 },
   defaultAllocation: 0.3,
+  allocationZones: { exploreMax: 0.1, warMin: 0.9, exploreEvery: 60, warUpkeep: 5, exploreSpeed: 1 / 3, seekSpeed: 1 / 2 },
 
   aiCommandsPerThink: 3,
 

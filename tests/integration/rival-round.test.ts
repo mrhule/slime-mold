@@ -17,7 +17,10 @@ function playToTheEnd(seed: number, round: number): { world: World; ticks: numbe
   let ticks = 0;
   while (ticks < TWENTY_MINUTES && world.outcome === 'playing') {
     if (ticks % interval === 0 && world.molds[0]!.status === 'alive') {
-      for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) enqueue(world, cmd);
+      for (const cmd of think(viewFor(world, 1), state, rng, world.balance.aiCommandsPerThink)) {
+        // the stand-in player keeps the slider off its two special ends (veins exploring alone, or bleeding at war)
+        enqueue(world, cmd.type === 'setAllocation' ? { ...cmd, value: Math.min(0.85, Math.max(0.15, cmd.value)) } : cmd);
+      }
     }
     step(world);
     ticks++;
