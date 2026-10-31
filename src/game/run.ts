@@ -2,8 +2,8 @@ import type { Speed } from './loop';
 import type { RoundOutcome, World } from '../sim/types';
 
 export type RunState = 'title' | 'playing' | 'paused' | 'roundEnd';
-/** why the game is paused: the player, the pause menu, or the tab losing focus */
-export type PauseReason = 'player' | 'menu' | 'focus';
+/** why the game is paused: the player, the pause menu, the tab losing focus, or a video playing over it */
+export type PauseReason = 'player' | 'menu' | 'focus' | 'video';
 
 export interface RunStorage {
   loadBest(): number;

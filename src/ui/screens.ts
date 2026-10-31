@@ -106,6 +106,7 @@ export class Screens {
     if (run.state === 'roundEnd') return this.roundEnd(run);
     if (run.state === 'paused') {
       if (run.pauseReason === 'menu') return this.menu();
+      if (run.pauseReason === 'video') return '';
       if (run.pauseReason === 'focus') return '<div class="screen focus-overlay"><div class="panel big"><h2>Paused</h2><p><span class="kbd-only">Click</span><span class="touch-only">Tap</span> to resume</p></div></div>';
       return '<div class="banner">Paused — <span class="kbd-only">Space</span><span class="touch-only">tap ❚❚</span> to resume. You can still give orders.</div>';
     }
@@ -131,7 +132,7 @@ export class Screens {
       </ul>
       <ul class="keys kbd-only">
         <li><b>Click</b> the map to grow there &middot; <b>right-click</b> a marker to cancel, a vein to cut it (again to rejoin), a building twice to demolish it</li>
-        <li><b>Q / E</b> or the slider: send nutrients to growth or to the fight</li>
+        <li><b>Q / E</b> or the slider: send nutrients to growth or to the war. All the way to Growth, veins explore on their own; all the way to War, your mold bleeds.</li>
         <li><b>F</b> build a factory &middot; <b>Space</b> pause &middot; <b>1 2 3</b> speed &middot; <b>WASD</b> and wheel to look around</li>
       </ul>
     </div></div>`;

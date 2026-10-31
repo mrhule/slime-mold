@@ -5,7 +5,10 @@
  * DOOM_REPEAT seconds, and the fading one only after the mold has recovered since it last played.
  */
 
-export type StingId = 'fading' | 'stand' | 'rally';
+export type StingId = 'fading' | 'stand' | 'rally' | 'again';
+
+/** the two recordings, one picked at random each time, when the molds meet again (a new contact a minute or more after the last) */
+export const AGAIN_FILES = ['second-contact-option-1.mp3', 'second-contact-option-2.mp3'] as const;
 
 export interface StingDef {
   id: StingId;
@@ -41,6 +44,13 @@ export const STINGS: Record<StingId, StingDef> = {
     caption: 'Mold! The tide has turned! The leaves tremble! The snails retreat! Spread, and the whole forest floor shall be OURS!',
     announce: { heading: 'First contact!', sub: '' },
   },
+  again: {
+    id: 'again',
+    file: AGAIN_FILES[0],
+    title: 'The rivals remember',
+    caption: 'They remember too, little mold... the rivals have grown. But so... have we. Spread! Spread, and let them REMEMBER... the weight of the mold!',
+    announce: { heading: 'Contact, again!', sub: '' },
+  },
 };
 
 /** the song played as a new round begins after a victory; the director never picks it, main.ts plays it on the round change */
@@ -65,6 +75,9 @@ export interface StingSnapshot {
   frontCells: number;
 }
 
+/** a new contact counts as meeting again only this long after the last contact that played a sting or video */
+const REMEET = 60;
+
 /** no sting in the first seconds of a round, and none within this long of the last one */
 const QUIET_START = 45;
 const COOLDOWN = 60;
@@ -76,6 +89,9 @@ const FADING_PEAK = 25;
 /** the last stand: the player's share of all living veins (theirs plus the enemies') gained this much, then lost this much from the top */
 const STAND_GAIN = 0.04;
 const STAND_LOSS = 0.03;
+/** the last stand does not play when the player's share has climbed this much over the last RECOVER_WINDOW seconds */
+const RECOVER_WINDOW = 10;
+const RECOVER_MARGIN = 0.01;
 /** first contact while the player holds less than this share of all veins is an attack, not a rally: the last stand plays instead */
 const CONTACT_LOSING = 0.4;
 /** fading also plays when the player is down to this share against rivals who hold at least FADING_PEAK cells */
@@ -93,6 +109,20 @@ export class StingDirector {
   private high = 0;
   /** why the last sting was picked, in words for the player */
   lastReason = '';
+  /** the recording to play for the last pick (the "again" sting alternates between two) */
+  lastFile: string | null = null;
+  /** the molds are touching now, and a new contact is waiting for its sting */
+  private touching = false;
+  /** the molds have touched at least once this round */
+  private met = false;
+  private againPending = false;
+  /** when the last contact that had a sting or video began, in round seconds */
+  private lastContactAt = -Infinity;
+  /** the player's share of all veins over the last few seconds, to tell a collapse from a comeback */
+  private history: { t: number; share: number }[] = [];
+
+  /** `random` picks between the two "again" recordings; tests pass their own */
+  constructor(private readonly random: () => number = Math.random) {}
 
   /** a new round: everything may play again */
   rebase(): void {
@@ -103,11 +133,25 @@ export class StingDirector {
     this.peakCells = 0;
     this.low = Infinity;
     this.high = 0;
+    this.touching = false;
+    this.met = false;
+    this.againPending = false;
+    this.lastContactAt = -Infinity;
+    this.history = [];
+  }
+
+  /** the first contact was marked some other way (a video), so the rally and the last stand do not also play for it */
+  useContact(seconds: number): void {
+    this.rallied = true;
+    this.lastContactAt = seconds;
+    this.touching = true;
+    this.met = true;
   }
 
   /** the sting could not play (audio blocked or muted): let it come up again later */
   release(id: StingId): void {
-    if (id === 'rally') this.rallied = false;
+    if (id === 'again') this.againPending = this.touching;
+    else if (id === 'rally') this.rallied = false;
     else this.doomAt.delete(id);
   }
 
@@ -117,28 +161,46 @@ export class StingDirector {
     const total = s.playerCells + s.enemyCells;
     const share = total > 0 ? s.playerCells / total : 0;
 
-    // watch for a push that was pushed back, every frame, whether or not a sting may play now
+    // watch for a push that was pushed back, every frame, whether or not a sting may play now. Only a fight
+    // counts: while the molds are apart the share moves just because one grows faster, which is no push at all.
     let pushedBack = false;
-    this.low = Math.min(this.low, share);
-    if (share > this.low + STAND_GAIN) this.high = Math.max(this.high, share);
-    if (this.high > 0 && this.high - share >= STAND_LOSS) {
-      pushedBack = true;
+    if (s.frontCells === 0) {
       this.low = share;
       this.high = 0;
+    } else {
+      this.low = Math.min(this.low, share);
+      if (share > this.low + STAND_GAIN) this.high = Math.max(this.high, share);
+      if (this.high > 0 && this.high - share >= STAND_LOSS) {
+        pushedBack = true;
+        this.low = share;
+        this.high = 0;
+      }
     }
+    // a mold already winning ground back is not making a last stand: compare with a few seconds ago
+    this.history.push({ t: s.seconds, share });
+    while (this.history.length > 1 && (this.history[1] as { t: number }).t <= s.seconds - RECOVER_WINDOW) this.history.shift();
+    const ago = this.history[0] as { t: number; share: number };
+    const recovering = s.seconds - ago.t >= RECOVER_WINDOW * 0.5 && share > ago.share + RECOVER_MARGIN;
 
     if (s.playerCells > this.peakCells * FADING_SHARE * 1.5) this.recovered = true;
     // first contact with an enemy mold ("the tide has turned") may come at any time, even early
     const contact = s.frontCells > 0 && !this.rallied;
+    // a new contact after the first one, a minute or more after the last, waits here for its sting
+    const touching = s.frontCells > 0;
+    if (touching && !this.touching && this.rallied && s.seconds - this.lastContactAt >= REMEET) this.againPending = true;
+    if (!touching) this.againPending = false;
+    this.touching = touching;
+    if (touching) this.met = true;
     if (s.seconds - this.lastAt < COOLDOWN || (s.seconds < QUIET_START && !contact)) return null;
     // losing by a lot to rivals, whatever the mold's own best size was
-    const outgunned = s.enemyCells >= FADING_PEAK && share <= OUTGUNNED_SHARE;
+    // (only once the molds have actually met: rivals the player has never touched say nothing about how it is doing)
+    const outgunned = this.met && s.enemyCells >= FADING_PEAK && share <= OUTGUNNED_SHARE;
     let pick: StingId | null = null;
     let reason = '';
     const shrunk = this.peakCells >= FADING_PEAK && s.playerCells <= this.peakCells * FADING_SHARE;
     if (contact) {
       // met while already behind: the enemy is attacking, so the last stand plays and the rally is used up
-      if (share < CONTACT_LOSING) {
+      if (share < CONTACT_LOSING && !recovering) {
         this.rallied = true;
         pick = 'stand';
         reason = `A rival hit you while you were behind: you hold ${Math.round(share * 100)}% of the veins.`;
@@ -149,14 +211,22 @@ export class StingDirector {
     } else if ((shrunk || outgunned) && this.recovered) {
       pick = 'fading';
       reason = shrunk ? 'Your mold has shrunk to a fraction of its best size.' : `Rivals hold far more than you: you have ${Math.round(share * 100)}% of the veins.`;
-    } else if (pushedBack) {
+    } else if (pushedBack && !recovering) {
       pick = 'stand';
       reason = 'A rival pushed you back from ground you had won.';
+    } else if (this.againPending) {
+      pick = 'again';
+      reason = 'Your mold has met a rival again, a minute or more after the last contact.';
     }
     if (!pick) return null;
-    if (pick === 'rally') {
+    if (pick === 'again') {
+      this.againPending = false;
+      this.lastContactAt = s.seconds;
+      this.lastFile = AGAIN_FILES[Math.min(AGAIN_FILES.length - 1, Math.floor(this.random() * AGAIN_FILES.length))] as string;
+    } else if (pick === 'rally') {
       if (this.rallied) return null;
       this.rallied = true;
+      this.lastContactAt = s.seconds;
     } else {
       const last = this.doomAt.get(pick);
       if (last !== undefined && s.seconds - last < DOOM_REPEAT) return null;
