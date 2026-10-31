@@ -298,6 +298,479 @@
     "w": 160,
     "h": 104
    }
+  ],
+  "floor-life": [
+   {
+    "file": "floor-life-0.webp",
+    "w": 96,
+    "h": 86
+   },
+   {
+    "file": "floor-life-1.webp",
+    "w": 82,
+    "h": 96
+   },
+   {
+    "file": "floor-life-2.webp",
+    "w": 96,
+    "h": 82
+   },
+   {
+    "file": "floor-life-3.webp",
+    "w": 96,
+    "h": 74
+   },
+   {
+    "file": "floor-life-4.webp",
+    "w": 96,
+    "h": 69
+   },
+   {
+    "file": "floor-life-5.webp",
+    "w": 96,
+    "h": 59
+   },
+   {
+    "file": "floor-life-6.webp",
+    "w": 96,
+    "h": 93
+   },
+   {
+    "file": "floor-life-7.webp",
+    "w": 86,
+    "h": 96
+   },
+   {
+    "file": "floor-life-8.webp",
+    "w": 90,
+    "h": 96
+   },
+   {
+    "file": "floor-life-9.webp",
+    "w": 96,
+    "h": 89
+   },
+   {
+    "file": "floor-life-10.webp",
+    "w": 64,
+    "h": 96
+   },
+   {
+    "file": "floor-life-11.webp",
+    "w": 93,
+    "h": 96
+   },
+   {
+    "file": "floor-life-12.webp",
+    "w": 96,
+    "h": 92
+   },
+   {
+    "file": "floor-life-13.webp",
+    "w": 96,
+    "h": 86
+   },
+   {
+    "file": "floor-life-14.webp",
+    "w": 96,
+    "h": 89
+   },
+   {
+    "file": "floor-life-15.webp",
+    "w": 92,
+    "h": 96
+   }
+  ],
+  "trees": [
+   {
+    "file": "trees-0.webp",
+    "w": 300,
+    "h": 297
+   },
+   {
+    "file": "trees-1.webp",
+    "w": 291,
+    "h": 300
+   },
+   {
+    "file": "trees-2.webp",
+    "w": 300,
+    "h": 284
+   },
+   {
+    "file": "trees-3.webp",
+    "w": 288,
+    "h": 300
+   }
+  ],
+  "wood": [
+   {
+    "file": "wood-0.webp",
+    "w": 220,
+    "h": 209
+   },
+   {
+    "file": "wood-1.webp",
+    "w": 220,
+    "h": 185
+   },
+   {
+    "file": "wood-2.webp",
+    "w": 220,
+    "h": 91
+   },
+   {
+    "file": "wood-3.webp",
+    "w": 220,
+    "h": 114
+   },
+   {
+    "file": "wood-4.webp",
+    "w": 220,
+    "h": 120
+   },
+   {
+    "file": "wood-5.webp",
+    "w": 220,
+    "h": 110
+   },
+   {
+    "file": "wood-6.webp",
+    "w": 220,
+    "h": 138
+   },
+   {
+    "file": "wood-7.webp",
+    "w": 220,
+    "h": 86
+   }
+  ],
+  "landmarks": [
+   {
+    "file": "landmarks-0.webp",
+    "w": 300,
+    "h": 274
+   },
+   {
+    "file": "landmarks-1.webp",
+    "w": 300,
+    "h": 221
+   },
+   {
+    "file": "landmarks-2.webp",
+    "w": 300,
+    "h": 227
+   },
+   {
+    "file": "landmarks-3.webp",
+    "w": 300,
+    "h": 268
+   }
+  ],
+  "snow-patches": [
+   {
+    "file": "snow-patches-0.webp",
+    "w": 200,
+    "h": 82
+   },
+   {
+    "file": "snow-patches-1.webp",
+    "w": 200,
+    "h": 100
+   },
+   {
+    "file": "snow-patches-2.webp",
+    "w": 200,
+    "h": 104
+   },
+   {
+    "file": "snow-patches-3.webp",
+    "w": 200,
+    "h": 179
+   },
+   {
+    "file": "snow-patches-4.webp",
+    "w": 200,
+    "h": 191
+   },
+   {
+    "file": "snow-patches-5.webp",
+    "w": 200,
+    "h": 84
+   },
+   {
+    "file": "snow-patches-6.webp",
+    "w": 200,
+    "h": 114
+   },
+   {
+    "file": "snow-patches-7.webp",
+    "w": 200,
+    "h": 124
+   },
+   {
+    "file": "snow-patches-8.webp",
+    "w": 200,
+    "h": 89
+   }
+  ],
+  "leaves": [
+   {
+    "file": "leaves-0.webp",
+    "w": 38,
+    "h": 56
+   },
+   {
+    "file": "leaves-1.webp",
+    "w": 38,
+    "h": 56
+   },
+   {
+    "file": "leaves-2.webp",
+    "w": 35,
+    "h": 56
+   },
+   {
+    "file": "leaves-3.webp",
+    "w": 39,
+    "h": 56
+   },
+   {
+    "file": "leaves-4.webp",
+    "w": 51,
+    "h": 56
+   },
+   {
+    "file": "leaves-5.webp",
+    "w": 51,
+    "h": 56
+   },
+   {
+    "file": "leaves-6.webp",
+    "w": 52,
+    "h": 56
+   },
+   {
+    "file": "leaves-7.webp",
+    "w": 40,
+    "h": 56
+   },
+   {
+    "file": "leaves-8.webp",
+    "w": 39,
+    "h": 56
+   },
+   {
+    "file": "leaves-9.webp",
+    "w": 41,
+    "h": 56
+   },
+   {
+    "file": "leaves-10.webp",
+    "w": 45,
+    "h": 56
+   },
+   {
+    "file": "leaves-11.webp",
+    "w": 41,
+    "h": 56
+   }
+  ],
+  "snowflakes": [
+   {
+    "file": "snowflakes-0.webp",
+    "w": 40,
+    "h": 38
+   },
+   {
+    "file": "snowflakes-1.webp",
+    "w": 40,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-2.webp",
+    "w": 40,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-3.webp",
+    "w": 38,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-4.webp",
+    "w": 38,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-5.webp",
+    "w": 40,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-6.webp",
+    "w": 36,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-7.webp",
+    "w": 37,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-8.webp",
+    "w": 35,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-9.webp",
+    "w": 36,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-10.webp",
+    "w": 36,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-11.webp",
+    "w": 36,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-12.webp",
+    "w": 40,
+    "h": 39
+   },
+   {
+    "file": "snowflakes-13.webp",
+    "w": 40,
+    "h": 32
+   },
+   {
+    "file": "snowflakes-14.webp",
+    "w": 40,
+    "h": 38
+   },
+   {
+    "file": "snowflakes-15.webp",
+    "w": 36,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-16.webp",
+    "w": 38,
+    "h": 40
+   },
+   {
+    "file": "snowflakes-17.webp",
+    "w": 36,
+    "h": 40
+   }
+  ],
+  "rain-splash": [
+   {
+    "file": "rain-splash-0.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-1.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-2.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-3.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-4.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-5.webp",
+    "w": 32,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-6.webp",
+    "w": 31,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-7.webp",
+    "w": 33,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-8.webp",
+    "w": 36,
+    "h": 35
+   },
+   {
+    "file": "rain-splash-9.webp",
+    "w": 36,
+    "h": 34
+   },
+   {
+    "file": "rain-splash-10.webp",
+    "w": 36,
+    "h": 34
+   },
+   {
+    "file": "rain-splash-11.webp",
+    "w": 35,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-12.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-13.webp",
+    "w": 36,
+    "h": 31
+   },
+   {
+    "file": "rain-splash-14.webp",
+    "w": 36,
+    "h": 36
+   },
+   {
+    "file": "rain-splash-15.webp",
+    "w": 36,
+    "h": 35
+   }
+  ],
+  "lightning": [
+   {
+    "file": "lightning-0.webp",
+    "w": 106,
+    "h": 420
+   },
+   {
+    "file": "lightning-1.webp",
+    "w": 148,
+    "h": 420
+   },
+   {
+    "file": "lightning-2.webp",
+    "w": 131,
+    "h": 420
+   },
+   {
+    "file": "lightning-3.webp",
+    "w": 173,
+    "h": 420
+   }
   ]
  },
  "images": {
@@ -315,6 +788,56 @@
    "file": "vignette.webp",
    "w": 1376,
    "h": 768
+  },
+  "floor-mud": {
+   "file": "floor-mud.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "floor-needles": {
+   "file": "floor-needles.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "floor-gravel": {
+   "file": "floor-gravel.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "floor-wet": {
+   "file": "floor-wet.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "floor-snow": {
+   "file": "floor-snow.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "overlay-rain": {
+   "file": "overlay-rain.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "overlay-snow": {
+   "file": "overlay-snow.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "overlay-frost": {
+   "file": "overlay-frost.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "overlay-fog": {
+   "file": "overlay-fog.webp",
+   "w": 1024,
+   "h": 1024
+  },
+  "overlay-storm": {
+   "file": "overlay-storm.webp",
+   "w": 1376,
+   "h": 774
   }
  }
 }
