@@ -1,6 +1,7 @@
 import { Link, WebSocketTransport, type Transport } from '../../link/client';
 import type { Envelope, Messages } from '../../link/protocol';
 import { RELAY_PATH } from '../../link/relay-path';
+import { deadTransport, reply, RtcHub, type Invite } from '../../link/rtc';
 import { UPGRADES, upgradeCost } from '../../link/hero-upgrades';
 import { storedNutrients } from '../sim/hud';
 import { TICK_DT } from '../sim/types';
@@ -8,6 +9,15 @@ import type { Command, MoldId, World } from '../sim/types';
 import { COOP } from './config';
 import { findFronts, type FrontInfo } from './fronts';
 import { dispatch } from './messages';
+
+/** what the paste-pairing screen shows */
+export interface PairInfo {
+  mode: 'host' | 'join';
+  offer: string | null;
+  answer: string | null;
+  busy: boolean;
+  error: string | null;
+}
 
 /** the front the hero is deployed to */
 export interface Deployment {
@@ -36,6 +46,12 @@ export interface HubOptions {
  */
 export class CoopHub {
   readonly link: Link;
+  /** serverless pairing in progress, if any */
+  pair: PairInfo | null = null;
+  private route: { make: () => Transport };
+  private defaultRoute: () => Transport;
+  private rtc: RtcHub | null = null;
+  private invite: Invite | null = null;
   hero: Messages['hero.state'] | null = null;
   fronts: FrontInfo[] = [];
   deployed: Deployment | null = null;
@@ -52,10 +68,15 @@ export class CoopHub {
   private deployedFront: FrontInfo | null = null;
 
   constructor(private opts: HubOptions) {
+    const relay = (): Transport => opts.transport?.() ?? new WebSocketTransport(url());
+    this.defaultRoute = relay;
+    this.route = { make: relay };
     const url = (): string => opts.url ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${RELAY_PATH}`;
-    this.link = new Link(opts.transport ?? (() => new WebSocketTransport(url())), { role: 'cmd', name: 'Commander' });
+    this.link = new Link(() => this.route.make(), { role: 'cmd', name: 'Commander' });
     this.world = opts.world();
     this.link.onState((s) => {
+      if (s === 'solo' && !this.pair?.busy) this.resetRoute();
+      if (s === 'linked') this.pair = null;
       if (s !== 'linked') {
         // the hero is gone: every front auto-resolves again, and nothing is charged
         this.hero = null;
@@ -76,6 +97,73 @@ export class CoopHub {
   emit(): void { for (const h of this.changeHandlers) h(); }
   notice(text: string): void { this.opts.notice?.(text); }
   command(cmd: Command): void { this.opts.enqueue(cmd); }
+
+  private resetRoute(): void {
+    this.route.make = this.defaultRoute;
+    this.invite?.cancel();
+    this.rtc?.close();
+    this.invite = this.rtc = this.pair = null;
+  }
+
+  private setPair(patch: Partial<PairInfo>): void {
+    if (this.pair) this.pair = { ...this.pair, ...patch };
+    this.emit();
+  }
+
+  private pairFail(e: unknown): void {
+    this.setPair({ busy: false, error: e instanceof Error ? e.message : 'Could not pair' });
+  }
+
+  /** host without a server: this page runs the relay and the hero connects by WebRTC after a paste each way */
+  async pairHost(): Promise<void> {
+    this.pair = { mode: 'host', offer: null, answer: null, busy: false, error: null };
+    this.emit();
+    try {
+      const h = (this.rtc = new RtcHub());
+      this.route.make = () => h.localTransport();
+      this.invite = await h.invite(await this.link.host());
+      this.setPair({ offer: this.invite.offer });
+    } catch (e) {
+      this.pairFail(e);
+    }
+  }
+
+  async pairAccept(text: string): Promise<void> {
+    this.setPair({ busy: true, error: null });
+    try {
+      await this.invite?.accept(text);
+      this.setPair({ busy: false });
+    } catch (e) {
+      this.pairFail(e);
+    }
+  }
+
+  pairJoinStart(): void {
+    this.pair = { mode: 'join', offer: null, answer: null, busy: false, error: null };
+    this.emit();
+  }
+
+  async pairJoin(text: string): Promise<void> {
+    this.setPair({ busy: true, error: null });
+    try {
+      const r = await reply(text);
+      let used = false;
+      this.route.make = () => (used ? deadTransport() : ((used = true), r.transport));
+      this.setPair({ busy: false, answer: r.answer });
+      this.link.join(r.code).catch(() => {
+        this.pairFail(new Error(this.link.error ?? 'The host did not accept the reply in time'));
+        this.resetRoute();
+      });
+    } catch (e) {
+      this.pairFail(e);
+    }
+  }
+
+  pairCancel(): void {
+    this.link.leave();
+    this.resetRoute();
+    this.emit();
+  }
 
   host(): Promise<string> { return this.link.host(); }
   join(code: string): Promise<void> { return this.link.join(code); }

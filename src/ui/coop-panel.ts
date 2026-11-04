@@ -1,6 +1,6 @@
 import { UPGRADES } from '../../link/hero-upgrades';
 import { COOP } from '../coop/config';
-import type { CoopHub } from '../coop/hub';
+import type { CoopHub, PairInfo } from '../coop/hub';
 import type { FrontInfo } from '../coop/fronts';
 import { CELL } from '../render/units';
 
@@ -55,7 +55,21 @@ export class CoopPanel {
         const code = (this.lobby.querySelector('input') as HTMLInputElement).value;
         void this.hub.join(code).catch(() => this.renderLobby(true));
       }
+      const pairText = (): string => (this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null)?.value ?? '';
       if (t.dataset.act === 'leave') this.hub.leave();
+      if (t.dataset.act === 'pair-host') void this.hub.pairHost();
+      if (t.dataset.act === 'pair-join-start') this.hub.pairJoinStart();
+      if (t.dataset.act === 'pair-accept') void this.hub.pairAccept(pairText());
+      if (t.dataset.act === 'pair-join') void this.hub.pairJoin(pairText());
+      if (t.dataset.act === 'pair-cancel') this.hub.pairCancel();
+      if (t.dataset.act === 'pair-copy') {
+        const box = this.lobby.querySelector('#pairOut') as HTMLTextAreaElement | null;
+        if (box) {
+          box.select();
+          void navigator.clipboard?.writeText(box.value).catch(() => document.execCommand('copy'));
+        }
+        return;
+      }
       if (t.dataset.act === 'close') this.lobbyOpen = false;
       this.renderLobby(true);
     });
@@ -101,13 +115,17 @@ export class CoopPanel {
 
   private renderLobby(force = false): void {
     const { link } = this.hub;
-    const html = !this.lobbyOpen
+    const html = this.hub.pair
+      ? this.pairHtml(this.hub.pair)
+      : !this.lobbyOpen
       ? ''
       : link.state === 'solo'
         ? `<div class="coop-title">Co-op with a hero</div>
            <p>Play Slime Mold: Hero on another device, then host a room here and join it with the code, or join the hero's room.</p>
            <div class="coop-row"><button class="btn" data-act="host">Host a room</button></div>
            <div class="coop-row"><input maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Room code" /><button class="btn" data-act="join">Join</button></div>
+           <p>No server on this network? Pair by copy and paste.</p>
+           <div class="coop-row"><button class="btn" data-act="pair-host">Host by paste</button><button class="btn" data-act="pair-join-start">Join by paste</button></div>
            ${link.error ? `<p class="coop-error">${esc(link.error)}</p>` : ''}
            <button class="coop-x" data-act="close">Close</button>`
         : `<div class="coop-title">${link.state === 'hosting' ? 'Waiting for the hero' : link.state === 'linked' ? 'Hero linked' : 'Link lost, trying to come back'}</div>
@@ -118,6 +136,7 @@ export class CoopPanel {
     this.lobbyKey = html;
     const hadFocus = this.lobby.contains(document.activeElement);
     const typed = (this.lobby.querySelector('input') as HTMLInputElement | null)?.value ?? '';
+    const pasted = (this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null)?.value ?? '';
     this.lobby.hidden = html === '';
     this.lobby.innerHTML = html;
     const input = this.lobby.querySelector('input') as HTMLInputElement | null;
@@ -125,6 +144,25 @@ export class CoopPanel {
       input.value = typed;
       if (hadFocus) input.focus();
     }
+    const pasteBox = this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null;
+    if (pasteBox) pasteBox.value = pasted;
+  }
+
+  /** the paste-pairing steps: the host sends a block and takes a reply, the guest does the opposite */
+  private pairHtml(p: PairInfo): string {
+    const out = (label: string, text: string): string =>
+      `<p>${label}</p><textarea id="pairOut" readonly rows="4">${esc(text)}</textarea><button class="btn" data-act="pair-copy">Copy</button>`;
+    let body: string;
+    if (p.mode === 'host') {
+      body = p.offer
+        ? `${out('1. Send this to the other device, any way you like.', p.offer)}<p>2. Paste the reply it gives you.</p><textarea id="pairIn" rows="3" placeholder="Paste the reply" spellcheck="false"></textarea><button class="btn" data-act="pair-accept" ${p.busy ? 'disabled' : ''}>Connect</button>`
+        : '<p>Preparing…</p>';
+    } else if (p.answer) {
+      body = `${out('Send this reply back to the host. It connects when they paste it.', p.answer)}<p>Waiting for the host…</p>`;
+    } else {
+      body = `<p>Paste the block from the host device.</p><textarea id="pairIn" rows="4" placeholder="Paste the host block" spellcheck="false"></textarea><button class="btn" data-act="pair-join" ${p.busy ? 'disabled' : ''}>Make reply</button>`;
+    }
+    return `<div class="coop-title">Pair by paste</div>${body}${p.error ? `<p class="coop-error">${esc(p.error)}</p>` : ''}<button class="coop-x" data-act="pair-cancel">Cancel</button>`;
   }
 
   private renderPanel(force = false): void {

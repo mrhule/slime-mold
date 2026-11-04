@@ -10,3 +10,5 @@ the other in the same change. The commander side of the protocol is handled in `
 
 The relay is attached to the Vite dev and preview servers at `/link` (see `vite.config.ts`). `npm run lan`
 serves the game to other devices on the network.
+
+`rtc.ts` is a copy too: serverless pairing by pasted text blocks (WebRTC). The host's page runs the relay in-process.

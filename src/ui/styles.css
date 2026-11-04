@@ -1007,3 +1007,4 @@ html.touch, .touch body {
 .touch .coop-panel { width: 230px; max-height: calc(100vh - 110px); }
 .touch .coop-arena canvas { width: 130px; height: 130px; }
 .coop-lobby[hidden], .coop-panel[hidden], .coop-arena[hidden] { display: none; }
+.coop-lobby textarea { width: 100%; font: 11px/1.3 monospace; border: 3px solid var(--ink); padding: 4px; resize: none; word-break: break-all; }
