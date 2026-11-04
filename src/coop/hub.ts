@@ -1,11 +1,11 @@
 import { Link, WebSocketTransport, type Transport } from '../../link/client';
 import type { Envelope, Messages } from '../../link/protocol';
-import { RELAY_PATH } from '../../link/relay-path';
 import { deadTransport, reply, RtcHub, type Invite } from '../../link/rtc';
 import { UPGRADES, upgradeCost } from '../../link/hero-upgrades';
 import { storedNutrients } from '../sim/hud';
 import { TICK_DT } from '../sim/types';
 import type { Command, MoldId, World } from '../sim/types';
+import { relayUrl } from './address';
 import { COOP } from './config';
 import { findFronts, type FrontInfo } from './fronts';
 import { dispatch } from './messages';
@@ -71,7 +71,7 @@ export class CoopHub {
     const relay = (): Transport => opts.transport?.() ?? new WebSocketTransport(url());
     this.defaultRoute = relay;
     this.route = { make: relay };
-    const url = (): string => opts.url ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${RELAY_PATH}`;
+    const url = (): string => opts.url ?? relayUrl();
     this.link = new Link(() => this.route.make(), { role: 'cmd', name: 'Commander' });
     this.world = opts.world();
     this.link.onState((s) => {

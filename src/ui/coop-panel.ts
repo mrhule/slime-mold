@@ -1,5 +1,7 @@
 import { UPGRADES } from '../../link/hero-upgrades';
+import { defaultPeer, joinUrl, relayHost, savePeer } from '../coop/address';
 import { COOP } from '../coop/config';
+import { qrSvg } from '../coop/qr';
 import type { CoopHub, PairInfo } from '../coop/hub';
 import type { FrontInfo } from '../coop/fronts';
 import { CELL } from '../render/units';
@@ -52,7 +54,7 @@ export class CoopPanel {
       if (!t) return;
       if (t.dataset.act === 'host') void this.hub.host().catch(() => this.renderLobby(true));
       if (t.dataset.act === 'join') {
-        const code = (this.lobby.querySelector('input') as HTMLInputElement).value;
+        const code = (this.lobby.querySelector('input:not(.coop-peer)') as HTMLInputElement).value;
         void this.hub.join(code).catch(() => this.renderLobby(true));
       }
       const pairText = (): string => (this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null)?.value ?? '';
@@ -71,6 +73,12 @@ export class CoopPanel {
         return;
       }
       if (t.dataset.act === 'close') this.lobbyOpen = false;
+      this.renderLobby(true);
+    });
+    this.lobby.addEventListener('change', (e) => {
+      const t = e.target as HTMLInputElement;
+      if (!t.classList.contains('coop-peer')) return;
+      savePeer(t.value.trim());
       this.renderLobby(true);
     });
     this.lobby.addEventListener('keydown', (e) => {
@@ -130,22 +138,33 @@ export class CoopPanel {
            <button class="coop-x" data-act="close">Close</button>`
         : `<div class="coop-title">${link.state === 'hosting' ? 'Waiting for the hero' : link.state === 'linked' ? 'Hero linked' : 'Link lost, trying to come back'}</div>
            <div class="coop-code">${esc(link.code ?? '')}</div>
-           <p>${link.state === 'hosting' ? 'In Slime Mold: Hero, join this code.' : 'Share this code to add another device.'}</p>
+           ${link.state === 'hosting' ? this.qrHtml(link.code ?? '') : '<p>Share this code to add another device.</p>'}
            <div class="coop-row"><button class="btn" data-act="leave">Leave</button><button class="coop-x" data-act="close">Close</button></div>`;
     if (!force && html === this.lobbyKey) return;
     this.lobbyKey = html;
     const hadFocus = this.lobby.contains(document.activeElement);
-    const typed = (this.lobby.querySelector('input') as HTMLInputElement | null)?.value ?? '';
+    const typed = (this.lobby.querySelector('input:not(.coop-peer)') as HTMLInputElement | null)?.value ?? '';
     const pasted = (this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null)?.value ?? '';
     this.lobby.hidden = html === '';
     this.lobby.innerHTML = html;
-    const input = this.lobby.querySelector('input') as HTMLInputElement | null;
+    const input = this.lobby.querySelector('input:not(.coop-peer)') as HTMLInputElement | null;
     if (input) {
       input.value = typed;
       if (hadFocus) input.focus();
     }
     const pasteBox = this.lobby.querySelector('#pairIn') as HTMLTextAreaElement | null;
     if (pasteBox) pasteBox.value = pasted;
+  }
+
+  /** a QR code that opens the hero game and joins this room on this machine's relay, with the code and the address it points at */
+  private qrHtml(code: string): string {
+    const peer = defaultPeer();
+    const url = joinUrl(peer, code, relayHost());
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+    return `<p>Scan with the other device's camera, or in Slime Mold: Hero join this code.</p>
+      ${url ? `<div class="coop-qr">${qrSvg(url)}</div>` : ''}
+      ${local ? '<p class="coop-error">This page is open as localhost, so another device cannot reach it. Open it by the network address of this computer instead.</p>' : ''}
+      <label>Other game's address <input class="coop-peer" value="${esc(peer)}" spellcheck="false" autocapitalize="off" /></label>`;
   }
 
   /** the paste-pairing steps: the host sends a block and takes a reply, the guest does the opposite */
