@@ -1,7 +1,8 @@
+import { capOf } from './buildings';
 import { DX, DY } from './grid';
 import { removeCellAndSplit } from './network';
 import { moldOf } from './world';
-import type { CellIndex, MoldId, World } from './types';
+import type { CellIndex, Component, MoldId, World } from './types';
 
 /** cells that wither (or recede) when a front the hero fought is decided */
 export const FRONT_SWING_CELLS = 10;
@@ -46,10 +47,42 @@ function contactCells(world: World, victim: MoldId, other: MoldId): CellIndex[] 
  * recall) makes the player's line recede from it. Not called for fronts that auto-resolve.
  */
 export function resolveFront(world: World, moldId: MoldId, rival: MoldId, outcome: 'won' | 'lost'): void {
-  const victim = outcome === 'won' ? rival : moldId;
-  const winner = outcome === 'won' ? moldId : rival;
-  if (moldOf(world, rival).status !== 'alive') return;
-  for (const cell of contactCells(world, victim, winner).slice(0, FRONT_SWING_CELLS)) {
+  setFrontHold(world, moldId, rival, false);
+  swing(world, outcome === 'won' ? rival : moldId, outcome === 'won' ? moldId : rival, FRONT_SWING_CELLS);
+}
+
+/** is combat between these two molds suspended because a hero is fighting their front? */
+export function frontHeld(world: Readonly<World>, a: MoldId, b: MoldId): boolean {
+  return moldOf(world as World, a).holdAgainst.includes(b) || moldOf(world as World, b).holdAgainst.includes(a);
+}
+
+export function setFrontHold(world: World, moldId: MoldId, rival: MoldId, held: boolean): void {
+  const list = moldOf(world, moldId).holdAgainst;
+  const i = list.indexOf(rival);
+  if (held && i < 0) list.push(rival);
+  else if (!held && i >= 0) list.splice(i, 1);
+}
+
+/** the hero's pressure moved the line while the front is held: positive cells make ours recede, negative wither the rival's */
+export function shiftFront(world: World, moldId: MoldId, rival: MoldId, cells: number): void {
+  if (!Number.isFinite(cells) || cells === 0) return;
+  const n = Math.min(Math.abs(Math.trunc(cells)), FRONT_SWING_CELLS);
+  if (cells > 0) swing(world, moldId, rival, n);
+  else swing(world, rival, moldId, n);
+}
+
+/** nutrients arriving from outside (the hero's harvest): into the biggest piece, up to what it can hold */
+export function gainNutrients(world: World, moldId: MoldId, amount: number): void {
+  if (!(amount > 0)) return;
+  let best: Component | null = null;
+  for (const c of world.components.values()) if (c.moldId === moldId && (!best || c.pool > best.pool)) best = c;
+  if (best) best.pool = Math.min(capOf(world, best), best.pool + amount);
+}
+
+/** remove up to `count` cells of `victim` where they touch `winner` */
+function swing(world: World, victim: MoldId, winner: MoldId, count: number): void {
+  if (moldOf(world, victim).status !== 'alive' || moldOf(world, winner).status !== 'alive') return;
+  for (const cell of contactCells(world, victim, winner).slice(0, count)) {
     if (world.owner[cell] !== victim) continue;
     world.events.push({ type: 'cellDied', cell, mold: victim, by: winner });
     moldOf(world, victim).stats.cellsDestroyed++;

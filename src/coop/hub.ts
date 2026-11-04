@@ -24,6 +24,8 @@ export interface Deployment {
   id: string;
   rival: MoldId;
   progress: Messages['front.progress'] | null;
+  /** how many steps of pressure the line has already been moved for */
+  steps: number;
 }
 
 export interface HubOptions {
@@ -64,6 +66,8 @@ export class CoopHub {
   private scanClock = 0;
   private drainTick = 0;
   private lastLevels = '';
+  /** the hero's running harvest total at the last report (null until the first one) */
+  private harvestedSeen: number | null = null;
   /** the front as it was when the hero was sent, kept on the map if the veins stop touching mid-fight */
   private deployedFront: FrontInfo | null = null;
 
@@ -79,6 +83,7 @@ export class CoopHub {
       if (s === 'linked') this.pair = null;
       if (s !== 'linked') {
         // the hero is gone: every front auto-resolves again, and nothing is charged
+        if (this.deployed) this.command({ type: 'frontHold', mold: this.opts.playerId, rival: this.deployed.rival, held: false });
         this.hero = null;
         this.deployed = null;
         this.markers = [];
@@ -187,6 +192,29 @@ export class CoopHub {
     return true;
   }
 
+  /** the hero's harvest is a running total: pay the commander the difference, and read a drop as a new hero game */
+  creditHarvest(total: number): void {
+    if (this.harvestedSeen !== null) {
+      if (total < this.harvestedSeen) this.harvestedSeen = 0;
+      const gain = total - this.harvestedSeen;
+      if (gain > 0) this.command({ type: 'gain', mold: this.opts.playerId, amount: gain });
+    }
+    this.harvestedSeen = total;
+  }
+
+  /**
+   * While the hero fights a front the line moves only with what the hero reports: as its pressure climbs past
+   * where the fight began our line recedes a step at a time, and as it falls the rival's cells wither.
+   */
+  followPressure(): void {
+    const d = this.deployed;
+    if (!d?.progress || !this.deployedFront) return;
+    const steps = Math.round((d.progress.pressure - this.deployedFront.pressure) / COOP.lineStep);
+    if (steps === d.steps) return;
+    this.command({ type: 'frontShift', mold: this.opts.playerId, rival: d.rival, cells: (steps - d.steps) * COOP.cellsPerStep });
+    d.steps = steps;
+  }
+
   upgradeLevel(id: string): number { return this.hero?.levels[id] ?? 0; }
 
   /** the price of the hero's next level, or null at the top */
@@ -217,7 +245,9 @@ export class CoopHub {
   deploy(frontId: string): boolean {
     const f = this.fronts.find((x) => x.id === frontId);
     if (!this.linked || !f || this.deployed) return false;
-    this.deployed = { id: f.id, rival: f.rival, progress: null };
+    this.deployed = { id: f.id, rival: f.rival, progress: null, steps: 0 };
+    // the hero decides this front: our own combat there stops until the result (or the link) ends it
+    this.command({ type: 'frontHold', mold: this.opts.playerId, rival: f.rival, held: true });
     this.deployedFront = f;
     this.markers = [];
     this.drainTick = this.opts.world().tick;

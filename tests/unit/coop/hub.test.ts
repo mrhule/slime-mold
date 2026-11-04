@@ -29,7 +29,7 @@ function setup() {
   const hero = new Link(() => new MemoryTransport(relay), { role: 'hero', name: 'Hero' });
   const heard: Envelope[] = [];
   hero.onMessage((e) => heard.push(e));
-  const heroState = { mold: 'goo', wave: 1, hp: 100, maxHp: 100, mana: 50, maxMana: 50, levels: {} as Record<string, number> };
+  const heroState = { mold: 'goo', wave: 1, harvested: 0, roaming: true, hp: 100, maxHp: 100, mana: 50, maxMana: 50, levels: {} as Record<string, number> };
   return { world, me: me.id, rival: rival.id, hub, hero, heard, commands, notices, heroState };
 }
 
@@ -95,10 +95,10 @@ describe('CoopHub', () => {
     s.world.tick += 20;
     s.hub.update(0.1);
     expect(s.commands).toContainEqual(expect.objectContaining({ type: 'spend', partial: true }));
-    s.hero.send('front.progress', { id: s.hub.deployed!.id, wave: 2, kills: 5, hp: 0.8, pressure: 0.9, pool: 0.4 });
+    s.hero.send('front.progress', { id: s.hub.deployed!.id, wave: 2, kills: 5, hp: 0.8, pressure: 0.9, pool: 0.4, bounty: 0, bosses: 0 });
     await settle();
     expect(s.hub.deployed?.progress?.pressure).toBe(0.9);
-    s.hero.send('front.result', { id: s.hub.deployed!.id, outcome: 'won', kills: 9 });
+    s.hero.send('front.result', { id: s.hub.deployed!.id, outcome: 'won', kills: 9, loot: { nutrients: 0, tech: 0, goo: 0 } });
     await settle();
     expect(s.hub.deployed).toBeNull();
     expect(s.commands).toContainEqual({ type: 'frontResult', mold: s.me, rival: s.rival, outcome: 'won' });
@@ -123,5 +123,33 @@ describe('CoopHub', () => {
     await settle();
     expect(s.hub.deployed).toBeNull();
     expect(s.hub.linked).toBe(false);
+  });
+});
+
+describe('roaming harvest and held fronts', () => {
+  it('credits the difference of the running harvest, and reads a drop as a new game', async () => {
+    const s = setup();
+    await link(s);
+    s.commands.length = 0;
+    for (const h of [4, 12, 3]) {
+      s.hero.send('hero.state', { ...s.heroState, harvested: h });
+      await settle();
+    }
+    expect(s.commands.filter((c) => c.type === 'gain').map((c) => (c as { amount: number }).amount)).toEqual([4, 8, 3]);
+  });
+
+  it('holds the front while the hero is deployed, follows its pressure, and lets go when the link drops', async () => {
+    const s = setup();
+    await link(s);
+    const frontId = `F${s.rival - 1}`;
+    s.hub.deploy(frontId);
+    expect(s.commands).toContainEqual({ type: 'frontHold', mold: s.me, rival: s.rival, held: true });
+    s.commands.length = 0;
+    s.hero.send('front.progress', { id: frontId, wave: 1, kills: 0, hp: 1, pressure: 1, pool: 1, bounty: 0, bosses: 0 });
+    await settle();
+    expect(s.commands.some((c) => c.type === 'frontShift' && c.cells > 0)).toBe(true);
+    s.hero.leave();
+    await settle();
+    expect(s.commands).toContainEqual({ type: 'frontHold', mold: s.me, rival: s.rival, held: false });
   });
 });

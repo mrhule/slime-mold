@@ -195,7 +195,7 @@ export class CoopPanel {
       const bar = (cls: string, v: number, max: number, text: string): string =>
         `<div class="coop-bar ${cls}"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i><span>${text}</span></div>`;
       const heroHtml = hero
-        ? `${bar('hp', hero.hp, hero.maxHp, `HP ${hero.hp} / ${hero.maxHp}`)}${bar('mana', hero.mana, hero.maxMana, `Mana ${hero.mana} / ${hero.maxMana}`)}
+        ? `<p class="coop-status">${d ? `Fighting at ${d.id}` : hero.roaming ? 'Roaming: harvesting nutrients for you' : 'Waiting at base'}</p>${bar('hp', hero.hp, hero.maxHp, `HP ${hero.hp} / ${hero.maxHp}`)}${bar('mana', hero.mana, hero.maxMana, `Mana ${hero.mana} / ${hero.maxMana}`)}
            <div class="coop-row">
              <button class="btn" data-act="heal" ${stock < COOP.supply.heal.cost ? 'disabled' : ''}>${COOP.supply.heal.label} · ${COOP.supply.heal.cost}</button>
              <button class="btn" data-act="mana" ${stock < COOP.supply.mana.cost ? 'disabled' : ''}>${COOP.supply.mana.label} · ${COOP.supply.mana.cost}</button>

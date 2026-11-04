@@ -13,7 +13,8 @@ const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinit
 export const HANDLERS: Handlers = {
   'hero.state': (hub, b) => {
     if (typeof b?.mold !== 'string' || !num(b.hp) || !num(b.maxHp) || !num(b.mana) || !num(b.maxMana) || !b.levels || typeof b.levels !== 'object') return;
-    hub.hero = { mold: b.mold, wave: num(b.wave) ? b.wave : 0, hp: b.hp, maxHp: Math.max(1, b.maxHp), mana: b.mana, maxMana: Math.max(1, b.maxMana), levels: { ...b.levels } };
+    if (num(b.harvested)) hub.creditHarvest(b.harvested);
+    hub.hero = { mold: b.mold, wave: num(b.wave) ? b.wave : 0, harvested: num(b.harvested) ? b.harvested : 0, roaming: b.roaming === true, hp: b.hp, maxHp: Math.max(1, b.maxHp), mana: b.mana, maxMana: Math.max(1, b.maxMana), levels: { ...b.levels } };
   },
   'front.progress': (hub, b) => {
     if (!hub.deployed || b?.id !== hub.deployed.id || !num(b.pressure) || !num(b.pool)) return;
@@ -24,7 +25,10 @@ export const HANDLERS: Handlers = {
       hp: num(b.hp) ? b.hp : 1,
       pressure: Math.max(0, Math.min(1, b.pressure)),
       pool: Math.max(0, Math.min(1, b.pool)),
+      bounty: num(b.bounty) ? b.bounty : 0,
+      bosses: num(b.bosses) ? b.bosses : 0,
     };
+    hub.followPressure();
   },
   'front.result': (hub, b) => {
     if (typeof b?.id !== 'string' || (b.outcome !== 'won' && b.outcome !== 'lost' && b.outcome !== 'recalled')) return;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scanFronts } from '../../../src/sim/combat';
+import { scanFronts, tickCombat } from '../../../src/sim/combat';
 import { applyCommand } from '../../../src/sim/commands';
 import { FRONT_SWING_CELLS, spendNutrients } from '../../../src/sim/coop';
 import { addMold } from '../../../src/sim/molds';
@@ -63,5 +63,52 @@ describe('front results', () => {
     applyCommand(world, { type: 'frontResult', mold: me, rival, outcome: 'lost' });
     expect(count(world, me)).toBe(mine - FRONT_SWING_CELLS);
     expect(count(world, rival)).toBe(theirs);
+  });
+});
+
+describe('a front a hero is fighting', () => {
+  const fight = (world: World, ticks: number): void => {
+    for (let i = 0; i < ticks; i++) {
+      scanFronts(world);
+      tickCombat(world);
+    }
+  };
+  const biomass = (world: World): number => world.biomass.reduce((a, b) => a + b, 0);
+
+  it('does not advance on its own, however high the pressure, until the hero\'s result comes', () => {
+    const { world, me, rival } = setup();
+    applyCommand(world, { type: 'frontHold', mold: me, rival, held: true });
+    const [mine, theirs, mass] = [count(world, me), count(world, rival), biomass(world)];
+    fight(world, 400);
+    expect(count(world, me)).toBe(mine);
+    expect(count(world, rival)).toBe(theirs);
+    expect(biomass(world)).toBeCloseTo(mass);
+    applyCommand(world, { type: 'frontResult', mold: me, rival, outcome: 'won' });
+    expect(count(world, rival)).toBeLessThan(theirs);
+    expect(world.molds[me - 1]!.holdAgainst).toHaveLength(0);
+  });
+
+  it('is auto-resolved by the sim as usual with no hero', () => {
+    const { world } = setup();
+    const mass = biomass(world);
+    fight(world, 400);
+    expect(biomass(world)).toBeLessThan(mass);
+  });
+
+  it('moves only with the hero\'s pressure: rising recedes our line, falling withers theirs', () => {
+    const { world, me, rival } = setup();
+    applyCommand(world, { type: 'frontHold', mold: me, rival, held: true });
+    const [mine, theirs] = [count(world, me), count(world, rival)];
+    applyCommand(world, { type: 'frontShift', mold: me, rival, cells: 2 });
+    expect(count(world, me)).toBe(mine - 2);
+    applyCommand(world, { type: 'frontShift', mold: me, rival, cells: -3 });
+    expect(count(world, rival)).toBe(theirs - 3);
+  });
+
+  it('pays the commander what the hero harvests', () => {
+    const { world, me } = setup();
+    const before = total(world, me);
+    applyCommand(world, { type: 'gain', mold: me, amount: 5 });
+    expect(total(world, me)).toBeCloseTo(before + 5);
   });
 });

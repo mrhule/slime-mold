@@ -8,6 +8,9 @@ export const COOP = {
   poolMax: 400,
   /** the marker and the panel flash when pressure passes this */
   dangerPressure: 0.7,
+  /** the line moves one step for each this much the hero's pressure rises or falls, and a step is this many cells */
+  lineStep: 0.1,
+  cellsPerStep: 2,
   /** supplies the commander can buy: the share restored and the price */
   supply: {
     heal: { health: 0.4, mana: 0, cost: 40, label: 'Heal 40%' },
