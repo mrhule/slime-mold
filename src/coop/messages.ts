@@ -10,6 +10,13 @@ type Handlers = { [K in keyof Messages]?: (hub: CoopHub, body: Messages[K], env:
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
+/** upgrade levels from another machine: every level must be a plain number, since they end up in the panel's markup */
+function cleanLevels(v: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v)) if (num(n)) out[k] = Math.max(0, Math.min(99, Math.floor(n)));
+  return out;
+}
+
 /** rows of plain numbers from another machine: keep only the whole rows, and not too many */
 const rows = (v: unknown, width: number, max = 400): number[][] =>
   Array.isArray(v) ? v.filter((r): r is number[] => Array.isArray(r) && r.length >= width && r.slice(0, width).every(num)).slice(0, max) : [];
@@ -36,7 +43,7 @@ export const HANDLERS: Handlers = {
   'hero.state': (hub, b) => {
     if (typeof b?.mold !== 'string' || !num(b.hp) || !num(b.maxHp) || !num(b.mana) || !num(b.maxMana) || !b.levels || typeof b.levels !== 'object') return;
     if (num(b.harvested)) hub.creditHarvest(b.harvested);
-    hub.hero = { mold: b.mold, wave: num(b.wave) ? b.wave : 0, harvested: num(b.harvested) ? b.harvested : 0, roaming: b.roaming === true, hp: b.hp, maxHp: Math.max(1, b.maxHp), mana: b.mana, maxMana: Math.max(1, b.maxMana), levels: { ...b.levels } };
+    hub.hero = { mold: b.mold, wave: num(b.wave) ? b.wave : 0, harvested: num(b.harvested) ? b.harvested : 0, roaming: b.roaming === true, hp: b.hp, maxHp: Math.max(1, b.maxHp), mana: b.mana, maxMana: Math.max(1, b.maxMana), levels: cleanLevels(b.levels) };
   },
   'front.progress': (hub, b) => {
     if (!hub.deployed || b?.id !== hub.deployed.id || !num(b.pressure) || !num(b.pool)) return;

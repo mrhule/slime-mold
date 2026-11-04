@@ -1,9 +1,9 @@
+import { pickRelay } from '../../link/hosts';
 import { RELAY_PATH } from '../../link/relay-path';
 
-/** where the relay is: next to this page, or the machine `?relay=ip:port` names (a phone that scanned the hero's QR code) */
+/** where the relay is: next to this page, or the machine `?relay=ip:port` names (a phone that scanned the hero's QR code), but only on this computer or a private network */
 export function relayHost(): string {
-  const r = new URLSearchParams(location.search).get('relay');
-  return r && /^[\w.-]+(:\d+)?$/.test(r) ? r : location.host;
+  return pickRelay(new URLSearchParams(location.search).get('relay'), location.host);
 }
 
 export const relayUrl = (): string => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${relayHost()}${RELAY_PATH}`;

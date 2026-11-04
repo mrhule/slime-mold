@@ -77,6 +77,17 @@ layout by itself; **Settings → Touch mode** (Auto / On / Off) overrides that.
 | `H` | Center on your core |
 | `Esc` | Pause menu (or cancel placement) |
 
+## Security notes
+
+The co-op link (`link/`) is built for a trusted home network, not the internet.
+
+- `npm run lan` (`vite --host`) makes the dev server, and the relay at `/link`, reachable from every device on your network. Use it on a network you trust, and stop it when you are done. Plain `npm run dev` listens on this computer only.
+- The relay has no passwords: anyone who can reach it and knows a 4 letter room code can join that room. It limits what a stranger can do: at most 64 rooms and 64 connections, frames over 16 KB are refused, a connection that guesses 8 wrong codes is cut off, and a new room never replaces an existing one.
+- A web page from elsewhere on the internet cannot open the relay: WebSocket connections whose `Origin` is not this computer, a private address (10.x, 172.16-31.x, 192.168.x, `.local`) or the page's own host get a 403. `?relay=` only takes effect for those same addresses, so a crafted link cannot point the game at a stranger's server.
+- Text from another device (peer names, codes, errors, the hero's reports) is shown as text or escaped, never as markup.
+- A pair-by-paste block contains the device's local network address. Send it only to the person you are pairing with.
+- Messages from the hero are checked and clamped before they touch the game, but a linked hero is trusted: it can claim kills and loot that pay nutrients. This game stays the authority on nutrients and on what a hero's win does to the map.
+
 ## Run it
 
 Requires Node.js 24 or newer.

@@ -12,3 +12,5 @@ The relay is attached to the Vite dev and preview servers at `/link` (see `vite.
 serves the game to other devices on the network.
 
 `rtc.ts` is a copy too: serverless pairing by pasted text blocks (WebRTC). The host's page runs the relay in-process.
+
+`hosts.ts` is a copy as well (which machines the link may talk to); `relay.ts` and `vite-plugin.ts` carry the hardening (room and connection limits, Origin check).
