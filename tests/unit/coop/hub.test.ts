@@ -3,6 +3,7 @@ import { Link } from '../../../link/client';
 import { MemoryTransport } from '../../../link/memory';
 import type { Envelope } from '../../../link/protocol';
 import { Relay } from '../../../link/relay';
+import { climateMessage } from '../../../src/coop/climate';
 import { findFronts } from '../../../src/coop/fronts';
 import { CoopHub } from '../../../src/coop/hub';
 import { scanFronts } from '../../../src/sim/combat';
@@ -151,5 +152,37 @@ describe('roaming harvest and held fronts', () => {
     s.hero.leave();
     await settle();
     expect(s.commands).toContainEqual({ type: 'frontHold', mold: s.me, rival: s.rival, held: false });
+  });
+});
+
+describe('climate for the hero', () => {
+  it('says the season, weather and intensity of the commander\'s map', () => {
+    const { world } = setup();
+    world.season = 'winter';
+    world.weather.kind = 'blizzard';
+    expect(climateMessage(world)).toMatchObject({ season: 'winter', weather: 'blizzard' });
+    const c = climateMessage(world);
+    expect(c.intensity).toBeGreaterThanOrEqual(0);
+    expect(c.intensity).toBeLessThanOrEqual(1);
+  });
+
+  it('is sent at link, when the sky changes, and every few seconds, without touching the RTS weather', async () => {
+    const s = setup();
+    await link(s); // the link helper's update() already ran once
+    await settle();
+    const heard = () => s.heard.filter((e) => e.type === 'climate');
+    expect(heard()).toHaveLength(1);
+    s.hub.update(0.5);
+    await settle();
+    expect(heard()).toHaveLength(1); // unchanged and not yet time
+    s.world.weather.kind = 'storm';
+    s.hub.update(0.1);
+    await settle();
+    expect(heard()).toHaveLength(2);
+    expect((heard()[1]!.body as { weather: string }).weather).toBe('storm');
+    s.hub.update(3.1);
+    await settle();
+    expect(heard()).toHaveLength(3); // the periodic repeat
+    expect(s.world.weather.kind).toBe('storm'); // the hub only reads it
   });
 });

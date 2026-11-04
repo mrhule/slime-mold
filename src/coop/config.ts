@@ -16,6 +16,8 @@ export const COOP = {
     heal: { health: 0.4, mana: 0, cost: 40, label: 'Heal 40%' },
     mana: { health: 0, mana: 1, cost: 30, label: 'Refill mana' },
   },
+  /** seconds between repeats of the season and weather sent to the hero */
+  climateEvery: 3,
   /** seconds between looks at the war map for fronts */
   scanEvery: 0.5,
   /** the hero's dish is this wide, centred in the middle */

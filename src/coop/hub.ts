@@ -6,6 +6,7 @@ import { storedNutrients } from '../sim/hud';
 import { TICK_DT } from '../sim/types';
 import type { Command, MoldId, World } from '../sim/types';
 import { relayUrl } from './address';
+import { climateKey, climateMessage } from './climate';
 import { COOP } from './config';
 import { findFronts, type FrontInfo } from './fronts';
 import { dispatch } from './messages';
@@ -66,6 +67,9 @@ export class CoopHub {
   private scanClock = 0;
   private drainTick = 0;
   private lastLevels = '';
+  /** the last sky sent to the hero, and the seconds since any was sent (a late joiner gets it within a few seconds) */
+  private sentClimate = '';
+  private climateClock = 0;
   /** the hero's running harvest total at the last report (null until the first one) */
   private harvestedSeen: number | null = null;
   /** the front as it was when the hero was sent, kept on the map if the veins stop touching mid-fight */
@@ -81,6 +85,7 @@ export class CoopHub {
     this.link.onState((s) => {
       if (s === 'solo' && !this.pair?.busy) this.resetRoute();
       if (s === 'linked') this.pair = null;
+      if (s === 'linked') this.sentClimate = ''; // a hero just linked: send the sky at once
       if (s !== 'linked') {
         // the hero is gone: every front auto-resolves again, and nothing is charged
         if (this.deployed) this.command({ type: 'frontHold', mold: this.opts.playerId, rival: this.deployed.rival, held: false });
@@ -278,6 +283,17 @@ export class CoopHub {
     this.notice(outcome === 'won' ? `The hero won ${frontId} (${kills} kills): the rival withers!` : `The hero left ${frontId}: our line recedes`);
   }
 
+  /** the sky goes to the hero when it changes, when the hero first links, and every few seconds so nobody stays out of step */
+  private sendClimate(w: World, dt: number): void {
+    this.climateClock += dt;
+    const c = climateMessage(w);
+    const key = climateKey(c);
+    if (key === this.sentClimate && this.climateClock < COOP.climateEvery) return;
+    this.sentClimate = key;
+    this.climateClock = 0;
+    this.link.send('climate', c);
+  }
+
   /** call every frame; fronts are rescanned twice a second and an open front drains once a second of game time */
   update(dt: number): void {
     const w = this.opts.world();
@@ -298,6 +314,7 @@ export class CoopHub {
       }
       return;
     }
+    this.sendClimate(w, dt);
     this.scanClock += dt;
     if (this.scanClock >= COOP.scanEvery) {
       this.scanClock = 0;
