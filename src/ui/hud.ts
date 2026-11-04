@@ -21,6 +21,9 @@ const fmtTime = (seconds: number): string => {
 };
 
 /** Comic-panel HUD (R19, FR-026) bound to a HudModel. Plain DOM, no framework. */
+const SEASON_NAMES = { spring: 'Spring', summer: 'Summer', fall: 'Fall', winter: 'Winter' } as const;
+const WEATHER_NAMES = { clear: 'Clear', rain: 'Rain', storm: 'Storm', fog: 'Fog', frost: 'Frost', snow: 'Snow', blizzard: 'Blizzard' } as const;
+
 export class Hud {
   private readonly el: Record<string, HTMLElement> = {};
   private readonly slider: HTMLInputElement;
@@ -34,6 +37,7 @@ export class Hud {
   private announceTimer = 0;
   private rivalKey = '';
   private controlKey = '';
+  private seasonKey = '';
   private readonly winControl: number;
 
   constructor(
@@ -48,6 +52,7 @@ export class Hud {
         <div class="panel-title">Slime Mold</div>
         <div class="row"><span class="label">Round</span><span class="value" data-hud="round">1</span></div>
         <div class="row"><span class="label">Time</span><span class="value" data-hud="time">0:00</span></div>
+        <div class="row season" data-hud="seasonRow" title=""><span class="label">Season</span><span class="value" data-hud="season">Spring</span></div>
         <div class="row" title="Nutrients stored across your whole mold, against how much your pieces can hold. Build factories to hold more."><span class="label">Nutrients</span><span class="value" data-hud="nutrients">0</span></div>
         <div class="row flow" title="Nutrients arriving per second: your core, food you have eaten, and goo pools with a store house"><span class="label">Income</span><span class="value pos" data-hud="inflow">+0.0/s</span></div>
         <div class="row flow" data-hud="upkeepRow" title="Upkeep owed per second: every vein cell and building costs a little to keep alive"><span class="label">Upkeep</span><span class="value out" data-hud="upkeep">-0.0/s</span></div>
@@ -91,7 +96,7 @@ export class Hud {
       <div class="narration" data-hud="narration" hidden><span class="narr-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="narr-body"><span class="narr-title" data-hud="narrTitle"></span><span class="narr-text" data-hud="narrText"></span></span></div>`,
     );
     const q = (name: string): HTMLElement => root.querySelector(`[data-hud="${name}"]`) as HTMLElement;
-    for (const k of ['round', 'time', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRivals', 'controlGoal', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'sliderBox', 'zoneNote', 'evolve', 'burstBtn']) this.el[k] = q(k);
+    for (const k of ['round', 'time', 'season', 'seasonRow', 'nutrients', 'income', 'inflow', 'upkeep', 'upkeepRow', 'growth', 'growthRow', 'fight', 'fightRow', 'dying', 'control', 'controlFill', 'controlRivals', 'controlGoal', 'controlRow', 'controlMeter', 'easing', 'starved', 'unlinked', 'rivals', 'toast', 'narration', 'narrTitle', 'narrText', 'announce', 'announceHeading', 'announceSub', 'mute', 'chip', 'sliderBox', 'zoneNote', 'evolve', 'burstBtn']) this.el[k] = q(k);
     this.el.burstBtn!.addEventListener('click', () => this.pressBurst());
     this.el.mute!.addEventListener('click', () => this.actions.onToggleMute());
     this.el.evolve!.addEventListener('click', () => this.actions.onEvolve());
@@ -151,6 +156,7 @@ export class Hud {
   update(hud: HudModel, clock: HudClock): void {
     this.el.round!.textContent = String(hud.round);
     this.el.time!.textContent = fmtTime(hud.elapsedSeconds);
+    this.renderSeason(hud);
     this.el.nutrients!.textContent = `${hud.stock.total.toFixed(1)} / ${Math.round(hud.stock.cap)}${hud.stock.full ? ' FULL' : ''}`;
     this.el.nutrients!.classList.toggle('neg', hud.stock.full);
     const evolveBtn = this.el.evolve as HTMLButtonElement;
@@ -228,6 +234,22 @@ export class Hud {
       b.classList.toggle('on', v === 'pause' ? clock.paused : !clock.paused && Number(v) === clock.speed);
     }
     this.renderRivals(hud);
+  }
+
+  /** the season and weather, with what they do to the economy in the tooltip */
+  private renderSeason(hud: HudModel): void {
+    const c = hud.climate;
+    const weather = c.weather === 'clear' ? '' : ` · ${WEATHER_NAMES[c.weather]}`;
+    const key = `${c.season}:${c.weather}:${Math.ceil(c.secondsLeft)}`;
+    if (key === this.seasonKey) return;
+    this.seasonKey = key;
+    this.el.season!.textContent = `${SEASON_NAMES[c.season]}${weather}`;
+    const row = this.el.seasonRow as HTMLElement;
+    row.dataset.season = c.season;
+    row.dataset.weather = c.weather;
+    const pct = (v: number): string => `${v >= 1 ? '+' : ''}${Math.round((v - 1) * 100)}%`;
+    const e = c.effects;
+    row.title = `${SEASON_NAMES[c.season]}, ${Math.ceil(c.secondsLeft)}s left${weather}. Growth ${pct(e.growth)}, upkeep ${pct(e.upkeep)}, collectors ${pct(e.collector)}, goo pools ${pct(e.pool)}, sight ${pct(e.vision)}.`;
   }
 
   /** a coloured piece of the control bar for each rival the player has met */

@@ -1,5 +1,6 @@
 import type { Speed } from './loop';
 import type { RoundOutcome, World } from '../sim/types';
+import { nextSeasonOffset } from '../sim/seasons';
 
 export type RunState = 'title' | 'playing' | 'paused' | 'roundEnd';
 /** why the game is paused: the player, the pause menu, the tab losing focus, or a video playing over it */
@@ -13,7 +14,7 @@ export interface RunStorage {
 export interface RunOptions {
   runSeed: number;
   /** builds the world for a round of this run */
-  createWorld: (runSeed: number, roundNumber: number) => World;
+  createWorld: (runSeed: number, roundNumber: number, seasonOffset?: number) => World;
   /** picks a fresh seed for a new run */
   newSeed: () => number;
   storage?: RunStorage;
@@ -121,20 +122,21 @@ export class Run {
     this.emit();
   }
 
-  private load(runSeed: number, roundNumber: number): void {
+  /** `seasonOffset` carries the four-season year over from the round before; a new run starts in spring */
+  private load(runSeed: number, roundNumber: number, seasonOffset = 0): void {
     this.runSeed = runSeed;
     this.roundNumber = roundNumber;
-    this.world = this.opts.createWorld(runSeed, roundNumber);
+    this.world = this.opts.createWorld(runSeed, roundNumber, seasonOffset);
     this.worldVersion++;
     this.outcome = null;
     this.pauseReason = null;
     this.state = 'playing';
   }
 
-  /** after a victory: a new, harder map. Nothing else carries over. */
+  /** after a victory: a new, harder map. Only the time of year carries over. */
   nextRound(): void {
     if (this.state !== 'roundEnd' || this.outcome !== 'victory') return;
-    this.load(this.runSeed, this.roundNumber + 1);
+    this.load(this.runSeed, this.roundNumber + 1, nextSeasonOffset(this.world));
     this.emit();
   }
 

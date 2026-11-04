@@ -228,7 +228,7 @@ function advanceTip(world: World, mold: Mold, tip: GrowthTarget, dt: number): vo
         // a store house on this vein makes each delivered nutrient go further (S8)
         const boost = world.supply[head] as number;
         // and the farther the head is from supply along the veins, the less of it arrives (feed)
-        tip.progress += grant * boost * (world.feed[head] as number);
+        tip.progress += grant * boost * (world.feed[head] as number) * world.climate.growth;
         if (boost > 1) world.supplyUse.add(comp.id);
       }
       // starved = the stock is (nearly) empty, so growth is limited to whatever income arrives

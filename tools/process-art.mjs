@@ -2,6 +2,8 @@
  * Turns the raw generated art in art-source/ into small, game-ready files in public/art/:
  *   - sheets on a magenta background are keyed to transparency and cut into one sprite per drawing
  *   - floor tiles and the vignette are shrunk to WebP
+ *   - weather overlays (white marks on black) become white images whose see-through amount is the mark, and the ones that
+ *     repeat are made seamless by blending four half-tile-shifted copies, so they tile with no visible join
  * Run: node tools/process-art.mjs   (needs the `sharp` dev dependency)
  * Writes public/art/art.json describing every output so the game never hard-codes sprite counts.
  */
@@ -84,11 +86,24 @@ function blobs({ data, width, height }, cell = 12, minPixels = 1500) {
   return boxes;
 }
 
+/** raw RGBA with a flat background removed, whatever its colour: the corner pixel says what the background is */
+async function keyedAuto(file) {
+  const { data, info } = await sharp(path.join(SRC, file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const out = Buffer.from(data);
+  const bg = [data[0], data[1], data[2]];
+  for (let i = 0; i < out.length; i += 4) {
+    const d = Math.hypot(out[i] - bg[0], out[i + 1] - bg[1], out[i + 2] - bg[2]) / 441;
+    const alpha = Math.max(0, Math.min(1, (d - 0.08) / 0.2));
+    out[i + 3] = Math.round(alpha * 255);
+  }
+  return { data: out, width: info.width, height: info.height };
+}
+
 const manifest = { sprites: {}, images: {} };
 
 /** @param {string} name @param {string} file @param {number} maxSize longest side of each sprite in pixels */
 async function sheet(name, file, maxSize, opts = {}) {
-  const img = await keyed(file);
+  const img = opts.auto ? await keyedAuto(file) : await keyed(file);
   const boxes = blobs(img, opts.cell, opts.minPixels);
   manifest.sprites[name] = [];
   let n = 0;
@@ -139,6 +154,66 @@ await sheet('relay-booster', 'relay-booster-sheet.png', 160);
 if (fs.existsSync(path.join(SRC, 'collector-sheet.png'))) await sheet('collector', 'collector-sheet.png', 160);
 if (fs.existsSync(path.join(SRC, 'fortress-sheet.png'))) await sheet('fortress', 'fortress-sheet.png', 160);
 if (fs.existsSync(path.join(SRC, 'goo-link.png'))) await sheet('goo-link', 'goo-link.png', 160);
+
+/**
+ * A weather overlay: white marks on black become a white image that is see-through everywhere but the marks.
+ * With `tile` the four-copy blend bakes a seamless repeat into it.
+ */
+async function overlay(name, file, size, opts = {}) {
+  const img = sharp(path.join(SRC, file)).removeAlpha().greyscale();
+  const { data, info } = await (opts.height ? img.resize(size, opts.height) : img.resize(size, size)).raw().toBuffer({ resolveWithObject: true });
+  const w = info.width;
+  const h = info.height;
+  const luma = new Float32Array(w * h);
+  for (let i = 0; i < luma.length; i++) luma[i] = data[i] / 255;
+  const grey = opts.tile ? new Float32Array(w * h) : luma;
+  if (opts.tile) {
+    const hx = w >> 1;
+    const hy = h >> 1;
+    for (let y = 0; y < h; y++) {
+      const b = Math.sin((Math.PI * y) / h) ** 2;
+      for (let x = 0; x < w; x++) {
+        const a = Math.sin((Math.PI * x) / w) ** 2;
+        grey[y * w + x] =
+          luma[y * w + x] * a * b +
+          luma[y * w + ((x + hx) % w)] * (1 - a) * b +
+          luma[((y + hy) % h) * w + x] * a * (1 - b) +
+          luma[((y + hy) % h) * w + ((x + hx) % w)] * (1 - a) * (1 - b);
+      }
+    }
+  }
+  const rgba = Buffer.alloc(w * h * 4);
+  for (let i = 0; i < grey.length; i++) {
+    const v = Math.min(1, Math.max(0, (grey[i] - (opts.floor ?? 0.04)) / (1 - (opts.floor ?? 0.04))));
+    rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = 255;
+    rgba[i * 4 + 3] = Math.round(v * 255);
+  }
+  const out = `${name}.webp`;
+  const info2 = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } }).webp({ quality: 80, alphaQuality: 85 }).toFile(path.join(OUT, out));
+  manifest.images[name] = { file: out, w: info2.width, h: info2.height };
+  console.log(`${name}: ${info2.width}x${info2.height}, ${(info2.size / 1024).toFixed(0)} KB`);
+}
+
+// the second set (docs/art-prompts-2.md): more ground, living things, wood, landmarks, season and weather art
+await plain('floor-mud', 'floor-mud.png', 1024, { quality: 80 });
+await plain('floor-needles', 'floor-needles.png', 1024, { quality: 80 });
+await plain('floor-gravel', 'floor-gravel.png', 1024, { quality: 80 });
+await plain('floor-wet', 'floor-wet.png', 1024, { quality: 80 });
+await plain('floor-snow', 'floor-snow.png', 1024, { quality: 80 });
+await sheet('floor-life', 'floor-life-sheet.png', 96, { cell: 8, minPixels: 200 });
+await sheet('trees', 'trees-sheet.png', 300, { cell: 5, minPixels: 2000 });
+await sheet('wood', 'wood-sheet.png', 220, { cell: 5, minPixels: 1000 });
+await sheet('landmarks', 'landmarks-sheet.png', 300, { cell: 5, minPixels: 2000 });
+await sheet('snow-patches', 'snow-patches-sheet.png', 200, { auto: true, minPixels: 800 });
+await sheet('leaves', 'leaves-sheet.png', 56, { cell: 8, minPixels: 300 });
+await sheet('snowflakes', 'snowflakes-sheet.png', 40, { auto: true, cell: 6, minPixels: 40 });
+await sheet('rain-splash', 'rain-splash-sheet.png', 36, { cell: 9, minPixels: 60 });
+await sheet('lightning', 'lightning-sheet.png', 420, { minPixels: 500 });
+await overlay('overlay-rain', 'rain-streaks.png', 1024, { tile: true });
+await overlay('overlay-snow', 'snow-fall.png', 1024, { tile: true });
+await overlay('overlay-frost', 'frost-overlay.png', 1024, { tile: true });
+await overlay('overlay-fog', 'fog-overlay.png', 1024, { tile: true, floor: 0.02 });
+await overlay('overlay-storm', 'storm-vignette.png', 1376, { height: 774 });
 
 fs.writeFileSync(path.join(OUT, 'art.json'), JSON.stringify(manifest, null, 1));
 const total = fs.readdirSync(OUT).reduce((s, f) => s + fs.statSync(path.join(OUT, f)).size, 0);

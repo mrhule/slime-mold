@@ -3,6 +3,7 @@ import { poolCounts, poolIncome } from './food';
 import { burstStatus } from './bloom';
 import { mapControl, winThreshold } from './round';
 import { evolveStatus } from './tiers';
+import { seasonStatus } from './seasons';
 import { moldOf } from './world';
 import { TICK_DT } from './types';
 import type { BuildOption, BuildingType, HudModel, MoldId, World } from './types';
@@ -60,6 +61,7 @@ export function readHud(world: World, moldId: MoldId): HudModel {
     allocation: mold.allocation,
     zones: { exploreMax: world.balance.allocationZones.exploreMax, warMin: world.balance.allocationZones.warMin },
     mapControl: mapControl(world, moldId),
+    climate: { season: world.season, weather: world.weather.kind, secondsLeft: seasonStatus(world).secondsLeft, effects: { ...world.climate } },
     winControl: winThreshold(world),
     burst: { ...burstStatus(world, moldId), cost: world.balance.burst.cost, target: world.balance.burst.winControl },
     growthStarved: mold.targets.some((t) => t.state === 'starved'),

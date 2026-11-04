@@ -7,6 +7,7 @@ import { generateMap, validateMap } from './mapgen';
 import type { GeneratedMap } from './mapgen';
 import { addMold } from './molds';
 import { deriveSeed } from './rng';
+import { seasonStatus } from './seasons';
 import { createWorld } from './world';
 import type { DifficultyProfile, World } from './types';
 
@@ -17,6 +18,7 @@ export { burstStatus, blooming } from './bloom';
 export { stateHash } from './hash';
 export { readHud } from './hud';
 export { step } from './step';
+export { nextSeasonOffset, seasonStatus } from './seasons';
 export { difficultyFor } from './difficulty';
 export { roundOutcome } from './round';
 export { viewFor } from './view';
@@ -32,6 +34,8 @@ export interface CreateRoundOptions {
   aspect?: number;
   /** number of rival molds; defaults to the difficulty profile's rival count */
   rivals?: number;
+  /** seconds into the four-season year the round starts at (the previous round's end); omitted starts in spring */
+  seasonOffset?: number;
 }
 
 /** Build a fresh round: generate a valid map and place the player's and the rivals' molds. */
@@ -63,6 +67,8 @@ export function createRound(opts: CreateRoundOptions): World {
     world.mapFallback = true;
   }
   world.mapAttempts = attempts;
+  world.seasonOffset = opts.seasonOffset ?? 0;
+  world.season = seasonStatus(world).season;
 
   world.replay.runSeed = opts.runSeed;
   const { starts, playerIndex } = map;

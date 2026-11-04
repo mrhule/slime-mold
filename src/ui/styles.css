@@ -400,6 +400,11 @@ html, body {
   border-radius: 0;
 }
 
+.hud .row.season .value { font-weight: 700; }
+.hud .row.season[data-season='spring'] .value { color: #2f7d32; }
+.hud .row.season[data-season='summer'] .value { color: #b9770e; }
+.hud .row.season[data-season='fall'] .value { color: #a3501b; }
+.hud .row.season[data-season='winter'] .value { color: #3a6ea5; }
 .hud .rivals { margin-top: 6px; }
 .hud .rival { display: flex; align-items: center; gap: 8px; border-top: 2px solid var(--ink); padding: 3px 0; font-size: 13px; font-weight: 700; }
 .hud .rival .rname { flex: 1; font-family: var(--display); font-size: 16px; letter-spacing: 1px; text-transform: uppercase; }

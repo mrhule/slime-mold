@@ -1,4 +1,5 @@
-import type { BalanceConfig } from '../config/balance';
+import type { BalanceConfig, ClimateEffects, Season, Weather } from '../config/balance';
+export type { ClimateEffects, Season, Weather } from '../config/balance';
 import type { Rng, RngStreams } from './rng';
 
 /** 0 = none, 1 = the player, 2..6 = rivals */
@@ -205,6 +206,9 @@ export type SimEvent =
   | { type: 'foodDepleted'; foodSourceId: number }
   | { type: 'sporeBurst'; mold: MoldId; seeds: number }
   | { type: 'moldEliminated'; mold: MoldId }
+  | { type: 'seasonChanged'; season: Season }
+  | { type: 'weatherChanged'; weather: Weather }
+  | { type: 'lightning'; cell: CellIndex }
   | { type: 'pieceOrphaned'; mold: MoldId; componentId: number }
   | { type: 'buildingPlaced'; id: number; building: BuildingType; mold: MoldId; cell: CellIndex }
   | { type: 'moldEvolved'; mold: MoldId; tier: number }
@@ -286,6 +290,8 @@ export interface HudModel {
   /** the slider's two ends: at or below exploreMax the veins explore on their own, at or above warMin the mold bleeds */
   zones: { exploreMax: number; warMin: number };
   mapControl: number;
+  /** the time of year: the season, the weather, and seconds left of the season */
+  climate: { season: Season; weather: Weather; secondsLeft: number; effects: ClimateEffects };
   /** the control that wins right now: it eases down in a long round */
   winControl: number;
   /** the spore burst: whether it can be used, and the bloom's clock once it has been */
@@ -446,6 +452,13 @@ export interface World {
   reachable: Uint8Array;
   /** tick at which the next drop will be announced */
   nextDropTick: number;
+  /** the season now, and how many seconds into the four-season year the round began (rounds carry the year over) */
+  season: Season;
+  seasonOffset: number;
+  /** the weather now and the tick it ends */
+  weather: { kind: Weather; untilTick: number };
+  /** what the season and weather do to the economy right now; worked out every tick, never saved */
+  climate: ClimateEffects;
   nextTargetId: number;
   reachableCells: number;
   /** how many generation attempts the map needed, and whether the open-map fallback was used */

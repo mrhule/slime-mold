@@ -32,6 +32,9 @@ export class Hasher {
 export function stateHash(world: World): number {
   const h = new Hasher();
   h.num(world.tick);
+  h.num(world.seasonOffset);
+  h.num(world.weather.untilTick);
+  h.num(world.weather.kind.length * 31 + world.weather.kind.charCodeAt(0));
   h.array(world.terrain);
   h.array(world.owner);
   h.array(world.biomass);

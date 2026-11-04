@@ -93,6 +93,23 @@ export interface StoreHouseSpec extends BuildingSpec {
   upgradeCost: number[];
 }
 
+export type Season = 'spring' | 'summer' | 'fall' | 'winter';
+export type Weather = 'clear' | 'rain' | 'storm' | 'fog' | 'frost' | 'snow' | 'blizzard';
+
+/** multipliers that change how the economy runs (1 = no change) */
+export interface ClimateEffects {
+  /** how fast veins grow */
+  growth: number;
+  /** upkeep owed by veins and buildings */
+  upkeep: number;
+  /** what collectors earn from the sun */
+  collector: number;
+  /** what goo pools pay */
+  pool: number;
+  /** how far molds see (their vision radius) */
+  vision: number;
+}
+
 /** Every tunable constant (Constitution IV). Sim code reads it through `world.balance`. */
 export interface BalanceConfig {
   // economy
@@ -179,6 +196,22 @@ export interface BalanceConfig {
   burst: { minSeconds: number; cost: number; seeds: number; spacing: number; bloomSeconds: number; spreadEvery: number; spreadChance: number; winControl: number };
   defaultAllocation: number;
   /**
+   * Four fixed seasons in a loop, each `length` seconds long, with weather picked at random inside
+   * each one. A season's effects and the current weather's effects multiply. Everything here reaches
+   * every mold alike, rivals included.
+   */
+  seasons: {
+    length: number;
+    effects: Record<Season, ClimateEffects>;
+    weatherEffects: Record<Weather, ClimateEffects>;
+    /** the weather a season can bring, with how likely each is (relative weights) */
+    weather: Record<Season, { kind: Weather; weight: number }[]>;
+    /** how long one spell of weather lasts, in seconds (a new season always starts a new spell) */
+    spellSeconds: { min: number; max: number };
+    /** storms: mean seconds between strikes, damage to the struck cell and to its neighbours, and how often a strike lands on a mold */
+    lightning: { every: number; hit: number; splash: number; onMoldChance: number };
+  };
+  /**
    * The ends of the Growth/War slider. At `exploreMax` or less the player's veins splinter off by
    * themselves, one new target every `exploreEvery` ticks, wandering at `exploreSpeed` of normal growth speed; once food or a goo pool has been revealed they head for it at `seekSpeed`. At
    * `warMin` or more the mold bleeds: every vein cell costs `1 + warUpkeep` times its usual upkeep.
@@ -239,6 +272,9 @@ export interface BalanceConfig {
   };
 }
 
+/** one weather option of a season: what it is, and how likely it is against the others */
+const w = (kind: Weather, weight: number): { kind: Weather; weight: number } => ({ kind, weight });
+
 export const defaultBalance: BalanceConfig = Object.freeze({
   coreIncome: 0.5,
   upkeepPerCell: 0.004,
@@ -297,6 +333,32 @@ export const defaultBalance: BalanceConfig = Object.freeze({
   victoryEase: { startSeconds: 420, perMinute: 0.025, floor: 0.5 },
   burst: { minSeconds: 240, cost: 500, seeds: 28, spacing: 9, bloomSeconds: 90, spreadEvery: 10, spreadChance: 0.03, winControl: 0.6 },
   defaultAllocation: 0.3,
+  seasons: {
+    length: 120,
+    effects: {
+      spring: { growth: 1.2, upkeep: 1, collector: 1, pool: 1, vision: 1 },
+      summer: { growth: 1.1, upkeep: 1, collector: 1.35, pool: 1, vision: 1 },
+      fall: { growth: 0.9, upkeep: 1, collector: 0.9, pool: 1, vision: 1 },
+      winter: { growth: 0.65, upkeep: 1.5, collector: 0.6, pool: 0.9, vision: 1 },
+    },
+    weatherEffects: {
+      clear: { growth: 1, upkeep: 1, collector: 1, pool: 1, vision: 1 },
+      rain: { growth: 1.1, upkeep: 1, collector: 1, pool: 1.25, vision: 1 },
+      storm: { growth: 1, upkeep: 1, collector: 1, pool: 1.15, vision: 1 },
+      fog: { growth: 1, upkeep: 1, collector: 1, pool: 1, vision: 1 },
+      frost: { growth: 0.8, upkeep: 1, collector: 1, pool: 1, vision: 1 },
+      snow: { growth: 0.9, upkeep: 1, collector: 1, pool: 1, vision: 1 },
+      blizzard: { growth: 0.8, upkeep: 1, collector: 1, pool: 1, vision: 0.5 },
+    },
+    weather: {
+      spring: [w('clear', 3), w('rain', 5), w('fog', 2)],
+      summer: [w('clear', 5), w('storm', 3), w('rain', 2)],
+      fall: [w('clear', 2), w('rain', 4), w('fog', 2), w('frost', 2)],
+      winter: [w('clear', 2), w('snow', 4), w('blizzard', 2), w('frost', 3)],
+    },
+    spellSeconds: { min: 12, max: 30 },
+    lightning: { every: 6, hit: 0.8, splash: 0.4, onMoldChance: 0.6 },
+  },
   allocationZones: { exploreMax: 0.1, warMin: 0.9, exploreEvery: 60, warUpkeep: 5, exploreSpeed: 1 / 3, seekSpeed: 1 / 2 },
 
   aiCommandsPerThink: 3,
