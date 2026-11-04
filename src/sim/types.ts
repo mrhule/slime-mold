@@ -178,7 +178,11 @@ export type Command =
   /** spend most of a full stock to move up a tier */
   | { type: 'evolve'; mold: MoldId }
   /** go all in: scatter spores over the map and bloom, then reach the burst's control target or lose */
-  | { type: 'sporeBurst'; mold: MoldId };
+  | { type: 'sporeBurst'; mold: MoldId }
+  /** co-op: pay nutrients (hero upgrades, supplies, an open front's upkeep); `partial` takes what there is instead of refusing */
+  | { type: 'spend'; mold: MoldId; amount: number; partial?: boolean }
+  /** co-op: the hero decided the front against `rival`; the line moves */
+  | { type: 'frontResult'; mold: MoldId; rival: MoldId; outcome: 'won' | 'lost' };
 
 export type PlaceReason =
   | 'unknown-building'

@@ -954,3 +954,56 @@ html.touch, .touch body {
 .hud .zone-note[hidden] { display: none; }
 .touch .hud .alloc-chip.war { background: #e0432a; color: #fff; }
 .touch .hud .alloc-chip.explore { background: #1fae7b; color: #fff; }
+
+/* Co-op with the hero (012): the status pill, lobby, hero panel, arena view and the meters on the map */
+.coop-pill {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  font: 700 14px var(--body); padding: 6px 12px; cursor: pointer;
+  background: var(--paper); color: var(--ink); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+}
+.coop-pill[data-state='linked'] { background: #b9e08c; }
+.coop-pill[data-state='hosting'] { background: var(--accent); }
+.coop-pill[data-state='dropped'] { background: #f3a08e; }
+.coop-lobby, .coop-panel { position: absolute; right: 12px; width: 270px; padding: 10px 14px 12px; font-size: 13px; font-weight: 600; display: grid; gap: 8px; }
+.coop-lobby { top: 56px; z-index: 6; }
+.coop-panel { top: 56px; max-height: calc(100vh - 160px); overflow-y: auto; }
+.coop-lobby:not([hidden]) ~ .coop-panel { display: none; }
+.coop-lobby p, .coop-panel p { margin: 0; }
+.coop-title { font: 20px var(--display); letter-spacing: 1px; }
+.coop-code { font: 44px var(--display); letter-spacing: 8px; text-align: center; }
+.coop-nut { color: #2f6b1c; }
+.coop-error { color: var(--danger); }
+.coop-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.coop-lobby input { width: 90px; font: 700 18px var(--body); text-transform: uppercase; text-align: center; border: 3px solid var(--ink); padding: 4px; }
+.coop-lobby .btn, .coop-panel .btn { font-size: 15px; padding: 3px 10px 1px; margin: 0; }
+.coop-panel .btn:disabled { filter: grayscale(1) brightness(0.8); cursor: not-allowed; transform: none; }
+.coop-x { font: inherit; font-size: 12px; background: none; border: 0; text-decoration: underline; cursor: pointer; color: var(--ink); text-align: left; padding: 2px; }
+.coop-bar { position: relative; height: 20px; border: 3px solid var(--ink); background: #11140e; }
+.coop-bar i { position: absolute; inset: 0 auto 0 0; }
+.coop-bar.hp i { background: #d8503a; }
+.coop-bar.mana i { background: #3f7bd6; }
+.coop-bar span { position: relative; color: #fff; font-size: 11px; padding-left: 6px; line-height: 14px; }
+.coop-ups { display: grid; gap: 4px; }
+.coop-up { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.coop-up small { opacity: 0.7; }
+.coop-front { display: flex; align-items: center; gap: 8px; }
+.coop-fid { font: 18px var(--display); min-width: 44px; }
+.coop-meter { position: relative; flex: 1; height: 14px; border: 3px solid var(--ink); background: #b9e08c; display: block; min-width: 60px; }
+.coop-meter i { position: absolute; inset: 0 auto 0 0; background: #8a58c4; }
+.coop-meter b { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+.coop-front.danger .coop-meter, .coop-marker.danger { animation: coop-flash 0.6s steps(2) infinite; }
+@keyframes coop-flash { 50% { filter: brightness(1.6) saturate(1.5); } }
+.coop-arena { position: absolute; right: 12px; bottom: 16px; padding: 8px; display: grid; gap: 4px; z-index: 4; }
+.coop-arena canvas { display: block; background: #1b2016; border: 3px solid var(--ink); width: 180px; height: 180px; cursor: crosshair; touch-action: none; }
+.coop-arena-title { font: 16px var(--display); letter-spacing: 1px; }
+.coop-markers { position: absolute; inset: 0; pointer-events: none; }
+#ui > .coop-markers { pointer-events: none; }
+.coop-marker {
+  position: absolute; left: 0; top: 0; width: 84px; padding: 2px 4px 3px; cursor: pointer; pointer-events: auto;
+  background: var(--paper); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font: 14px var(--display); letter-spacing: 1px;
+}
+.coop-marker.mine { background: var(--accent); }
+.coop-marker .coop-meter { height: 10px; border-width: 2px; min-width: 0; }
+.touch .coop-panel { width: 230px; max-height: calc(100vh - 110px); }
+.touch .coop-arena canvas { width: 130px; height: 130px; }
+.coop-lobby[hidden], .coop-panel[hidden], .coop-arena[hidden] { display: none; }

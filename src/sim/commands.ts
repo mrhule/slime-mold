@@ -1,6 +1,7 @@
 import { demolishBuilding, placeBuilding, upgradeBuilding } from './buildings';
 import { addTarget } from './growth';
 import { sporeBurst } from './bloom';
+import { resolveFront, spendNutrients } from './coop';
 import { evolve } from './tiers';
 import { dirBetween } from './grid';
 import { cutKey, linkCells, relabelComponent, unlinkCells } from './network';
@@ -97,6 +98,12 @@ export function applyCommand(world: World, cmd: Command): void {
       }
       return reject(world, cmd.mold, 'no-vein', a);
     }
+    case 'spend':
+      if (spendNutrients(world, cmd.mold, cmd.amount, cmd.partial === true) <= 0 && cmd.amount > 0 && !cmd.partial) reject(world, cmd.mold, 'cant-afford');
+      return;
+    case 'frontResult':
+      resolveFront(world, cmd.mold, cmd.rival, cmd.outcome);
+      return;
     case 'setAllocation': {
       const v = Math.min(1, Math.max(0, cmd.value));
       mold.allocation = Math.round(v * 20) / 20;

@@ -2,6 +2,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { linkRelay } from './link/vite-plugin';
 
 const MUSIC_EXT = /\.(mp3|ogg|wav|m4a|flac)$/i;
 
@@ -52,7 +53,7 @@ function musicTracks(): Plugin {
 export default defineConfig({
   // GitHub Pages serves the game under /<repo>/, so the deploy workflow sets BASE_PATH
   base: process.env.BASE_PATH ?? '/',
-  plugins: [musicTracks()],
+  plugins: [musicTracks(), linkRelay()],
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
