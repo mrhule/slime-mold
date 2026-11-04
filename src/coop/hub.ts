@@ -6,6 +6,7 @@ import { storedNutrients } from '../sim/hud';
 import { TICK_DT } from '../sim/types';
 import type { Command, MoldId, World } from '../sim/types';
 import { relayUrl } from './address';
+import { mapControl } from '../sim/round';
 import { climateKey, climateMessage } from './climate';
 import { COOP } from './config';
 import { findFronts, type FrontInfo } from './fronts';
@@ -25,6 +26,8 @@ export interface Deployment {
   id: string;
   rival: MoldId;
   progress: Messages['front.progress'] | null;
+  /** the hero's running kill bounty already paid out */
+  bounty: number;
   /** how many steps of pressure the line has already been moved for */
   steps: number;
 }
@@ -67,6 +70,18 @@ export class CoopHub {
   private scanClock = 0;
   private drainTick = 0;
   private lastLevels = '';
+  /** the latest picture of the hero's arena, when it came (hub seconds), and the rocks, which are only sent now and then */
+  arena: Messages['arena.view'] | null = null;
+  private arenaAt = -Infinity;
+  obstacles: number[][] = [];
+  /** hub seconds, advanced by update() */
+  private clock = 0;
+  private strikeReadyAt = 0;
+  /** defenses paid for and sent, waiting for the hero's answer */
+  private pendingDefends: { kind: 'turret' | 'wall'; x: number; y: number; cost: number }[] = [];
+  /** tech points the hero's boss kills have earned (nothing spends them yet) */
+  tech = 0;
+  private overviewClock = 0;
   /** the last sky sent to the hero, and the seconds since any was sent (a late joiner gets it within a few seconds) */
   private sentClimate = '';
   private climateClock = 0;
@@ -90,6 +105,8 @@ export class CoopHub {
         // the hero is gone: every front auto-resolves again, and nothing is charged
         if (this.deployed) this.command({ type: 'frontHold', mold: this.opts.playerId, rival: this.deployed.rival, held: false });
         this.hero = null;
+        this.arena = null;
+        this.pendingDefends = [];
         this.deployed = null;
         this.markers = [];
       }
@@ -250,7 +267,7 @@ export class CoopHub {
   deploy(frontId: string): boolean {
     const f = this.fronts.find((x) => x.id === frontId);
     if (!this.linked || !f || this.deployed) return false;
-    this.deployed = { id: f.id, rival: f.rival, progress: null, steps: 0 };
+    this.deployed = { id: f.id, rival: f.rival, progress: null, bounty: 0, steps: 0 };
     // the hero decides this front: our own combat there stops until the result (or the link) ends it
     this.command({ type: 'frontHold', mold: this.opts.playerId, rival: f.rival, held: true });
     this.deployedFront = f;
@@ -267,20 +284,99 @@ export class CoopHub {
 
   /** a marker in arena space for the hero */
   mark(x: number, y: number, label = 'GO'): void {
-    if (!this.linked || !this.deployed) return;
+    if (!this.linked || !this.arenaFresh()) return;
     this.markers.push({ x, y });
     this.link.send('marker', { x, y, label });
     this.emit();
   }
 
   /** the hero decided its front: the sim moves the line (a recall counts as a retreat) */
-  resolve(frontId: string, outcome: Messages['front.result']['outcome'], kills: number): void {
+  resolve(frontId: string, outcome: Messages['front.result']['outcome'], kills: number, loot?: Messages['front.result']['loot']): void {
     const d = this.deployed;
     if (!d || d.id !== frontId) return;
     this.deployed = null;
+    // kills were paid as they happened (creditBounty); what a win frees is goo, which this game counts as nutrients
+    if (loot) {
+      if (loot.goo > 0) this.command({ type: 'gain', mold: this.opts.playerId, amount: loot.goo });
+      this.tech += Math.max(0, loot.tech);
+    }
     this.markers = [];
     this.command({ type: 'frontResult', mold: this.opts.playerId, rival: d.rival, outcome: outcome === 'won' ? 'won' : 'lost' });
     this.notice(outcome === 'won' ? `The hero won ${frontId} (${kills} kills): the rival withers!` : `The hero left ${frontId}: our line recedes`);
+  }
+
+  /** the hero's kill bounty is a running total for the front: pay what is new */
+  creditBounty(total: number): void {
+    const d = this.deployed;
+    if (!d) return;
+    if (total > d.bounty) this.command({ type: 'gain', mold: this.opts.playerId, amount: total - d.bounty });
+    d.bounty = Math.max(d.bounty, total);
+  }
+
+  /** a fresh picture of the arena is on hand (the zoomed view hides without one) */
+  arenaFresh(): boolean {
+    return this.linked && this.arena !== null && this.clock - this.arenaAt <= COOP.viewStale;
+  }
+
+  setArena(view: Messages['arena.view']): void {
+    this.arena = view;
+    this.arenaAt = this.clock;
+    if (view.obstacles) this.obstacles = view.obstacles;
+  }
+
+  get strikeCooldown(): number { return Math.max(0, this.strikeReadyAt - this.clock); }
+
+  /** artillery: the commander pays and enforces the cooldown, then tells the hero where */
+  strike(x: number, y: number): boolean {
+    if (!this.linked || !this.arenaFresh() || this.strikeCooldown > 0 || !this.pay(COOP.strike.cost)) return false;
+    this.strikeReadyAt = this.clock + COOP.strike.cooldown;
+    this.link.send('strike', { x, y });
+    this.emit();
+    return true;
+  }
+
+  defenseCost(kind: 'turret' | 'wall'): number { return kind === 'turret' ? COOP.defense.turretCost : COOP.defense.wallCost; }
+
+  /** build a wall or turret in the arena: pay first, then ask; the hero answers with defend.result and a refusal is refunded */
+  defend(kind: 'turret' | 'wall', x: number, y: number): boolean {
+    const standing = (this.arena?.defenses.length ?? 0) + this.pendingDefends.length;
+    if (!this.linked || !this.arenaFresh() || standing >= COOP.defense.max) return false;
+    const cost = this.defenseCost(kind);
+    if (!this.pay(cost)) return false;
+    this.pendingDefends.push({ kind, x, y, cost });
+    this.link.send('defend', { kind, x, y });
+    this.emit();
+    return true;
+  }
+
+  /** the hero's answer to defend: nothing more to do when built, the nutrients come back when it was not */
+  defendResult(r: Messages['defend.result']): void {
+    const i = this.pendingDefends.findIndex((d) => d.kind === r.kind && Math.abs(d.x - r.x) < 2 && Math.abs(d.y - r.y) < 2);
+    if (i < 0) return;
+    const [d] = this.pendingDefends.splice(i, 1);
+    if (d && !r.ok) {
+      this.command({ type: 'gain', mold: this.opts.playerId, amount: d.cost });
+      this.notice(`No room for that ${r.kind}: ${d.cost} nutrients refunded`);
+    }
+    this.emit();
+  }
+
+  /** what the hero's war-room map shows: every front with its pressure and pool, how much of the map is ours, and the nutrient trend */
+  overview(): Messages['overview'] {
+    const w = this.opts.world();
+    const mine = w.molds[this.opts.playerId - 1];
+    const fronts = this.fronts.map((f) => {
+      const d = this.deployed?.id === f.id ? this.deployed : null;
+      return {
+        id: f.id,
+        name: `Rival ${f.rival - 1}`,
+        pressure: Math.round((d?.progress?.pressure ?? f.pressure) * 100) / 100,
+        pool: Math.round((d?.progress?.pool ?? Math.min(1, f.pool / COOP.poolMax)) * 100) / 100,
+        hero: d !== null,
+      };
+    });
+    const drain = this.deployed ? COOP.frontDrain : 0;
+    return { fronts, territory: Math.round(mapControl(w, this.opts.playerId) * 100) / 100, trend: Math.round(((mine?.netIncome ?? 0) - drain) * 10) / 10 };
   }
 
   /** the sky goes to the hero when it changes, when the hero first links, and every few seconds so nobody stays out of step */
@@ -314,7 +410,13 @@ export class CoopHub {
       }
       return;
     }
+    this.clock += dt;
     this.sendClimate(w, dt);
+    this.overviewClock += dt;
+    if (this.overviewClock >= COOP.overviewEvery) {
+      this.overviewClock = 0;
+      this.link.send('overview', this.overview());
+    }
     this.scanClock += dt;
     if (this.scanClock >= COOP.scanEvery) {
       this.scanClock = 0;

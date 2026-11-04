@@ -16,6 +16,13 @@ export const COOP = {
     heal: { health: 0.4, mana: 0, cost: 40, label: 'Heal 40%' },
     mana: { health: 0, mana: 1, cost: 30, label: 'Refill mana' },
   },
+  /** the hero's arena tools from the zoomed view; the commander pays first and enforces the cooldown (values from the hero's TUNING) */
+  strike: { cost: 60, cooldown: 12 },
+  defense: { max: 8, turretCost: 80, wallCost: 30 },
+  /** the zoomed view hides when no picture has arrived for this many seconds */
+  viewStale: 2,
+  /** seconds between overviews for the hero's war-room map */
+  overviewEvery: 1,
   /** seconds between repeats of the season and weather sent to the hero */
   climateEvery: 3,
   /** seconds between looks at the war map for fronts */
