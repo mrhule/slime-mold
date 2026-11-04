@@ -13,6 +13,7 @@ import { Run } from './game/run';
 import { visibleDeaths } from './game/frame-events';
 import { createStorage, safeLocalStorage } from './game/storage';
 import { Tutorial } from './game/tutorial';
+import { CoopHub } from './coop/hub';
 import { loadArt } from './render/art';
 import { GameRenderer } from './render/renderer';
 import { createRound, countBuildings, enqueue, knownFoodLeft, pendingAllocation, placePreview, readHud, roundOutcome, step, upgradeSpec } from './sim';
@@ -20,6 +21,7 @@ import { TICK_DT } from './sim';
 import type { BuildingType, Command, SimEvent } from './sim';
 import { BuildBar } from './ui/buildbar';
 import { Coach } from './ui/coach';
+import { CoopPanel } from './ui/coop-panel';
 import { DebugOverlay } from './ui/debug';
 import { Hud } from './ui/hud';
 import { InputController } from './ui/input';
@@ -143,6 +145,11 @@ async function main(): Promise<void> {
     },
     run.world.balance.victoryControl,
   );
+  // co-op with the hero game: does nothing until someone hosts or joins a room
+  const coop = new CoopHub({ world: () => run.world, playerId: PLAYER, enqueue: send, notice: (text) => hud.toast(text, 4) });
+  const coopPanel = new CoopPanel(ui, coop, (x, y) => renderer.camera.worldToScreen(x, y));
+  const joinCode = params.get('join');
+  if (joinCode) void coop.join(joinCode).catch(() => coopPanel.render(true));
   // X is the spore burst key; it needs a second press to confirm, like the button
   document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'x' && !e.repeat && (run.state === 'playing' || (run.state === 'paused' && run.pauseReason !== 'menu'))) hud.pressBurst();
@@ -388,6 +395,8 @@ async function main(): Promise<void> {
     }
 
     renderer.update(run.world, dt, ghost, inspect);
+    coop.update(dt);
+    coopPanel.layout();
     const model = readHud(run.world, PLAYER);
     model.allocation = pendingAllocation(run.world, PLAYER); // show orders given while paused
     hud.update(model, { speed: run.speed, paused: run.state === 'paused' });

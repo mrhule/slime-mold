@@ -2,6 +2,7 @@ import { DX, DY, neighbor } from './grid';
 import { isStray } from './fade';
 import { addCell, removeCellAndSplit } from './network';
 import { recomputeBoost } from './buildings';
+import { frontHeld } from './coop';
 import { moldOf, moldsInOrder } from './world';
 import { TICK_DT } from './types';
 import type { Component, World } from './types';
@@ -77,6 +78,10 @@ export function tickCombat(world: World): void {
 
   for (const mold of moldsInOrder(world)) {
     for (const cell of mold.frontCells) {
+      // a hero is fighting this front: our own simulation neither spends nor strikes here
+      if (mold.holdAgainst.length > 0 || world.molds.some((m) => m.holdAgainst.includes(mold.id))) {
+        if (!hasOpenEnemy(world, mold.id, cell)) continue;
+      }
       const comp = world.components.get(world.component[cell] as number) as Component;
       const grant = Math.min((world.pressure[cell] as number) * dt, comp.pool);
       comp.pool -= grant;
@@ -90,7 +95,7 @@ export function tickCombat(world: World): void {
         const n = neighbor(w, h, cell, k);
         if (n < 0) continue;
         const o = world.owner[n] as number;
-        if (o === 0 || o === mold.id) continue;
+        if (o === 0 || o === mold.id || frontHeld(world, mold.id, o)) continue;
         if (sc.damageStamp[n] !== stamp) {
           sc.damageStamp[n] = stamp;
           sc.damage[n] = 0;
@@ -168,4 +173,16 @@ export function checkEliminations(world: World): void {
     mold.targets.length = 0;
     world.events.push({ type: 'moldEliminated', mold: mold.id });
   }
+}
+
+/** does this cell touch an enemy whose front is not held by a hero? */
+function hasOpenEnemy(world: World, moldId: number, cell: number): boolean {
+  const { width: w, height: h } = world;
+  for (let k = 0; k < 8; k++) {
+    const n = neighbor(w, h, cell, k);
+    if (n < 0) continue;
+    const o = world.owner[n] as number;
+    if (o !== 0 && o !== moldId && !frontHeld(world, moldId, o)) return true;
+  }
+  return false;
 }

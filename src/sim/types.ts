@@ -87,6 +87,8 @@ export interface Mold {
   /** the tick the spore burst's bloom ends, 0 before it and -1 once it is over */
   bloomUntil: number;
   burstUsed: boolean;
+  /** co-op: rivals whose front a hero is fighting; combat between this mold and them is suspended and only the hero moves the line */
+  holdAgainst: MoldId[];
   /** owned cells touching an enemy cell, rebuilt every tick */
   frontCells: CellIndex[];
   /** smoothed biomass per second lost on fronts, and the per-tick accumulator */
@@ -178,7 +180,17 @@ export type Command =
   /** spend most of a full stock to move up a tier */
   | { type: 'evolve'; mold: MoldId }
   /** go all in: scatter spores over the map and bloom, then reach the burst's control target or lose */
-  | { type: 'sporeBurst'; mold: MoldId };
+  | { type: 'sporeBurst'; mold: MoldId }
+  /** co-op: pay nutrients (hero upgrades, supplies, an open front's upkeep); `partial` takes what there is instead of refusing */
+  | { type: 'spend'; mold: MoldId; amount: number; partial?: boolean }
+  /** co-op: the hero decided the front against `rival`; the line moves */
+  | { type: 'frontResult'; mold: MoldId; rival: MoldId; outcome: 'won' | 'lost' }
+  /** co-op: a hero is deployed at the front against `rival` (held) or has left it (released) */
+  | { type: 'frontHold'; mold: MoldId; rival: MoldId; held: boolean }
+  /** co-op: the hero's pressure moved the line: positive cells make ours recede, negative cells wither the rival's */
+  | { type: 'frontShift'; mold: MoldId; rival: MoldId; cells: number }
+  /** co-op: nutrients the hero harvested */
+  | { type: 'gain'; mold: MoldId; amount: number };
 
 export type PlaceReason =
   | 'unknown-building'
